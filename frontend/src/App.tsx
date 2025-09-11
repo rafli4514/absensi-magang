@@ -1,6 +1,4 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Flex, Box, TextField, IconButton } from "@radix-ui/themes";
-import { MagnifyingGlassIcon, DotsHorizontalIcon } from "@radix-ui/react-icons";
 import Layout from "./components/Layout";
 import { Theme } from "@radix-ui/themes";
 import Login from "./pages/LoginPage";
@@ -8,6 +6,7 @@ import UserManagementPage from "./pages/UserManagementPage";
 import AbsensiPage from "./pages/AbsensiPage";
 import "./App.css";
 import JadwalPage from "./pages/JadwalPage";
+import DashboardPage from "./pages/DashboardPage";
 
 function App() {
   return (
@@ -19,41 +18,7 @@ function App() {
                 <Route
                   index
                   element={
-                    <Flex direction="column" gap="3" maxWidth="400px">
-                      <Box maxWidth="200px">
-                        <TextField.Root placeholder="Search the docs…" size="1">
-                          <TextField.Slot>
-                            <MagnifyingGlassIcon height="16" width="16" />
-                          </TextField.Slot>
-                        </TextField.Root>
-                      </Box>
-
-                      <Box maxWidth="250px">
-                        <TextField.Root placeholder="Search the docs…" size="2">
-                          <TextField.Slot>
-                            <MagnifyingGlassIcon height="16" width="16" />
-                          </TextField.Slot>
-                          <TextField.Slot>
-                            <IconButton size="1" variant="ghost">
-                              <DotsHorizontalIcon height="14" width="14" />
-                            </IconButton>
-                          </TextField.Slot>
-                        </TextField.Root>
-                      </Box>
-
-                      <Box maxWidth="300px">
-                        <TextField.Root placeholder="Search the docs…" size="3">
-                          <TextField.Slot>
-                            <MagnifyingGlassIcon height="16" width="16" />
-                          </TextField.Slot>
-                          <TextField.Slot pr="3">
-                            <IconButton size="2" variant="ghost">
-                              <DotsHorizontalIcon height="16" width="16" />
-                            </IconButton>
-                          </TextField.Slot>
-                        </TextField.Root>
-                      </Box>
-                    </Flex>
+                    <DashboardPage />
                   }
                 />
                 <Route path="/peserta-magang" element={<UserManagementPage />} />
