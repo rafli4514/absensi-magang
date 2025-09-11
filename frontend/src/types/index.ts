@@ -57,9 +57,9 @@ export interface LaporanAbsensi {
 
 export interface DashboardStats {
   totalPesertaMagang: number;
-  activePesertaMagang: number;
-  todayAbsensiMasuk: number;
-  todayAbsensiKeluar: number;
+  pesertaMagangAktif: number;
+  AbsensiMasukHariIni: number;
+  AbsensiKeluarHariIni: number;
   tingkatKehadiran: number;
-  recentActivities: Absensi[];
+  aktivitasBaruBaruIni: Absensi[];
 }
