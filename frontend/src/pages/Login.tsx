@@ -5,7 +5,7 @@ import IconnetLogo from "../assets/iconnet-large.png";
 
 export default function Login() {
   const [formData, setFormData] = useState({
-    email: "",
+    username: "",
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -35,38 +35,38 @@ export default function Login() {
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="text-center">
-          <div className="flex items-center justify-center h-16 bg-primary-200 space-x-5">
+          <div className="flex items-center justify-center h-16 bg-primary-200">
             <img src={IconnetLogo} alt="Iconnet Logo" className="h-16" />
           </div>
-          <p className="mt-2 text-sm text-gray-600">
-            Sistem Absensi Magang/PKL
-          </p>
         </div>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit}>
+        <div className="bg-white py-4 px-4 sha  dow sm:rounded-lg sm:px-10">
+          <h1 className="mt-2 text-xl font-bold text-black text-center">
+            Sistem Absensi PKL
+          </h1>
+          <form className="space-y-6 mt-5" onSubmit={handleSubmit}>
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-black"
               >
                 Username
               </label>
-              <div className="mt-1 relative">
+              <div className="mt-1 relative border rounded-md shadow-sm border-gray-300 focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500 w-full">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Mail className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
+                  id="username"
+                  name="username"
+                  type="text"
+                  autoComplete="username"
                   required
-                  value={formData.email}
+                  value={formData.username}
                   onChange={handleChange}
-                  className="input-field pl-10"
+                  className="block w-full rounded-md border-0 py-1.5 pl-10 text-gray-900 ring-0 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6"
                   placeholder="Username"
                 />
               </div>
@@ -79,7 +79,7 @@ export default function Login() {
               >
                 Password
               </label>
-              <div className="mt-1 relative">
+              <div className="mt-1 relative border rounded-md shadow-sm border-gray-300 focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500 w-full">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-gray-400" />
                 </div>
@@ -91,7 +91,7 @@ export default function Login() {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="input-field pl-10 pr-10"
+                  className="block w-full rounded-md border-0 py-1.5 pl-10 pr-10 text-gray-900 ring-0 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6"
                   placeholder="Masukkan password"
                 />
                 <button
@@ -138,7 +138,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-black bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <div className="flex items-center">
@@ -146,7 +146,7 @@ export default function Login() {
                     Signing in...
                   </div>
                 ) : (
-                  "Sign in"
+                  "Masuk"
                 )}
               </button>
             </div>
