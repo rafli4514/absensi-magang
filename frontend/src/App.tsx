@@ -3,10 +3,11 @@ import { Flex, Box, TextField, IconButton } from "@radix-ui/themes";
 import { MagnifyingGlassIcon, DotsHorizontalIcon } from "@radix-ui/react-icons";
 import Layout from "./components/Layout";
 import { Theme } from "@radix-ui/themes";
-import Login from "./pages/Login";
-import UserManagement from "./pages/UserManagement";
-import AbsensiPage from "./pages/Absensi";
+import Login from "./pages/LoginPage";
+import UserManagementPage from "./pages/UserManagementPage";
+import AbsensiPage from "./pages/AbsensiPage";
 import "./App.css";
+import JadwalPage from "./pages/JadwalPage";
 
 function App() {
   return (
@@ -55,9 +56,9 @@ function App() {
                     </Flex>
                   }
                 />
-                <Route path="/peserta-magang" element={<UserManagement />} />
+                <Route path="/peserta-magang" element={<UserManagementPage />} />
                 <Route path="/absensi" element={<AbsensiPage />} />{" "}
-                <Route path="/jadwal" element={<div>Jadwal</div>} />{" "}
+                <Route path="/jadwal" element={<JadwalPage />} />{" "}
                 <Route path="/izin" element={<div>Pengajuan Izin</div>} />{" "}
                 <Route path="/laporan" element={<div>Laporan</div>} />
                 <Route path="/pengaturan" element={<div>Pengaturan</div>} />
