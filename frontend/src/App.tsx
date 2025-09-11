@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 import { Theme } from "@radix-ui/themes";
 import Login from "./pages/Login";
 import UserManagement from "./pages/UserManagement";
+import AbsensiPage from "./pages/Absensi";
 import "./App.css";
 
 function App() {
@@ -55,7 +56,7 @@ function App() {
                   }
                 />
                 <Route path="/peserta-magang" element={<UserManagement />} />
-                <Route path="/absensi" element={<div>Absensi</div>} />{" "}
+                <Route path="/absensi" element={<AbsensiPage />} />{" "}
                 <Route path="/jadwal" element={<div>Jadwal</div>} />{" "}
                 <Route path="/izin" element={<div>Pengajuan Izin</div>} />{" "}
                 <Route path="/laporan" element={<div>Laporan</div>} />
