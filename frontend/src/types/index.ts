@@ -17,7 +17,7 @@ export interface PesertaMagang {
   nomorHp: string;
   TanggalMulai: string;
   TanggalSelesai: string;
-  status: "active" | "inactive" | "completed";
+  status: "Aktif" | "Nonaktif" | "Selesai";
   avatar?: string;
   createdAt: string;
   updatedAt: string;
