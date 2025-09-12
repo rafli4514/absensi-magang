@@ -210,9 +210,9 @@ export default function PesertaMagang() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 shadow-md rounded-2xl">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex items-center w-full relative">
+      <Box className="bg-white p-4 shadow-md rounded-2xl">
+        <Flex className="flex flex-col sm:flex-row gap-4">
+          <Flex className="flex items-center w-full relative">
             <TextField.Root
               color="indigo"
               placeholder="Cari Peserta Magang…"
@@ -220,7 +220,7 @@ export default function PesertaMagang() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full"
             />
-          </div>
+          </Flex>
           <IconButton variant="surface" color="gray">
             <MagnifyingGlassIcon width="18" height="18" />
           </IconButton>
@@ -233,15 +233,15 @@ export default function PesertaMagang() {
             >
               <Select.Trigger color="indigo" radius="large" />
               <Select.Content color="indigo">
-                <Select.Item value="Semua">Semua</Select.Item>
+                <Select.Item value="Semua">Semua Status</Select.Item>
                 <Select.Item value="Aktif">Aktif</Select.Item>
                 <Select.Item value="Nonaktif">Tidak Aktif</Select.Item>
                 <Select.Item value="Selesai">Selesai</Select.Item>
               </Select.Content>
             </Select.Root>
           </div>
-        </div>
-      </div>
+        </Flex>
+      </Box>
 
       <Box>
         <Card>
@@ -394,7 +394,7 @@ export default function PesertaMagang() {
                                       Selesai
                                     </Select.Item>
                                   </Select.Content>
-                                </Select.Root>
+                                </Select.Root>  
                               </div>
                             </div>
 

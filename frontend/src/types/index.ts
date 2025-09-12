@@ -36,7 +36,7 @@ export interface Absensi {
   };
   selfieUrl?: string;
   qrCodeData: string;
-  status: "valid" | "invalid" | "late";
+  status: "valid" | "invalid" | "Terlambat";
   catatan?: string;
   createdAt: string;
 }

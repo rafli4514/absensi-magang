@@ -29,7 +29,7 @@ const mockStats: DashboardStats = {
         nomorHp: "08123456789",
         TanggalMulai: "2025-09-04",
         TanggalSelesai: "2026-01-04",
-        status: "Aktif",
+        status: "active",
         createdAt: "2025-08-01",
         updatedAt: "2025-08-01",
       },
@@ -155,14 +155,14 @@ export default function Dashboard() {
                   className={`p-2 rounded-full ${
                     activity.status === "valid"
                       ? "bg-success-100"
-                      : activity.status === "late"
+                      : activity.status === "Terlambat"
                       ? "bg-warning-100"
                       : "bg-danger-100"
                   }`}
                 >
                   {activity.status === "valid" ? (
                     <CheckCircle className="h-4 w-4 text-success-600" />
-                  ) : activity.status === "late" ? (
+                  ) : activity.status === "Terlambat" ? (
                     <AlertCircle className="h-4 w-4 text-warning-600" />
                   ) : (
                     <XCircle className="h-4 w-4 text-danger-600" />
@@ -181,14 +181,14 @@ export default function Dashboard() {
                   className={`text-xs px-2 py-1 rounded-full ${
                     activity.status === "valid"
                       ? "bg-success-100 text-success-800"
-                      : activity.status === "late"
+                      : activity.status === "Terlambat"
                       ? "bg-warning-100 text-warning-800"
                       : "bg-danger-100 text-danger-800"
                   }`}
                 >
                   {activity.status === "valid"
                     ? "Tepat waktu"
-                    : activity.status === "late"
+                    : activity.status === "Terlambat"
                     ? "Terlambat"
                     : "Tidak valid"}
                 </span>
