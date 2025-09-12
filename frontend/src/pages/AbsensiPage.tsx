@@ -27,7 +27,7 @@ const mockAbsensi: Absensi[] = [
       nomorHp: "08123456789",
       TanggalMulai: "2025-09-04",
       TanggalSelesai: "2026-01-04",
-      status: "active",
+      status: "Aktif",
       createdAt: "2025-08-01",
       updatedAt: "2025-08-01",
     },
