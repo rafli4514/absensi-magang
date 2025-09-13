@@ -5,10 +5,12 @@ import {
   Button,
   Card,
   Flex,
+  IconButton,
   Select,
   Switch,
   TextField,
 } from "@radix-ui/themes";
+import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 
 export default function PengaturanPage() {
   const [qrSettings, setQrSettings] = useState({
@@ -337,13 +339,10 @@ export default function PengaturanPage() {
                     placeholder="Masukkan nama tempat atau alamat..."
                     className="flex-1"
                   />
-                  <Button variant="outline">
-                    Cari
-                  </Button>
+                  <IconButton>
+                    <MagnifyingGlassIcon/>
+                  </IconButton>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Contoh: "Jl. Sudirman, Jakarta" atau "Monas Jakarta"
-                </p>
               </div>
 
               {/* Coordinates Input */}
@@ -380,10 +379,10 @@ export default function PengaturanPage() {
 
                 <div className="flex gap-2">
                   <Button variant="outline" size="2">
-                    📍 Dapatkan Lokasi Saat Ini
+                    Dapatkan Lokasi Saat Ini
                   </Button>
                   <Button variant="outline" size="2">
-                    🔍 Validasi Koordinat
+                    Validasi Koordinat
                   </Button>
                 </div>
               </div>
@@ -410,7 +409,7 @@ export default function PengaturanPage() {
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-blue-800 mb-2">
-                    💡 Tips Pengaturan Lokasi
+                    Tips Pengaturan Lokasi
                   </h4>
                   <ul className="text-xs text-blue-700 space-y-1">
                     <li>• Pastikan koordinat akurat untuk menghindari check-in tidak valid</li>

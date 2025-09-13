@@ -219,6 +219,32 @@ export default function Laporan() {
             Generate dan export laporan kehadiran siswa
           </p>
         </div>
+        {/* Generate Report Button */}
+        <div className="flex justify-end">
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger>
+              <Button className="flex items-center bg-blue-600 hover:bg-blue-700 text-white">
+                <Download className="h-4 w-4 mr-2" />
+                Generate Laporan
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content>
+              <DropdownMenu.Item onClick={() => console.log("Generate Excel")}>
+                <Download className="h-4 w-4 mr-2" />
+                Excel (.xlsx)
+              </DropdownMenu.Item>
+              <DropdownMenu.Item onClick={() => console.log("Generate PDF")}>
+                <Download className="h-4 w-4 mr-2" />
+                PDF
+              </DropdownMenu.Item>
+              <DropdownMenu.Item onClick={() => console.log("Generate CSV")}>
+                <Download className="h-4 w-4 mr-2" />
+                CSV
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Root>
+        </div>
       </div>
 
       {/* Statistics Cards */}
@@ -277,33 +303,6 @@ export default function Laporan() {
         </Card>
       </Grid>
 
-      {/* Generate Report Button */}
-      <div className="flex justify-end">
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger>
-            <Button className="flex items-center bg-blue-600 hover:bg-blue-700 text-white">
-              <Download className="h-4 w-4 mr-2" />
-              Generate Laporan
-              <ChevronDown className="h-4 w-4 ml-2" />
-            </Button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content>
-            <DropdownMenu.Item onClick={() => console.log("Generate Excel")}>
-              <Download className="h-4 w-4 mr-2" />
-              Excel (.xlsx)
-            </DropdownMenu.Item>
-            <DropdownMenu.Item onClick={() => console.log("Generate PDF")}>
-              <Download className="h-4 w-4 mr-2" />
-              PDF
-            </DropdownMenu.Item>
-            <DropdownMenu.Item onClick={() => console.log("Generate CSV")}>
-              <Download className="h-4 w-4 mr-2" />
-              CSV
-            </DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu.Root>
-      </div>
-
       {/* Filters */}
       <Box className="bg-white p-4 shadow-md rounded-2xl">
         <Flex direction="column" gap="4">
@@ -359,19 +358,26 @@ export default function Laporan() {
           <Table.Root variant="ghost">
             <Table.Header>
               <Table.Row>
-                <Table.ColumnHeaderCell>Nama Peserta Magang</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>
+                  Nama Peserta Magang
+                </Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Total Hari</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Hadir</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Tidak Hadir</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Terlambat</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Periode Mulai</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>Persentase Kehadiran</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>
+                  Persentase Kehadiran
+                </Table.ColumnHeaderCell>
               </Table.Row>
             </Table.Header>
             <Table.Body>
               {filteredData.map((record, index) => (
-                <Table.Row key={`${record.pesertaMagangId}-${index}`} className="hover:bg-gray-50">
+                <Table.Row
+                  key={`${record.pesertaMagangId}-${index}`}
+                  className="hover:bg-gray-50"
+                >
                   <Table.Cell>
                     <Text size="2">{record.pesertaMagangName}</Text>
                   </Table.Cell>
@@ -389,20 +395,30 @@ export default function Laporan() {
                     </span>
                   </Table.Cell>
                   <Table.Cell>
-                    <Text size="2" align="center">{record.totalHari}</Text>
+                    <Text size="2" align="center">
+                      {record.totalHari}
+                    </Text>
                   </Table.Cell>
                   <Table.Cell>
-                    <Text size="2" align="center" color="green">{record.hadir}</Text>
+                    <Text size="2" align="center" color="green">
+                      {record.hadir}
+                    </Text>
                   </Table.Cell>
                   <Table.Cell>
-                    <Text size="2" align="center" color="red">{record.tidakHadir}</Text>
+                    <Text size="2" align="center" color="red">
+                      {record.tidakHadir}
+                    </Text>
                   </Table.Cell>
                   <Table.Cell>
-                    <Text size="2" align="center" color="orange">{record.terlambat}</Text>
+                    <Text size="2" align="center" color="orange">
+                      {record.terlambat}
+                    </Text>
                   </Table.Cell>
                   <Table.Cell>
                     <Text size="2" align="center" color="gray">
-                      {new Date(record.periode.mulai).toLocaleDateString("id-ID")}
+                      {new Date(record.periode.mulai).toLocaleDateString(
+                        "id-ID"
+                      )}
                     </Text>
                   </Table.Cell>
                   <Table.Cell>

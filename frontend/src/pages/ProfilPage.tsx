@@ -15,7 +15,6 @@ import {
   Camera,
   Save,
   Shield,
-  Calendar,
 } from "lucide-react";
 
 export default function ProfilPage() {
@@ -95,9 +94,6 @@ export default function ProfilPage() {
                 <h3 className="text-lg font-semibold text-gray-900">
                   Informasi Profil
                 </h3>
-                <Text size="2" color="gray">
-                  Informasi dasar akun pengguna
-                </Text>
               </Flex>
 
               <div className="space-y-6">
@@ -113,7 +109,7 @@ export default function ProfilPage() {
                       {profileData.role}
                     </Badge>
                   </div>
-                  <Button variant="outline" size="2" onClick={handleAvatarChange} className="mt-2">
+                  <Button mt="5" variant="outline" size="2" onClick={handleAvatarChange}>
                     <Camera className="h-4 w-4 mr-2" />
                     Ganti Foto
                   </Button>
@@ -171,19 +167,6 @@ export default function ProfilPage() {
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setProfileData({...profileData, department: e.target.value})}
                       disabled={!isEditingProfile}
                     />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Tanggal Bergabung</label>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Calendar className="h-4 w-4" />
-                    {new Date(profileData.joinDate).toLocaleDateString('id-ID', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
                   </div>
                 </div>
 
