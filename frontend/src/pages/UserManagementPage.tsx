@@ -17,6 +17,7 @@ import {
   MagnifyingGlassIcon,
   Pencil2Icon,
   TrashIcon,
+  MixerHorizontalIcon,
 } from "@radix-ui/react-icons";
 
 // Mock data - replace with actual API calls
@@ -28,9 +29,10 @@ const mockPesertaMagang: PesertaMagang[] = [
     divisi: "IT",
     universitas: "Universitas Apa Coba",
     nomorHp: "08123456789",
-    TanggalMulai: "2025-09-04",
-    TanggalSelesai: "2026-01-04",
+    tanggalMulai: "2025-09-04",
+    tanggalSelesai: "2026-01-04",
     status: "Aktif",
+    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face",
     createdAt: "2025-08-01",
     updatedAt: "2025-08-01",
   },
@@ -112,7 +114,9 @@ export default function PesertaMagang() {
                 />
               </div>
 
-              {/* Third Row: Nomor HP and Tanggal Mulai */}
+              
+
+              {/* Third Row: Nomor HP and Status */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="w-full">
                   <label className="block mb-2 font-semibold text-gray-700">
@@ -123,7 +127,7 @@ export default function PesertaMagang() {
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
-                <div>
+                <div className="w-full sm:w-1/2">
                   <label className="block mb-2 font-semibold text-gray-700">
                     Status
                   </label>
@@ -131,7 +135,6 @@ export default function PesertaMagang() {
                     <Select.Trigger
                       className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       color="indigo"
-                      // variant="soft"
                       radius="large"
                     />
                     <Select.Content color="indigo">
@@ -188,6 +191,21 @@ export default function PesertaMagang() {
               </div>
             </Flex>
 
+            {/* Avatar Upload - placed at bottom */}
+            <div className="mt-4 w-full">
+              <label className="block mb-2 font-semibold text-gray-700">
+                Avatar
+              </label>
+              <div className="w-full border-2 border-dashed border-gray-300 rounded-xl p-4">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="block w-full text-base file:mr-4 file:py-3 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                />
+                <p className="mt-2 text-xs text-gray-500">PNG, JPG, atau JPEG.</p>
+              </div>
+            </div>
+
             {/* Action Buttons */}
             <div className="mt-6 flex justify-end gap-4">
               <Dialog.Close>
@@ -211,35 +229,41 @@ export default function PesertaMagang() {
 
       {/* Filters */}
       <Box className="bg-white p-4 shadow-md rounded-2xl">
-        <Flex className="flex flex-col sm:flex-row gap-4">
-          <Flex className="flex items-center w-full relative">
-            <TextField.Root
-              color="indigo"
-              placeholder="Cari Peserta Magang…"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full"
-            />
+        <Flex direction="column" gap="4">
+          <Flex align="center" gap="2">
+            <MixerHorizontalIcon width="18" height="18" />
+            <h3 className="text-lg font-semibold text-gray-900">Filter Peserta Magang</h3>
           </Flex>
-          <IconButton variant="surface" color="gray">
-            <MagnifyingGlassIcon width="18" height="18" />
-          </IconButton>
-          <div className="flex items-center">
-            <Select.Root
-              size="2"
-              defaultValue="Semua"
-              value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value)}
-            >
-              <Select.Trigger color="indigo" radius="large" />
-              <Select.Content color="indigo">
-                <Select.Item value="Semua">Semua Status</Select.Item>
-                <Select.Item value="Aktif">Aktif</Select.Item>
-                <Select.Item value="Nonaktif">Tidak Aktif</Select.Item>
-                <Select.Item value="Selesai">Selesai</Select.Item>
-              </Select.Content>
-            </Select.Root>
-          </div>
+          <Flex gap="4" wrap="wrap">
+            <Flex className="flex items-center w-full relative">
+              <TextField.Root
+                color="indigo"
+                placeholder="Cari Peserta Magang…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
+              <IconButton variant="surface" color="gray" className="ml-2">
+                <MagnifyingGlassIcon width="18" height="18" />
+              </IconButton>
+            </Flex>
+            <div className="flex items-center">
+              <Select.Root
+                size="2"
+                defaultValue="Semua"
+                value={statusFilter}
+                onValueChange={(value) => setStatusFilter(value)}
+              >
+                <Select.Trigger color="indigo" radius="large" />
+                <Select.Content color="indigo">
+                  <Select.Item value="Semua">Semua Status</Select.Item>
+                  <Select.Item value="Aktif">Aktif</Select.Item>
+                  <Select.Item value="Nonaktif">Tidak Aktif</Select.Item>
+                  <Select.Item value="Selesai">Selesai</Select.Item>
+                </Select.Content>
+              </Select.Root>
+            </div>
+          </Flex>
         </Flex>
       </Box>
 
@@ -264,14 +288,22 @@ export default function PesertaMagang() {
                   <Table.Cell>
                     <div className="flex items-center">
                       <div className="h-10 w-10 flex-shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                          <span className="text-sm font-medium text-primary-600">
-                            {item.nama
-                              .split(" ")
-                              .map((n: string) => n[0])
-                              .join("")}
-                          </span>
-                        </div>
+                        {item.avatar ? (
+                          <img
+                            src={item.avatar}
+                            alt={item.nama}
+                            className="h-10 w-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
+                            <span className="text-sm font-medium text-primary-600">
+                              {item.nama
+                                .split(" ")
+                                .map((n: string) => n[0])
+                                .join("")}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
@@ -296,11 +328,11 @@ export default function PesertaMagang() {
                   </Table.Cell>
                   <Table.Cell>
                     <div className="text-sm text-gray-900">
-                      {new Date(item.TanggalMulai).toLocaleDateString("id-ID")}
+                      {new Date(item.tanggalMulai).toLocaleDateString("id-ID")}
                     </div>
                     <div className="text-sm text-gray-900">
                       s/d{" "}
-                      {new Date(item.TanggalSelesai).toLocaleDateString(
+                      {new Date(item.tanggalSelesai).toLocaleDateString(
                         "id-ID"
                       )}
                     </div>
@@ -356,6 +388,8 @@ export default function PesertaMagang() {
                                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                               />
                             </div>
+
+                            
 
                             {/* row 3: Nomor HP and Status */}
                             <div className="flex flex-col sm:flex-row gap-4">
@@ -430,7 +464,7 @@ export default function PesertaMagang() {
                                 </label>
                                 <TextField.Root
                                   type="date"
-                                  defaultValue={item.TanggalMulai}
+                                  defaultValue={item.tanggalMulai}
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                               </div>
@@ -440,12 +474,27 @@ export default function PesertaMagang() {
                                 </label>
                                 <TextField.Root
                                   type="date"
-                                  defaultValue={item.TanggalSelesai}
+                                  defaultValue={item.tanggalSelesai}
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                               </div>
                             </div>
                           </Flex>
+
+                          {/* Avatar Upload - placed at bottom */}
+                          <div className="mt-2 w-full">
+                            <label className="block mb-2 font-semibold text-gray-700">
+                              Avatar
+                            </label>
+                            <div className="w-full border-2 border-dashed border-gray-300 rounded-xl p-4">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="block w-full text-base file:mr-4 file:py-3 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                              />
+                              <p className="mt-2 text-xs text-gray-500">PNG, JPG, atau JPEG.</p>
+                            </div>
+                          </div>
 
                           {/* Action Buttons */}
                           <div className="mt-6 flex justify-end gap-4">

@@ -4,8 +4,8 @@ export interface User {
   username: string;
   role: "admin" | "student";
   avatar?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string; 
+  updatedAt: string; 
 }
 
 export interface PesertaMagang {
@@ -15,8 +15,8 @@ export interface PesertaMagang {
   divisi: string;
   universitas: string;
   nomorHp: string;
-  TanggalMulai: string;
-  TanggalSelesai: string;
+  tanggalMulai: string;
+  tanggalSelesai: string; 
   status: "Aktif" | "Nonaktif" | "Selesai";
   avatar?: string;
   createdAt: string;
@@ -26,7 +26,8 @@ export interface PesertaMagang {
 export interface Absensi {
   id: string;
   pesertaMagangId: string;
-  pesertaMagang: PesertaMagang;
+  // Embedded pesertaMagang is optional when the API expands relations
+  pesertaMagang?: PesertaMagang;
   tipe: "Masuk" | "Keluar";
   timestamp: string;
   lokasi?: {
@@ -39,6 +40,9 @@ export interface Absensi {
   status: "valid" | "invalid" | "Terlambat";
   catatan?: string;
   createdAt: string;
+  updatedAt?: string; 
+  ipAddress?: string; 
+  device?: string; 
 }
 
 export interface LaporanAbsensi {
@@ -48,18 +52,35 @@ export interface LaporanAbsensi {
   hadir: number;
   tidakHadir: number;
   terlambat: number;
-  tingkatKehadiran: number;
+  tingkatKehadiran: number; 
   periode: {
-    mulai: string;
-    selesai: string;
+    mulai: string; 
   };
+}
+
+export interface PengajuanIzin {
+  id: string;
+  pesertaMagangId: string;
+  pesertaMagang?: PesertaMagang;
+  tipe: "sakit" | "izin" | "cuti";
+  tanggalMulai: string;
+  tanggalSelesai: string;
+  alasan: string;
+  status: "pending" | "disetujui" | "ditolak";
+  diajukanPada: string;
+  dokumenPendukung?: string;
+  disetujuiOleh?: string;
+  disetujuiPada?: string;
+  catatan?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface DashboardStats {
   totalPesertaMagang: number;
   pesertaMagangAktif: number;
-  AbsensiMasukHariIni: number;
-  AbsensiKeluarHariIni: number;
-  tingkatKehadiran: number;
-  aktivitasBaruBaruIni: Absensi[];
+  absensiMasukHariIni: number;
+  absensiKeluarHariIni: number;
+  tingkatKehadiran: number; 
+  aktivitasBaruBaruIni: Absensi[]; 
 }

@@ -5,32 +5,28 @@ import Login from "./pages/LoginPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import AbsensiPage from "./pages/AbsensiPage";
 import "./App.css";
-import JadwalPage from "./pages/JadwalPage";
 import DashboardPage from "./pages/DashboardPage";
+import PengajuanIzinPage from "./pages/PengajuanIzinPage";
+import LaporanPage from "./pages/LaporanPage";
 
 function App() {
   return (
-        <Theme>
-          <Router>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={<Layout />}>
-                <Route
-                  index
-                  element={
-                    <DashboardPage />
-                  }
-                />
-                <Route path="/peserta-magang" element={<UserManagementPage />} />
-                <Route path="/absensi" element={<AbsensiPage />} />{" "}
-                <Route path="/jadwal" element={<JadwalPage />} />{" "}
-                <Route path="/izin" element={<div>Pengajuan Izin</div>} />{" "}
-                <Route path="/laporan" element={<div>Laporan</div>} />
-                <Route path="/pengaturan" element={<div>Pengaturan</div>} />
-              </Route>
-            </Routes>
-          </Router>
-        </Theme>
+    <Theme>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<Layout />}>
+            <Route index element={<DashboardPage />} />
+            <Route path="/peserta-magang" element={<UserManagementPage />} />
+            <Route path="/absensi" element={<AbsensiPage />} />{" "}
+            <Route path="/izin" element={<PengajuanIzinPage />} />{" "}
+            <Route path="/laporan" element={<LaporanPage   />} />
+            <Route path="/pengaturan" element={<div>Pengaturan</div>} />
+            <Route path="/profil-pengguna" element={<div>profil</div>} />
+          </Route>
+        </Routes>
+      </Router>
+    </Theme>
   );
 }
 

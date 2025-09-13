@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Absensi } from "../types";
+import type { Absensi, PesertaMagang } from "../types";
 import { formatDateTime } from "../lib/utils";
 import {
   AspectRatio,
@@ -24,6 +24,7 @@ import {
   EyeOpenIcon,
   InfoCircledIcon,
   MagnifyingGlassIcon,
+  MixerHorizontalIcon,
 } from "@radix-ui/react-icons";
 import Gambar from "../assets/papa.jpg"
 
@@ -39,8 +40,8 @@ const mockAbsensi: Absensi[] = [
       divisi: "IT",
       universitas: "Universitas Apa Coba",
       nomorHp: "08123456789",
-      TanggalMulai: "2025-09-04",
-      TanggalSelesai: "2026-01-04",
+      tanggalMulai: "2025-09-04",
+      tanggalSelesai: "2026-01-04",
       status: "Aktif",
       createdAt: "2025-08-01",
       updatedAt: "2025-08-01",
@@ -97,7 +98,13 @@ export default function AbsensiPage() {
   const [typeFilter, setTypeFilter] = useState<string>("Semua");
   const [dateFilter, setDateFilter] = useState("");
 
-  const filteredAbsensi = Absensi.filter((record) => {
+  const hasPesertaMagang = (
+    record: Absensi
+  ): record is Absensi & { pesertaMagang: PesertaMagang } => {
+    return record.pesertaMagang !== undefined && record.pesertaMagang !== null;
+  };
+
+  const filteredAbsensi = Absensi.filter(hasPesertaMagang).filter((record) => {
     const matchesSearch =
       record.pesertaMagang.nama
         .toLowerCase()
@@ -142,10 +149,13 @@ export default function AbsensiPage() {
 
       {/* Filters */}
       <Box className="bg-white p-4 shadow-md rounded-2xl">
-        <Flex gap="4">
-          <Flex justify={"between"} align="center" gap="4" className="w-full">
-            {/* Search Field */}
-            <div className="flex items-center w-full relative">
+        <Flex direction="column" gap="4">
+          <Flex align="center" gap="2">
+            <MixerHorizontalIcon width="18" height="18" />
+            <h3 className="text-lg font-semibold text-gray-900">Filter Absensi</h3>
+          </Flex>
+          <Flex gap="4" wrap="wrap">
+            <Flex className="flex items-center w-full relative">
               <TextField.Root
                 color="indigo"
                 placeholder="Cari Peserta Magang…"
@@ -153,14 +163,10 @@ export default function AbsensiPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
               />
-            </div>
-
-            {/* icon search */}
-            <IconButton variant="surface" color="gray">
-              <MagnifyingGlassIcon width="18" height="18" />
-            </IconButton>
-
-            {/* Status Filter */}
+              <IconButton variant="surface" color="gray" className="ml-2">
+                <MagnifyingGlassIcon width="18" height="18" />
+              </IconButton>
+            </Flex>
             <div className="flex items-center">
               <Select.Root
                 size="2"
@@ -177,9 +183,22 @@ export default function AbsensiPage() {
                 </Select.Content>
               </Select.Root>
             </div>
-
-            {/* Date Filter */}
-            <div>
+            <div className="flex items-center">
+              <Select.Root
+                size="2"
+                defaultValue="Semua"
+                value={typeFilter}
+                onValueChange={(value) => setTypeFilter(value)}
+              >
+                <Select.Trigger color="indigo" radius="large" />
+                <Select.Content color="indigo">
+                  <Select.Item value="Semua">Semua Tipe</Select.Item>
+                  <Select.Item value="Masuk">Masuk</Select.Item>
+                  <Select.Item value="Keluar">Keluar</Select.Item>
+                </Select.Content>
+              </Select.Root>
+            </div>
+            <div className="flex items-center">
               <TextField.Root
                 aria-label="Filter Tanggal"
                 size="2"
@@ -240,7 +259,7 @@ export default function AbsensiPage() {
                   </Table.Cell>
                   <Table.Cell>
                     <div className="text-sm text-gray-900">
-                      {item.tipe === "Masuk" ? "Masuk" : "Pulang"}
+                      {item.tipe === "Masuk" ? "Masuk" : "Keluar"}
                     </div>
                   </Table.Cell>
                   <Table.Cell>
@@ -424,11 +443,65 @@ export default function AbsensiPage() {
                             <CameraIcon width="18" height="18" />
                           </IconButton>
                         </Dialog.Trigger>
-                        <Dialog.Content>
-                          <Dialog.Title>Foto Selfie</Dialog.Title>
-                          <AspectRatio ratio={1}>
-                              <img src={item.selfieUrl || "../assets/papa.jpg"} alt="" />
-                          </AspectRatio>
+                        <Dialog.Content className="max-w-2xl">
+                          <Dialog.Title>Validasi Foto Selfie</Dialog.Title>
+                          <Dialog.Description>
+                            Periksa foto selfie untuk memvalidasi kehadiran peserta magang
+                          </Dialog.Description>
+                          
+                          <div className="mt-6">
+                            <AspectRatio ratio={1}>
+                              <img 
+                                src={item.selfieUrl || "../assets/papa.jpg"} 
+                                alt="Foto Selfie" 
+                                className="w-full h-full object-cover rounded-lg"
+                              />
+                            </AspectRatio>
+                            
+                            {/* Status Info */}
+                            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-700">Status Saat Ini:</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <StatusIcon status={item.status} />
+                                    <StatusBadge status={item.status} />
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-sm text-gray-500">Waktu Absensi:</p>
+                                  <p className="text-sm font-medium">{new Date(item.timestamp).toLocaleString()}</p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Action Buttons */}
+                            <div className="mt-6 flex gap-3 justify-end">
+                              <Button 
+                                variant="outline" 
+                                color="red"
+                                onClick={() => {
+                                  // TODO: Update status to invalid
+                                  console.log('Set status to invalid for:', item.id);
+                                }}
+                                disabled={item.status === 'invalid'}
+                              >
+                                <CrossCircledIcon className="w-4 h-4 mr-2" />
+                                Tandai Tidak Valid
+                              </Button>
+                              <Button 
+                                color="green"
+                                onClick={() => {
+                                  // TODO: Update status to valid
+                                  console.log('Set status to valid for:', item.id);
+                                }}
+                                disabled={item.status === 'valid'}
+                              >
+                                <CheckCircledIcon className="w-4 h-4 mr-2" />
+                                Tandai Valid
+                              </Button>
+                            </div>
+                          </div>
                         </Dialog.Content>
                       </Dialog.Root>
                     </Flex>

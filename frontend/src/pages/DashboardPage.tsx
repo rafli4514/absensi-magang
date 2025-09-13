@@ -13,8 +13,8 @@ import type { DashboardStats } from "../types";
 const mockStats: DashboardStats = {
   totalPesertaMagang: 25,
   pesertaMagangAktif: 23,
-  AbsensiMasukHariIni: 20,
-  AbsensiKeluarHariIni: 3,
+  absensiMasukHariIni: 20,
+  absensiKeluarHariIni: 3,
   tingkatKehadiran: 87.5,
   aktivitasBaruBaruIni: [
     {
@@ -27,9 +27,9 @@ const mockStats: DashboardStats = {
         divisi: "IT",
         universitas: "Universitas Apa Coba",
         nomorHp: "08123456789",
-        TanggalMulai: "2025-09-04",
-        TanggalSelesai: "2026-01-04",
-        status: "active",
+        tanggalMulai: "2025-09-04",
+        tanggalSelesai: "2026-01-04",
+        status: "Aktif",
         createdAt: "2025-08-01",
         updatedAt: "2025-08-01",
       },
@@ -109,13 +109,13 @@ export default function Dashboard() {
         />
         <StatCard
           title="Hadir Hari Ini"
-          value={stats.AbsensiMasukHariIni}
+          value={stats.absensiMasukHariIni}
           icon={Clock}
           color="bg-warning-500"
         />
         <StatCard
           title="Tidak Hadir"
-          value={stats.AbsensiKeluarHariIni}
+          value={stats.absensiKeluarHariIni}
           icon={XCircle}
           color="bg-danger-500"
         />
@@ -170,7 +170,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900">
-                    {activity.pesertaMagang.nama}
+                    {activity.pesertaMagang?.nama}
                   </p>
                   <p className="text-sm text-gray-600">
                     {activity.tipe === "Masuk" ? "Masuk" : "Pulang"} -{" "}
