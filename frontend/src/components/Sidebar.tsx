@@ -60,19 +60,19 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-screen",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-screen overflow-hidden",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex flex-col h-full mt-2">
-          <div className="flex items-center justify-center h-16 bg-primary-200 space-x-5">
+        <div className="flex flex-col h-full mt-2 overflow-hidden">
+          <div className="flex items-center justify-center h-16 bg-primary-200 space-x-5 flex-shrink-0">
             <img src={IconnetLogo} alt="Iconnet Logo" className="h-10" />
           </div>
 
           {/* <div className="h-0.5 bg-black mx-6" /> */}
 
-          <nav className="flex-grow mt-2 px-4">
-            <ul className="space-y-2">
+          <nav className="flex-grow mt-2 px-4 overflow-hidden">
+            <ul className="space-y-2 overflow-hidden">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href;
                 return (
