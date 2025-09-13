@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   DashboardIcon,
   FileTextIcon,
@@ -26,6 +26,26 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // Show confirmation dialog
+
+      // Clear authentication data
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
+      localStorage.removeItem('isAuthenticated');
+      sessionStorage.clear();
+
+      // Close mobile sidebar if open
+      onClose();
+
+      // Redirect to login page
+      navigate('/login');
+
+      // Optional: Show success message
+      console.log('User logged out successfully');
+  };
 
   return (
     <>
@@ -40,20 +60,19 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-screen",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-screen overflow-hidden",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex flex-col h-full">
-          <div className="flex items-center justify-center h-16 bg-primary-200 space-x-5">
-            <img src={IconnetLogo} alt="Iconnet Logo" className="h-5" />
-            <h1 className="text-sm font-bold text-black">Absensi Magang</h1>
+        <div className="flex flex-col h-full mt-2 overflow-hidden">
+          <div className="flex items-center justify-center h-16 bg-primary-200 space-x-5 flex-shrink-0">
+            <img src={IconnetLogo} alt="Iconnet Logo" className="h-10" />
           </div>
 
-          <div className="h-0.5 bg-black mx-6" />
+          {/* <div className="h-0.5 bg-black mx-6" /> */}
 
-          <nav className="flex-grow mt-6 px-4">
-            <ul className="space-y-2">
+          <nav className="flex-grow mt-2 px-4 overflow-hidden">
+            <ul className="space-y-2 overflow-hidden">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href;
                 return (
@@ -79,11 +98,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           <div className="mt-auto p-4">
             <button
-              className="flex items-center w-full px-4 py-3 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors duration-200"
-              onClick={() => {
-                // Handle logout
-                console.log("Logout clicked");
-              }}
+              className="flex items-center w-full px-4 py-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 hover:text-red-700 transition-colors duration-200"
+              onClick={handleLogout}
             >
               <LogOut className="mr-3 h-5 w-5" />
               Keluar

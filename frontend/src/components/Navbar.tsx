@@ -26,7 +26,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
             <Menu className="h-6 w-6" />
           </button>
           <h2 className="ml-2 text-lg font-semibold text-gray-900 lg:ml-0">
-            Dashboard
+            Absensi Magang
           </h2>
         </div>
 

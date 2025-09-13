@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import type { PesertaMagang } from "../types/index";
 import {
   AlertDialog,
@@ -343,9 +344,11 @@ export default function PesertaMagang() {
                   <Table.Cell>
                     <Flex align="center" gap="2">
                       {/* Detail User */}
-                      <IconButton color="blue" variant="outline" highContrast>
-                        <EyeOpenIcon width="18" height="18" />
-                      </IconButton>
+                      <Link to={`/profil-peserta/${item.id}`}>
+                        <IconButton color="blue" variant="outline" highContrast>
+                          <EyeOpenIcon width="18" height="18" />
+                        </IconButton>
+                      </Link>
 
                       {/* Edit User */}
                       <Dialog.Root>

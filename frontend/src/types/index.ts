@@ -28,7 +28,7 @@ export interface Absensi {
   pesertaMagangId: string;
   // Embedded pesertaMagang is optional when the API expands relations
   pesertaMagang?: PesertaMagang;
-  tipe: "Masuk" | "Keluar";
+  tipe: "Masuk" | "Keluar" | "Izin" | "Sakit" | "Cuti";
   timestamp: string;
   lokasi?: {
     latitude: number;

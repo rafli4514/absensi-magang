@@ -7,8 +7,11 @@ import {
   Card,
   DropdownMenu,
   Flex,
+  Grid,
   IconButton,
   Select,
+  Table,
+  Text,
   TextField,
 } from "@radix-ui/themes";
 import {
@@ -198,6 +201,14 @@ export default function Laporan() {
     return matchesSearch && matchesStatus;
   });
 
+  // Statistics for reports
+  const stats = {
+    total: attendanceReports.length,
+    sangatBaik: attendanceReports.filter(r => r.tingkatKehadiran >= 95).length,
+    baik: attendanceReports.filter(r => r.tingkatKehadiran >= 85 && r.tingkatKehadiran < 95).length,
+    perluDiperhatikan: attendanceReports.filter(r => r.tingkatKehadiran < 85).length,
+  };
+
   return (
     <div className="space-y-6">
       {/* Page header */}
@@ -236,14 +247,68 @@ export default function Laporan() {
         </div>
       </div>
 
+      {/* Statistics Cards */}
+      <Grid columns={{ initial: "1", md: "4" }} gap="4">
+        <Card>
+          <Flex direction="column" p="4">
+            <Text size="2" weight="bold" color="gray">
+              Total Laporan
+            </Text>
+            <Text size="6" weight="bold">
+              {stats.total}
+            </Text>
+            <Text size="1" color="gray">
+              Total peserta magang
+            </Text>
+          </Flex>
+        </Card>
+        <Card>
+          <Flex direction="column" p="4">
+            <Text size="2" weight="bold" color="gray">
+              Sangat Baik
+            </Text>
+            <Text size="6" weight="bold" color="green">
+              {stats.sangatBaik}
+            </Text>
+            <Text size="1" color="gray">
+              ≥95% kehadiran
+            </Text>
+          </Flex>
+        </Card>
+        <Card>
+          <Flex direction="column" p="4">
+            <Text size="2" weight="bold" color="gray">
+              Baik
+            </Text>
+            <Text size="6" weight="bold" color="orange">
+              {stats.baik}
+            </Text>
+            <Text size="1" color="gray">
+              85-94% kehadiran
+            </Text>
+          </Flex>
+        </Card>
+        <Card>
+          <Flex direction="column" p="4">
+            <Text size="2" weight="bold" color="gray">
+              Perlu Diperhatikan
+            </Text>
+            <Text size="6" weight="bold" color="red">
+              {stats.perluDiperhatikan}
+            </Text>
+            <Text size="1" color="gray">
+              &lt;85% kehadiran
+            </Text>
+          </Flex>
+        </Card>
+      </Grid>
+
       {/* Filters */}
       <Box className="bg-white p-4 shadow-md rounded-2xl">
         <Flex direction="column" gap="4">
           <Flex align="center" gap="2">
             <MixerHorizontalIcon width="18" height="18" />
-            <h3 className="text-lg font-semibold text-gray-900">
-              Filter Laporan
-            </h3>
+            <Text weight="bold">Filter Laporan</Text>
           </Flex>
           <Flex gap="4" wrap="wrap">
             <Flex className="flex items-center w-full relative">
@@ -283,92 +348,86 @@ export default function Laporan() {
         <Card>
           <Flex direction="column" p="4" gap="2">
             <Flex align="center" gap="2">
-              <CalendarIcon className="h-5 w-5" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                Laporan Detail Kehadiran
-              </h3>
+              <CalendarIcon width="18" height="18" />
+              <Text weight="bold">Laporan Detail Kehadiran</Text>
             </Flex>
-            <p className="text-sm text-gray-600">
+            <Text size="2" color="gray">
               Data kehadiran detail untuk periode {startDate} - {endDate}
-            </p>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Nama Peserta Magang
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total Hari
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Hadir
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tidak Hadir
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Terlambat
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Periode Mulai
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Persentase Kehadiran
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredData.map((record, index) => (
-                    <tr
-                      key={`${record.pesertaMagangId}-${index}`}
-                      className="hover:bg-gray-50"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {record.pesertaMagangName}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                            record.pesertaMagang?.status === "Aktif"
-                              ? "bg-green-100 text-green-800"
-                              : record.pesertaMagang?.status === "Nonaktif"
-                              ? "bg-gray-100 text-gray-800"
-                              : "bg-blue-100 text-blue-800"
-                          }`}
-                        >
-                          {record.pesertaMagang?.status || "Unknown"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                        {record.totalHari}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-green-600">
-                        {record.hadir}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-red-600">
-                        {record.tidakHadir}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-orange-600">
-                        {record.terlambat}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-600">
-                        {new Date(record.periode.mulai).toLocaleDateString(
-                          "id-ID"
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                        {getAttendanceRateBadge(record.tingkatKehadiran)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            </Text>
           </Flex>
+          <Table.Root variant="ghost">
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeaderCell>
+                  Nama Peserta Magang
+                </Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Total Hari</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Hadir</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Tidak Hadir</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Terlambat</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Periode Mulai</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>
+                  Persentase Kehadiran
+                </Table.ColumnHeaderCell>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {filteredData.map((record, index) => (
+                <Table.Row
+                  key={`${record.pesertaMagangId}-${index}`}
+                  className="hover:bg-gray-50"
+                >
+                  <Table.Cell>
+                    <Text size="2">{record.pesertaMagangName}</Text>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        record.pesertaMagang?.status === "Aktif"
+                          ? "bg-green-100 text-green-800"
+                          : record.pesertaMagang?.status === "Nonaktif"
+                          ? "bg-gray-100 text-gray-800"
+                          : "bg-blue-100 text-blue-800"
+                      }`}
+                    >
+                      {record.pesertaMagang?.status || "Unknown"}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Text size="2" align="center">
+                      {record.totalHari}
+                    </Text>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Text size="2" align="center" color="green">
+                      {record.hadir}
+                    </Text>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Text size="2" align="center" color="red">
+                      {record.tidakHadir}
+                    </Text>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Text size="2" align="center" color="orange">
+                      {record.terlambat}
+                    </Text>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Text size="2" align="center" color="gray">
+                      {new Date(record.periode.mulai).toLocaleDateString(
+                        "id-ID"
+                      )}
+                    </Text>
+                  </Table.Cell>
+                  <Table.Cell>
+                    {getAttendanceRateBadge(record.tingkatKehadiran)}
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table.Root>
         </Card>
       </Box>
     </div>
