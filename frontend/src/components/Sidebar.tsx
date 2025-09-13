@@ -1,8 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   DashboardIcon,
-  CalendarIcon,
   FileTextIcon,
+  PersonIcon,
 } from "@radix-ui/react-icons";
 
 import { LogOut, Users, CalendarDays, Clock, Settings } from "lucide-react";
@@ -11,12 +11,12 @@ import { cn } from "../lib/utils";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: DashboardIcon },
-  { name: "Peserta Magang", href: "/peserta-magang", icon: Users },
-  { name: "Absensi", href: "/absensi", icon: Clock },
-  { name: "Jadwal", href: "/jadwal", icon: CalendarIcon },
-  { name: "Pengajuan Izin", href: "/izin", icon: CalendarDays },
-  { name: "Laporan", href: "/laporan", icon: FileTextIcon },
+  { name: "Manajemen Peserta Magang", href: "/peserta-magang", icon: Users },
+  { name: "Manajemen Absensi", href: "/absensi", icon: Clock },
+  { name: "Manajemen Izin", href: "/izin", icon: CalendarDays },
+  { name: "Laporan Absensi", href: "/laporan", icon: FileTextIcon },
   { name: "Pengaturan", href: "/pengaturan", icon: Settings },
+  { name: "Profil Pengguna", href: "/profil-pengguna", icon: PersonIcon },
 ];
 
 interface SidebarProps {
