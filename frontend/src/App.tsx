@@ -8,6 +8,7 @@ import "./App.css";
 import DashboardPage from "./pages/DashboardPage";
 import PengajuanIzinPage from "./pages/PengajuanIzinPage";
 import LaporanPage from "./pages/LaporanPage";
+import PengaturanPage from "./pages/PengaturanPage";
 
 function App() {
   return (
@@ -20,8 +21,8 @@ function App() {
             <Route path="/peserta-magang" element={<UserManagementPage />} />
             <Route path="/absensi" element={<AbsensiPage />} />{" "}
             <Route path="/izin" element={<PengajuanIzinPage />} />{" "}
-            <Route path="/laporan" element={<LaporanPage   />} />
-            <Route path="/pengaturan" element={<div>Pengaturan</div>} />
+            <Route path="/laporan" element={<LaporanPage />} />
+            <Route path="/pengaturan" element={<PengaturanPage />} />
             <Route path="/profil-pengguna" element={<div>profil</div>} />
           </Route>
         </Routes>
