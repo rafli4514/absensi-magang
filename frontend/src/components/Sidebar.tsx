@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   DashboardIcon,
   FileTextIcon,
@@ -26,6 +26,26 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // Show confirmation dialog
+
+      // Clear authentication data
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
+      localStorage.removeItem('isAuthenticated');
+      sessionStorage.clear();
+
+      // Close mobile sidebar if open
+      onClose();
+
+      // Redirect to login page
+      navigate('/login');
+
+      // Optional: Show success message
+      console.log('User logged out successfully');
+  };
 
   return (
     <>
@@ -79,11 +99,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           <div className="mt-auto p-4">
             <button
-              className="flex items-center w-full px-4 py-3 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors duration-200"
-              onClick={() => {
-                // Handle logout
-                console.log("Logout clicked");
-              }}
+              className="flex items-center w-full px-4 py-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 hover:text-red-700 transition-colors duration-200"
+              onClick={handleLogout}
             >
               <LogOut className="mr-3 h-5 w-5" />
               Keluar
