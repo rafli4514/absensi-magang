@@ -28,7 +28,7 @@ import {
 } from "@radix-ui/react-icons";
 import Gambar from "../assets/papa.jpg"
 
-// Mock data - replace with actual API cSemuas
+// Mock data - replace with actual API calls
 const mockAbsensi: Absensi[] = [
   {
     id: "1",
@@ -58,6 +58,55 @@ const mockAbsensi: Absensi[] = [
     status: "valid",
     createdAt: new Date().toISOString(),
   },
+  {
+    id: "2",
+    pesertaMagangId: "1",
+    pesertaMagang: {
+      id: "1",
+      nama: "Mamad Supratman",
+      username: "Mamad",
+      divisi: "IT",
+      universitas: "Universitas Apa Coba",
+      nomorHp: "08123456789",
+      tanggalMulai: "2025-09-04",
+      tanggalSelesai: "2026-01-04",
+      status: "Aktif",
+      createdAt: "2025-08-01",
+      updatedAt: "2025-08-01",
+    },
+    tipe: "Izin",
+    timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+    lokasi: {
+      latitude: -6.2088,
+      longitude: 106.8456,
+      alamat: "Jakarta, Indonesia",
+    },
+    qrCodeData: "QR456",
+    status: "valid",
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: "3",
+    pesertaMagangId: "1",
+    pesertaMagang: {
+      id: "1",
+      nama: "Mamad Supratman",
+      username: "Mamad",
+      divisi: "IT",
+      universitas: "Universitas Apa Coba",
+      nomorHp: "08123456789",
+      tanggalMulai: "2025-09-04",
+      tanggalSelesai: "2026-01-04",
+      status: "Aktif",
+      createdAt: "2025-08-01",
+      updatedAt: "2025-08-01",
+    },
+    tipe: "Sakit",
+    timestamp: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+    qrCodeData: "QR789",
+    status: "valid",
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
+  },
 ];
 
 const StatusIcon = ({ status }: { status: Absensi["status"] }) => {
@@ -75,12 +124,32 @@ const StatusIcon = ({ status }: { status: Absensi["status"] }) => {
 
 const StatusBadge = ({ status }: { status: Absensi["status"] }) => {
   const statusConfig = {
-    valid: { color: "bg-success-100 text-success-800", label: "Valid" },
-    Terlambat: { color: "bg-warning-100 text-warning-800", label: "Terlambat" },
-    invalid: { color: "bg-danger-100 text-danger-800", label: "Tidak Valid" },
+    valid: { color: "bg-green-100 text-green-800", label: "Valid" },
+    Terlambat: { color: "bg-yellow-100 text-yellow-800", label: "Terlambat" },
+    invalid: { color: "bg-red-100 text-red-800", label: "Tidak Valid" },
   };
 
   const config = statusConfig[status];
+
+  return (
+    <span
+      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}
+    >
+      {config.label}
+    </span>
+  );
+};
+
+const TypeBadge = ({ tipe }: { tipe: Absensi["tipe"] }) => {
+  const typeConfig = {
+    Masuk: { color: "bg-blue-100 text-blue-800", label: "Masuk" },
+    Keluar: { color: "bg-purple-100 text-purple-800", label: "Keluar" },
+    Izin: { color: "bg-orange-100 text-orange-800", label: "Izin" },
+    Sakit: { color: "bg-red-100 text-red-800", label: "Sakit" },
+    Cuti: { color: "bg-green-100 text-green-800", label: "Cuti" },
+  };
+
+  const config = typeConfig[tipe] || { color: "bg-gray-100 text-gray-800", label: tipe };
 
   return (
     <span
@@ -195,6 +264,9 @@ export default function AbsensiPage() {
                   <Select.Item value="Semua">Semua Tipe</Select.Item>
                   <Select.Item value="Masuk">Masuk</Select.Item>
                   <Select.Item value="Keluar">Keluar</Select.Item>
+                  <Select.Item value="Izin">Izin</Select.Item>
+                  <Select.Item value="Sakit">Sakit</Select.Item>
+                  <Select.Item value="Cuti">Cuti</Select.Item>
                 </Select.Content>
               </Select.Root>
             </div>
@@ -258,9 +330,7 @@ export default function AbsensiPage() {
                     {/* Nama Peserta */}
                   </Table.Cell>
                   <Table.Cell>
-                    <div className="text-sm text-gray-900">
-                      {item.tipe === "Masuk" ? "Masuk" : "Keluar"}
-                    </div>
+                    <TypeBadge tipe={item.tipe} />
                   </Table.Cell>
                   <Table.Cell>
                     <div className="text-sm text-gray-900">
@@ -332,9 +402,9 @@ export default function AbsensiPage() {
                                 <Text className="text-lg font-medium text-gray-700">
                                   Tipe Absensi
                                 </Text>
-                                <Text className="text-lg text-gray-900">
-                                  {item.tipe}
-                                </Text>
+                                <div className="flex justify-end">
+                                  <TypeBadge tipe={item.tipe} />
+                                </div>
                               </Flex>
 
                               {/* Timestamp */}
