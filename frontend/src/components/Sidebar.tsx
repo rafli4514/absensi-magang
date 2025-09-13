@@ -64,13 +64,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full mt-2">
           <div className="flex items-center justify-center h-16 bg-primary-200 space-x-5">
-            <img src={IconnetLogo} alt="Iconnet Logo" className="h-5" />
-            <h1 className="text-sm font-bold text-black">Absensi Magang</h1>
+            <img src={IconnetLogo} alt="Iconnet Logo" className="h-10" />
           </div>
 
-          <div className="h-0.5 bg-black mx-6" />
+          {/* <div className="h-0.5 bg-black mx-6" /> */}
 
           <nav className="flex-grow mt-6 px-4">
             <ul className="space-y-2">

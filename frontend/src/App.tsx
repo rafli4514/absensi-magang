@@ -10,6 +10,7 @@ import PengajuanIzinPage from "./pages/PengajuanIzinPage";
 import LaporanPage from "./pages/LaporanPage";
 import PengaturanPage from "./pages/PengaturanPage";
 import ProfilPage from "./pages/ProfilPage";
+import ProfilPesertaMagangPage from "./pages/ProfilPesertaMagangPage";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
             <Route path="/laporan" element={<LaporanPage />} />
             <Route path="/pengaturan" element={<PengaturanPage />} />
             <Route path="/profil-pengguna" element={<ProfilPage />} />
+            <Route path="/profil-peserta/:id" element={<ProfilPesertaMagangPage />} />
           </Route>
         </Routes>
       </Router>
