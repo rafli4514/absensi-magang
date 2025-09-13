@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import type { PesertaMagang, Absensi } from "../types";
 import { formatDateTime } from "../lib/utils";
+
+// UI Components
 import {
   Box,
   Button,
@@ -15,6 +17,8 @@ import {
   Text,
   TextField,
 } from "@radix-ui/themes";
+
+// Icons
 import {
   CameraIcon,
   CheckCircledIcon,
@@ -28,13 +32,17 @@ import {
   TrashIcon,
   FileTextIcon,
 } from "@radix-ui/react-icons";
+
 import {
   User,
   Building,
   Phone,
 } from "lucide-react";
 
-// Mock data - replace with actual API calls
+// =====================================
+// Mock Data - Replace with API calls
+// =====================================
+
 const mockPeserta: PesertaMagang = {
   id: "1",
   nama: "Ahmad Rizki Pratama",
@@ -100,6 +108,10 @@ const mockAbsensi: Absensi[] = [
   },
 ];
 
+// =====================================
+// Helper Components
+// =====================================
+
 const StatusIcon = ({ status }: { status: Absensi["status"] }) => {
   switch (status) {
     case "valid":
@@ -123,9 +135,7 @@ const StatusBadge = ({ status }: { status: Absensi["status"] }) => {
   const config = statusConfig[status];
 
   return (
-    <span
-      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}
-    >
+    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
       {config.label}
     </span>
   );
@@ -143,9 +153,7 @@ const TypeBadge = ({ tipe }: { tipe: Absensi["tipe"] }) => {
   const config = typeConfig[tipe] || { color: "bg-gray-100 text-gray-800", label: tipe };
 
   return (
-    <span
-      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}
-    >
+    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
       {config.label}
     </span>
   );
@@ -173,73 +181,39 @@ const getAttendanceRateBadge = (rate: number) => {
   }
 };
 
-export default function ProfilPesertaMagangPage() {
-  const { id } = useParams<{ id: string }>();
-  // TODO: Use id to fetch specific peserta data from API
-  const [peserta] = useState<PesertaMagang>(mockPeserta);
-  const [absensi] = useState<Absensi[]>(mockAbsensi);
-  const [statusFilter, setStatusFilter] = useState<string>("Semua");
-  const [typeFilter, setTypeFilter] = useState<string>("Semua");
+// =====================================
+// Custom Hooks for State Management
+// =====================================
 
-  // Dialog states
+const useDialogState = () => {
   const [selectedRecord, setSelectedRecord] = useState<Absensi | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showSelfieDialog, setShowSelfieDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [editForm, setEditForm] = useState({
-    status: "valid" as Absensi["status"],
-    notes: "",
-  });
 
-  // Action handlers
-  const handleViewDetail = (record: Absensi) => {
-    setSelectedRecord(record);
-    setShowDetailDialog(true);
+  return {
+    selectedRecord,
+    setSelectedRecord,
+    showDetailDialog,
+    setShowDetailDialog,
+    showSelfieDialog,
+    setShowSelfieDialog,
+    showEditDialog,
+    setShowEditDialog,
+    showDeleteDialog,
+    setShowDeleteDialog,
   };
+};
 
-  const handleViewSelfie = (record: Absensi) => {
-    setSelectedRecord(record);
-    setShowSelfieDialog(true);
-  };
+const useFilters = () => {
+  const [statusFilter, setStatusFilter] = useState<string>("Semua");
+  const [typeFilter, setTypeFilter] = useState<string>("Semua");
 
-  const handleEditStatus = (record: Absensi) => {
-    setSelectedRecord(record);
-    setEditForm({
-      status: record.status,
-      notes: "",
-    });
-    setShowEditDialog(true);
-  };
+  return { statusFilter, setStatusFilter, typeFilter, setTypeFilter };
+};
 
-  const handleDeleteRecord = (record: Absensi) => {
-    setSelectedRecord(record);
-    setShowDeleteDialog(true);
-  };
-
-  const handleDownloadProof = (record: Absensi) => {
-    // TODO: Implement actual download functionality
-    console.log('Download proof for record:', record.id);
-    alert('Fitur download bukti akan diimplementasikan');
-  };
-
-  const handleEditSubmit = () => {
-    // TODO: Implement API call to update record
-    console.log('Update record:', selectedRecord?.id, 'with:', editForm);
-    alert('Status berhasil diperbarui');
-    setShowEditDialog(false);
-    setSelectedRecord(null);
-  };
-
-  const handleDeleteConfirm = () => {
-    // TODO: Implement API call to delete record
-    console.log('Delete record:', selectedRecord?.id);
-    alert('Record berhasil dihapus');
-    setShowDeleteDialog(false);
-    setSelectedRecord(null);
-  };
-
-  // Calculate statistics
+const useAttendanceStats = (absensi: Absensi[]) => {
   const stats = {
     totalAbsensi: absensi.length,
     valid: absensi.filter(a => a.status === 'valid').length,
@@ -250,21 +224,93 @@ export default function ProfilPesertaMagangPage() {
     izin: absensi.filter(a => a.tipe === 'Izin').length,
   };
 
-  // Calculate attendance rate
   const totalHariKerja = 22; // Assuming 22 working days in a month
   const hadir = stats.valid + stats.terlambat;
   const tingkatKehadiran = totalHariKerja > 0 ? (hadir / totalHariKerja) * 100 : 0;
 
-  const filteredAbsensi = absensi.filter((record) => {
-    const matchesStatus = statusFilter === "Semua" || record.status === statusFilter;
-    const matchesType = typeFilter === "Semua" || record.tipe === typeFilter;
+  return { stats, tingkatKehadiran };
+};
 
+// =====================================
+// Main Component
+// =====================================
+
+export default function ProfilPesertaMagangPage() {
+  const { id } = useParams<{ id: string }>();
+  // TODO: Use id to fetch specific peserta data from API
+
+  // ============ Data States ============
+  const [peserta] = useState<PesertaMagang>(mockPeserta);
+  const [absensi] = useState<Absensi[]>(mockAbsensi);
+
+  // ============ UI States ============
+  const filters = useFilters();
+  const dialogState = useDialogState();
+  const [editForm, setEditForm] = useState({
+    status: "valid" as Absensi["status"],
+    notes: "",
+  });
+
+  // ============ Computed Values ============
+  const { stats, tingkatKehadiran } = useAttendanceStats(absensi);
+
+  const filteredAbsensi = absensi.filter((record) => {
+    const matchesStatus = filters.statusFilter === "Semua" || record.status === filters.statusFilter;
+    const matchesType = filters.typeFilter === "Semua" || record.tipe === filters.typeFilter;
     return matchesStatus && matchesType;
   });
 
+  // ============ Action Handlers ============
+  const handleViewDetail = (record: Absensi) => {
+    dialogState.setSelectedRecord(record);
+    dialogState.setShowDetailDialog(true);
+  };
+
+  const handleViewSelfie = (record: Absensi) => {
+    dialogState.setSelectedRecord(record);
+    dialogState.setShowSelfieDialog(true);
+  };
+
+  const handleEditStatus = (record: Absensi) => {
+    dialogState.setSelectedRecord(record);
+    setEditForm({
+      status: record.status,
+      notes: "",
+    });
+    dialogState.setShowEditDialog(true);
+  };
+
+  const handleDeleteRecord = (record: Absensi) => {
+    dialogState.setSelectedRecord(record);
+    dialogState.setShowDeleteDialog(true);
+  };
+
+  const handleDownloadProof = (record: Absensi) => {
+    // TODO: Implement actual download functionality
+    console.log('Download proof for record:', record.id);
+    alert('Fitur download bukti akan diimplementasikan');
+  };
+
+  const handleEditSubmit = () => {
+    // TODO: Implement API call to update record
+    console.log('Update record:', dialogState.selectedRecord?.id, 'with:', editForm);
+    alert('Status berhasil diperbarui');
+    dialogState.setShowEditDialog(false);
+    dialogState.setSelectedRecord(null);
+  };
+
+  const handleDeleteConfirm = () => {
+    // TODO: Implement API call to delete record
+    console.log('Delete record:', dialogState.selectedRecord?.id);
+    alert('Record berhasil dihapus');
+    dialogState.setShowDeleteDialog(false);
+    dialogState.setSelectedRecord(null);
+  };
+
+  // ============ Render ============
   return (
     <div className="space-y-6">
-      {/* Page header */}
+      {/* Page Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -429,8 +475,8 @@ export default function ProfilPesertaMagangPage() {
               <Select.Root
                 size="2"
                 defaultValue="Semua"
-                value={statusFilter}
-                onValueChange={(value) => setStatusFilter(value)}
+                value={filters.statusFilter}
+                onValueChange={(value) => filters.setStatusFilter(value)}
               >
                 <Select.Trigger color="indigo" radius="large" />
                 <Select.Content color="indigo">
@@ -445,8 +491,8 @@ export default function ProfilPesertaMagangPage() {
               <Select.Root
                 size="2"
                 defaultValue="Semua"
-                value={typeFilter}
-                onValueChange={(value) => setTypeFilter(value)}
+                value={filters.typeFilter}
+                onValueChange={(value) => filters.setTypeFilter(value)}
               >
                 <Select.Trigger color="indigo" radius="large" />
                 <Select.Content color="indigo">
@@ -581,57 +627,59 @@ export default function ProfilPesertaMagangPage() {
         </Card>
       )}
 
+      {/* ============ Dialog Components ============ */}
+
       {/* Detail Dialog */}
-      <Dialog.Root open={showDetailDialog} onOpenChange={setShowDetailDialog}>
+      <Dialog.Root open={dialogState.showDetailDialog} onOpenChange={dialogState.setShowDetailDialog}>
         <Dialog.Content style={{ maxWidth: 600 }}>
           <Dialog.Title>Detail Absensi</Dialog.Title>
           <Dialog.Description>
             Informasi lengkap record absensi
           </Dialog.Description>
 
-          {selectedRecord && (
+          {dialogState.selectedRecord && (
             <Flex direction="column" gap="4" mt="4">
               <Grid columns={{ initial: "1", md: "2" }} gap="4">
                 <div>
                   <Text size="2" weight="bold">Tipe</Text>
                   <div className="mt-1">
-                    <TypeBadge tipe={selectedRecord.tipe} />
+                    <TypeBadge tipe={dialogState.selectedRecord.tipe} />
                   </div>
                 </div>
                 <div>
                   <Text size="2" weight="bold">Status</Text>
                   <div className="mt-1">
-                    <StatusBadge status={selectedRecord.status} />
+                    <StatusBadge status={dialogState.selectedRecord.status} />
                   </div>
                 </div>
                 <div>
                   <Text size="2" weight="bold">Tanggal</Text>
-                  <Text size="3">{new Date(selectedRecord.timestamp).toLocaleDateString('id-ID')}</Text>
+                  <Text size="3">{new Date(dialogState.selectedRecord.timestamp).toLocaleDateString('id-ID')}</Text>
                 </div>
                 <div>
                   <Text size="2" weight="bold">Waktu</Text>
-                  <Text size="3">{formatDateTime(selectedRecord.createdAt)}</Text>
+                  <Text size="3">{formatDateTime(dialogState.selectedRecord.createdAt)}</Text>
                 </div>
               </Grid>
 
               <div>
                 <Text size="2" weight="bold">Lokasi</Text>
-                <Text size="3">{selectedRecord.lokasi?.alamat || "Tidak tersedia"}</Text>
+                <Text size="3">{dialogState.selectedRecord.lokasi?.alamat || "Tidak tersedia"}</Text>
               </div>
 
-              {selectedRecord.qrCodeData && (
+              {dialogState.selectedRecord.qrCodeData && (
                 <div>
                   <Text size="2" weight="bold">QR Code</Text>
-                  <Text size="3" className="font-mono">{selectedRecord.qrCodeData}</Text>
+                  <Text size="3" className="font-mono">{dialogState.selectedRecord.qrCodeData}</Text>
                 </div>
               )}
 
-              {selectedRecord.selfieUrl && (
+              {dialogState.selectedRecord.selfieUrl && (
                 <div>
                   <Text size="2" weight="bold">Foto Selfie</Text>
                   <div className="mt-2">
                     <img
-                      src={selectedRecord.selfieUrl}
+                      src={dialogState.selectedRecord.selfieUrl}
                       alt="Selfie"
                       className="w-32 h-32 object-cover rounded-lg border"
                     />
@@ -652,17 +700,17 @@ export default function ProfilPesertaMagangPage() {
       </Dialog.Root>
 
       {/* Selfie Dialog */}
-      <Dialog.Root open={showSelfieDialog} onOpenChange={setShowSelfieDialog}>
+      <Dialog.Root open={dialogState.showSelfieDialog} onOpenChange={dialogState.setShowSelfieDialog}>
         <Dialog.Content style={{ maxWidth: 500 }}>
           <Dialog.Title>Foto Selfie</Dialog.Title>
           <Dialog.Description>
             Foto selfie saat absensi
           </Dialog.Description>
 
-          {selectedRecord?.selfieUrl && (
+          {dialogState.selectedRecord?.selfieUrl && (
             <Flex justify="center" mt="4">
               <img
-                src={selectedRecord.selfieUrl}
+                src={dialogState.selectedRecord.selfieUrl}
                 alt="Selfie"
                 className="max-w-full max-h-96 object-contain rounded-lg border"
               />
@@ -680,7 +728,7 @@ export default function ProfilPesertaMagangPage() {
       </Dialog.Root>
 
       {/* Edit Status Dialog */}
-      <Dialog.Root open={showEditDialog} onOpenChange={setShowEditDialog}>
+      <Dialog.Root open={dialogState.showEditDialog} onOpenChange={dialogState.setShowEditDialog}>
         <Dialog.Content style={{ maxWidth: 500 }}>
           <Dialog.Title>Edit Status Absensi</Dialog.Title>
           <Dialog.Description>
@@ -727,24 +775,24 @@ export default function ProfilPesertaMagangPage() {
       </Dialog.Root>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog.Root open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <Dialog.Root open={dialogState.showDeleteDialog} onOpenChange={dialogState.setShowDeleteDialog}>
         <Dialog.Content style={{ maxWidth: 450 }}>
           <Dialog.Title>Hapus Record Absensi</Dialog.Title>
           <Dialog.Description>
             Apakah Anda yakin ingin menghapus record absensi ini? Tindakan ini tidak dapat dibatalkan.
           </Dialog.Description>
 
-          {selectedRecord && (
+          {dialogState.selectedRecord && (
             <Card mt="4">
               <Flex direction="column" gap="2">
                 <Text size="2">
-                  <strong>Tipe:</strong> <TypeBadge tipe={selectedRecord.tipe} />
+                  <strong>Tipe:</strong> <TypeBadge tipe={dialogState.selectedRecord.tipe} />
                 </Text>
                 <Text size="2">
-                  <strong>Tanggal:</strong> {new Date(selectedRecord.timestamp).toLocaleDateString('id-ID')}
+                  <strong>Tanggal:</strong> {new Date(dialogState.selectedRecord.timestamp).toLocaleDateString('id-ID')}
                 </Text>
                 <Text size="2">
-                  <strong>Status:</strong> <StatusBadge status={selectedRecord.status} />
+                  <strong>Status:</strong> <StatusBadge status={dialogState.selectedRecord.status} />
                 </Text>
               </Flex>
             </Card>
