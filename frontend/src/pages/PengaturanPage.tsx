@@ -350,27 +350,6 @@ export default function PengaturanPage() {
                     }
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ukuran QR Code
-                  </label>
-                  <Select.Root
-                    value={settings.qr.size}
-                    onValueChange={(value: 'small' | 'medium' | 'large') =>
-                      setSettings({
-                        ...settings,
-                        qr: { ...settings.qr, size: value },
-                      })
-                    }
-                  >
-                    <Select.Trigger />
-                    <Select.Content>
-                      <Select.Item value="small">Kecil</Select.Item>
-                      <Select.Item value="medium">Sedang</Select.Item>
-                      <Select.Item value="large">Besar</Select.Item>
-                    </Select.Content>
-                  </Select.Root>
-                </div>
               </div>
               <div className="space-y-4">
                 <div>
@@ -395,67 +374,76 @@ export default function PengaturanPage() {
                     </Select.Content>
                   </Select.Root>
                 </div>
-                <div className="flex justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={generateQRCode}
-                    disabled={isGeneratingQR}
-                  >
-                    {isGeneratingQR ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Membuat QR...
-                      </>
-                    ) : (
-                      "Generate QR Code Baru"
-                    )}
-                  </Button>
-                </div>
-                {currentQRCode && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
-                    <div className="text-center">
-                      <div className="mb-2">
-                        {!qrImageError ? (
-                          <img
-                            src={`data:image/png;base64,${currentQRCode}`}
-                            alt="QR Code"
-                            className="mx-auto border-2 border-gray-300 rounded-lg shadow-sm bg-white"
-                            style={{ width: "200px", height: "200px" }}
-                            onError={(e) => {
-                              console.error('QR Code image failed to load:', e);
-                              console.log('QR Code data length:', currentQRCode.length);
-                              console.log('QR Code data preview:', currentQRCode.substring(0, 100) + '...');
-                              setQrImageError(true);
-                            }}
-                            onLoad={() => {
-                              console.log('QR Code image loaded successfully');
-                            }}
-                          />
-                        ) : (
-                          <div className="mx-auto border-2 border-dashed border-gray-300 rounded-lg bg-white flex items-center justify-center" 
-                               style={{ width: "200px", height: "200px" }}>
-                            <div className="text-center text-gray-500">
-                              <QrCode className="h-12 w-12 mx-auto mb-2" />
-                              <p className="text-xs">QR Code gagal dimuat</p>
-                              <p className="text-xs">Coba generate ulang</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        QR Code berlaku hingga:{" "}
-                        {new Date(qrExpiresAt).toLocaleString("id-ID")}
-                      </p>
-                      {qrImageError && (
-                        <p className="text-xs text-red-600 mt-1">
-                          Gambar QR Code tidak dapat ditampilkan. Silakan generate ulang.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                onClick={generateQRCode}
+                disabled={isGeneratingQR}
+              >
+                {isGeneratingQR ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Membuat QR...
+                  </>
+                ) : (
+                  "Generate QR Code Baru"
+                )}
+              </Button>
+            </div>
+            {currentQRCode && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+                <div className="text-center">
+                  <div className="mb-2">
+                    {!qrImageError ? (
+                      <img
+                        src={`data:image/png;base64,${currentQRCode}`}
+                        alt="QR Code"
+                        className="mx-auto border-2 border-gray-300 rounded-lg shadow-sm bg-white"
+                        style={{ width: "200px", height: "200px" }}
+                        onError={(e) => {
+                          console.error("QR Code image failed to load:", e);
+                          console.log(
+                            "QR Code data length:",
+                            currentQRCode.length
+                          );
+                          console.log(
+                            "QR Code data preview:",
+                            currentQRCode.substring(0, 100) + "..."
+                          );
+                          setQrImageError(true);
+                        }}
+                        onLoad={() => {
+                          console.log("QR Code image loaded successfully");
+                        }}
+                      />
+                    ) : (
+                      <div
+                        className="mx-auto border-2 border-dashed border-gray-300 rounded-lg bg-white flex items-center justify-center"
+                        style={{ width: "200px", height: "200px" }}
+                      >
+                        <div className="text-center text-gray-500">
+                          <QrCode className="h-12 w-12 mx-auto mb-2" />
+                          <p className="text-xs">QR Code gagal dimuat</p>
+                          <p className="text-xs">Coba generate ulang</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    QR Code berlaku hingga:{" "}
+                    {new Date(qrExpiresAt).toLocaleString("id-ID")}
+                  </p>
+                  {qrImageError && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Gambar QR Code tidak dapat ditampilkan. Silakan generate
+                      ulang.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </Flex>
         </Card>
       </Box>

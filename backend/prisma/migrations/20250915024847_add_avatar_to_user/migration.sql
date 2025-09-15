@@ -27,7 +27,6 @@ CREATE TABLE "users" (
     "avatar" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
 
@@ -37,7 +36,7 @@ CREATE TABLE "peserta_magang" (
     "nama" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "divisi" TEXT NOT NULL,
-    "universitas" TEXT NOT NULL,
+    "instansi" TEXT NOT NULL,
     "nomorHp" TEXT NOT NULL,
     "tanggalMulai" TEXT NOT NULL,
     "tanggalSelesai" TEXT NOT NULL,
@@ -45,7 +44,6 @@ CREATE TABLE "peserta_magang" (
     "avatar" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-
     CONSTRAINT "peserta_magang_pkey" PRIMARY KEY ("id")
 );
 
@@ -64,7 +62,6 @@ CREATE TABLE "absensi" (
     "device" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-
     CONSTRAINT "absensi_pkey" PRIMARY KEY ("id")
 );
 
@@ -83,21 +80,22 @@ CREATE TABLE "pengajuan_izin" (
     "catatan" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-
     CONSTRAINT "pengajuan_izin_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
+CREATE UNIQUE INDEX "users_username_key" ON "users" ("username");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+CREATE UNIQUE INDEX "users_email_key" ON "users" ("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "peserta_magang_username_key" ON "peserta_magang"("username");
+CREATE UNIQUE INDEX "peserta_magang_username_key" ON "peserta_magang" ("username");
 
 -- AddForeignKey
-ALTER TABLE "absensi" ADD CONSTRAINT "absensi_pesertaMagangId_fkey" FOREIGN KEY ("pesertaMagangId") REFERENCES "peserta_magang"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "absensi"
+ADD CONSTRAINT "absensi_pesertaMagangId_fkey" FOREIGN KEY ("pesertaMagangId") REFERENCES "peserta_magang" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "pengajuan_izin" ADD CONSTRAINT "pengajuan_izin_pesertaMagangId_fkey" FOREIGN KEY ("pesertaMagangId") REFERENCES "peserta_magang"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "pengajuan_izin"
+ADD CONSTRAINT "pengajuan_izin_pesertaMagangId_fkey" FOREIGN KEY ("pesertaMagangId") REFERENCES "peserta_magang" ("id") ON DELETE CASCADE ON UPDATE CASCADE;

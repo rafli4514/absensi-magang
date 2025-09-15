@@ -1,8 +1,12 @@
-import { type Request, type Response } from 'express';
-import { prisma } from '../lib/prisma';
-import { sendSuccess, sendError, sendPaginatedSuccess } from '../utils/response';
-import path from 'path';
-import fs from 'fs';
+import { type Request, type Response } from "express";
+import { prisma } from "../lib/prisma";
+import {
+  sendSuccess,
+  sendError,
+  sendPaginatedSuccess,
+} from "../utils/response";
+import path from "path";
+import fs from "fs";
 
 export const getAllPesertaMagang = async (req: Request, res: Response) => {
   try {
@@ -12,7 +16,7 @@ export const getAllPesertaMagang = async (req: Request, res: Response) => {
     const status = req.query.status as string;
 
     const where: any = {};
-    if (status && status !== 'Semua') {
+    if (status && status !== "Semua") {
       where.status = status.toUpperCase();
     }
 
@@ -21,7 +25,7 @@ export const getAllPesertaMagang = async (req: Request, res: Response) => {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       }),
       prisma.pesertaMagang.count({ where }),
     ]);
@@ -30,13 +34,13 @@ export const getAllPesertaMagang = async (req: Request, res: Response) => {
 
     sendPaginatedSuccess(
       res,
-      'Peserta magang retrieved successfully',
+      "Peserta magang retrieved successfully",
       pesertaMagang,
       { page, limit, total, totalPages }
     );
   } catch (error) {
-    console.error('Get all peserta magang error:', error);
-    sendError(res, 'Failed to retrieve peserta magang');
+    console.error("Get all peserta magang error:", error);
+    sendError(res, "Failed to retrieve peserta magang");
   }
 };
 
@@ -47,24 +51,24 @@ export const getPesertaMagangById = async (req: Request, res: Response) => {
       where: { id },
       include: {
         absensi: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           take: 10, // Get last 10 attendance records
         },
         pengajuanIzin: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           take: 5, // Get last 5 leave requests
         },
       },
     });
 
     if (!pesertaMagang) {
-      return sendError(res, 'Peserta magang not found', 404);
+      return sendError(res, "Peserta magang not found", 404);
     }
 
-    sendSuccess(res, 'Peserta magang retrieved successfully', pesertaMagang);
+    sendSuccess(res, "Peserta magang retrieved successfully", pesertaMagang);
   } catch (error) {
-    console.error('Get peserta magang by ID error:', error);
-    sendError(res, 'Failed to retrieve peserta magang');
+    console.error("Get peserta magang by ID error:", error);
+    sendError(res, "Failed to retrieve peserta magang");
   }
 };
 
@@ -74,11 +78,11 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
       nama,
       username,
       divisi,
-      universitas,
+      instansi,
       nomorHp,
       tanggalMulai,
       tanggalSelesai,
-      status = 'AKTIF',
+      status = "AKTIF",
       avatar,
     } = req.body;
 
@@ -88,7 +92,7 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
     });
 
     if (existingPeserta) {
-      return sendError(res, 'Username already exists', 400);
+      return sendError(res, "Username already exists", 400);
     }
 
     const pesertaMagang = await prisma.pesertaMagang.create({
@@ -96,7 +100,7 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
         nama,
         username,
         divisi,
-        universitas,
+        instansi,
         nomorHp,
         tanggalMulai,
         tanggalSelesai,
@@ -105,10 +109,10 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
       },
     });
 
-    sendSuccess(res, 'Peserta magang created successfully', pesertaMagang, 201);
+    sendSuccess(res, "Peserta magang created successfully", pesertaMagang, 201);
   } catch (error) {
-    console.error('Create peserta magang error:', error);
-    sendError(res, 'Failed to create peserta magang', 400);
+    console.error("Create peserta magang error:", error);
+    sendError(res, "Failed to create peserta magang", 400);
   }
 };
 
@@ -119,7 +123,7 @@ export const updatePesertaMagang = async (req: Request, res: Response) => {
       nama,
       username,
       divisi,
-      universitas,
+      instansi,
       nomorHp,
       tanggalMulai,
       tanggalSelesai,
@@ -133,7 +137,7 @@ export const updatePesertaMagang = async (req: Request, res: Response) => {
     });
 
     if (!existingPeserta) {
-      return sendError(res, 'Peserta magang not found', 404);
+      return sendError(res, "Peserta magang not found", 404);
     }
 
     // Check if username already exists (excluding current peserta)
@@ -143,7 +147,7 @@ export const updatePesertaMagang = async (req: Request, res: Response) => {
       });
 
       if (duplicatePeserta) {
-        return sendError(res, 'Username already exists', 400);
+        return sendError(res, "Username already exists", 400);
       }
     }
 
@@ -151,7 +155,7 @@ export const updatePesertaMagang = async (req: Request, res: Response) => {
     if (nama) updateData.nama = nama;
     if (username) updateData.username = username;
     if (divisi) updateData.divisi = divisi;
-    if (universitas) updateData.universitas = universitas;
+    if (instansi) updateData.instansi = instansi;
     if (nomorHp) updateData.nomorHp = nomorHp;
     if (tanggalMulai) updateData.tanggalMulai = tanggalMulai;
     if (tanggalSelesai) updateData.tanggalSelesai = tanggalSelesai;
@@ -163,10 +167,14 @@ export const updatePesertaMagang = async (req: Request, res: Response) => {
       data: updateData,
     });
 
-    sendSuccess(res, 'Peserta magang updated successfully', updatedPesertaMagang);
+    sendSuccess(
+      res,
+      "Peserta magang updated successfully",
+      updatedPesertaMagang
+    );
   } catch (error) {
-    console.error('Update peserta magang error:', error);
-    sendError(res, 'Failed to update peserta magang', 400);
+    console.error("Update peserta magang error:", error);
+    sendError(res, "Failed to update peserta magang", 400);
   }
 };
 
@@ -184,7 +192,7 @@ export const deletePesertaMagang = async (req: Request, res: Response) => {
     });
 
     if (!pesertaMagang) {
-      return sendError(res, 'Peserta magang not found', 404);
+      return sendError(res, "Peserta magang not found", 404);
     }
 
     // Delete avatar file if exists
@@ -193,7 +201,7 @@ export const deletePesertaMagang = async (req: Request, res: Response) => {
         // Extract filename from avatar URL
         const avatarUrl = pesertaMagang.avatar;
         const filename = path.basename(avatarUrl);
-        const filePath = path.join(__dirname, '..', 'uploads', filename);
+        const filePath = path.join(__dirname, "..", "uploads", filename);
 
         // Check if file exists and delete it
         if (fs.existsSync(filePath)) {
@@ -201,7 +209,7 @@ export const deletePesertaMagang = async (req: Request, res: Response) => {
           console.log(`Avatar file deleted: ${filename}`);
         }
       } catch (fileError) {
-        console.error('Error deleting avatar file:', fileError);
+        console.error("Error deleting avatar file:", fileError);
         // Continue with deletion even if file deletion fails
       }
     }
@@ -211,25 +219,25 @@ export const deletePesertaMagang = async (req: Request, res: Response) => {
       where: { id },
     });
 
-    sendSuccess(res, 'Peserta magang deleted successfully');
+    sendSuccess(res, "Peserta magang deleted successfully");
   } catch (error) {
-    console.error('Delete peserta magang error:', error);
-    sendError(res, 'Failed to delete peserta magang');
+    console.error("Delete peserta magang error:", error);
+    sendError(res, "Failed to delete peserta magang");
   }
 };
 
 export const uploadAvatar = async (req: Request, res: Response) => {
   try {
-    console.log('Upload avatar request received');
+    console.log("Upload avatar request received");
     const { id } = req.params;
     const file = req.file;
 
-    console.log('File received:', file);
-    console.log('Peserta ID:', id);
+    console.log("File received:", file);
+    console.log("Peserta ID:", id);
 
     if (!file) {
-      console.log('No file uploaded');
-      return sendError(res, 'No file uploaded', 400);
+      console.log("No file uploaded");
+      return sendError(res, "No file uploaded", 400);
     }
 
     // Check if peserta magang exists and get current avatar
@@ -242,8 +250,8 @@ export const uploadAvatar = async (req: Request, res: Response) => {
     });
 
     if (!existingPeserta) {
-      console.log('Peserta magang not found:', id);
-      return sendError(res, 'Peserta magang not found', 404);
+      console.log("Peserta magang not found:", id);
+      return sendError(res, "Peserta magang not found", 404);
     }
 
     // Delete old avatar file if exists
@@ -252,7 +260,7 @@ export const uploadAvatar = async (req: Request, res: Response) => {
         // Extract filename from old avatar URL
         const oldAvatarUrl = existingPeserta.avatar;
         const oldFilename = path.basename(oldAvatarUrl);
-        const oldFilePath = path.join(__dirname, '..', 'uploads', oldFilename);
+        const oldFilePath = path.join(__dirname, "..", "uploads", oldFilename);
 
         // Check if old file exists and delete it
         if (fs.existsSync(oldFilePath)) {
@@ -260,14 +268,14 @@ export const uploadAvatar = async (req: Request, res: Response) => {
           console.log(`Old avatar file deleted: ${oldFilename}`);
         }
       } catch (fileError) {
-        console.error('Error deleting old avatar file:', fileError);
+        console.error("Error deleting old avatar file:", fileError);
         // Continue with upload even if old file deletion fails
       }
     }
 
     // Create avatar URL
     const avatarUrl = `http://localhost:3000/uploads/${file.filename}`;
-    console.log('Avatar URL:', avatarUrl);
+    console.log("Avatar URL:", avatarUrl);
 
     // Update peserta magang with new avatar
     const updatedPesertaMagang = await prisma.pesertaMagang.update({
@@ -275,14 +283,14 @@ export const uploadAvatar = async (req: Request, res: Response) => {
       data: { avatar: avatarUrl },
     });
 
-    console.log('Avatar updated successfully');
-    sendSuccess(res, 'Avatar uploaded successfully', {
+    console.log("Avatar updated successfully");
+    sendSuccess(res, "Avatar uploaded successfully", {
       pesertaMagang: updatedPesertaMagang,
       avatarUrl,
     });
   } catch (error) {
-    console.error('Upload avatar error:', error);
-    sendError(res, 'Failed to upload avatar', 400);
+    console.error("Upload avatar error:", error);
+    sendError(res, "Failed to upload avatar", 400);
   }
 };
 
@@ -300,7 +308,7 @@ export const removeAvatar = async (req: Request, res: Response) => {
     });
 
     if (!pesertaMagang) {
-      return sendError(res, 'Peserta magang not found', 404);
+      return sendError(res, "Peserta magang not found", 404);
     }
 
     // Delete physical file if avatar exists
@@ -309,7 +317,7 @@ export const removeAvatar = async (req: Request, res: Response) => {
         // Extract filename from avatar URL
         const avatarUrl = pesertaMagang.avatar;
         const filename = path.basename(avatarUrl);
-        const filePath = path.join(__dirname, '..', 'uploads', filename);
+        const filePath = path.join(__dirname, "..", "uploads", filename);
 
         // Check if file exists and delete it
         if (fs.existsSync(filePath)) {
@@ -317,7 +325,7 @@ export const removeAvatar = async (req: Request, res: Response) => {
           console.log(`Avatar file deleted: ${filename}`);
         }
       } catch (fileError) {
-        console.error('Error deleting avatar file:', fileError);
+        console.error("Error deleting avatar file:", fileError);
         // Continue with database update even if file deletion fails
       }
     }
@@ -328,9 +336,9 @@ export const removeAvatar = async (req: Request, res: Response) => {
       data: { avatar: null },
     });
 
-    sendSuccess(res, 'Avatar removed successfully', updatedPesertaMagang);
+    sendSuccess(res, "Avatar removed successfully", updatedPesertaMagang);
   } catch (error) {
-    console.error('Remove avatar error:', error);
-    sendError(res, 'Failed to remove avatar', 500);
+    console.error("Remove avatar error:", error);
+    sendError(res, "Failed to remove avatar", 500);
   }
 };
