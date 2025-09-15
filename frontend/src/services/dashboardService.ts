@@ -14,6 +14,13 @@ class DashboardService {
     return response.data;
   }
 
+  async getDailyStats(date: string): Promise<ApiResponse<DashboardStats>> {
+    const response = await api.get<ApiResponse<DashboardStats>>('/dashboard/daily-stats', {
+      params: { date }
+    });
+    return response.data;
+  }
+
   async getAttendanceReport(params?: {
     startDate?: string;
     endDate?: string;

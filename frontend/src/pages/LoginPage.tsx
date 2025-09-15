@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-import IconnetLogo from "../assets/iconnet-large.png";
+import Logo from "../assets/64eb562e223ee070362018.png";
 import authService from "../services/authService";
 
 export default function Login() {
@@ -53,7 +53,7 @@ export default function Login() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="text-center">
           <div className="flex items-center justify-center h-16 bg-primary-200">
-            <img src={IconnetLogo} alt="Iconnet Logo" className="h-16" />
+            <img src={Logo} alt="Iconnet Logo" className="h-16" />
           </div>
         </div>
       </div>
