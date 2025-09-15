@@ -15,6 +15,7 @@ import {
 } from "@radix-ui/themes";
 import {
   CalendarIcon,
+  ClockIcon,
   MixerHorizontalIcon,
 } from "@radix-ui/react-icons";
 
@@ -46,8 +47,12 @@ const getAttendanceRateBadge = (rate: number) => {
 };
 
 export default function LaporanPage() {
-  const [attendanceReports, setAttendanceReports] = useState<LaporanAbsensi[]>([]);
-  const [pesertaMagangData, setPesertaMagangData] = useState<PesertaMagang[]>([]);
+  const [attendanceReports, setAttendanceReports] = useState<LaporanAbsensi[]>(
+    []
+  );
+  const [pesertaMagangData, setPesertaMagangData] = useState<PesertaMagang[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -66,14 +71,14 @@ export default function LaporanPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Fetch attendance report and peserta magang data in parallel
       const [attendanceResponse, pesertaResponse] = await Promise.all([
         dashboardService.getAttendanceReport({
           startDate: dateRange.startDate || undefined,
           endDate: dateRange.endDate || undefined,
         }),
-        pesertaMagangService.getPesertaMagang()
+        pesertaMagangService.getPesertaMagang(),
       ]);
 
       if (attendanceResponse.success && attendanceResponse.data) {
@@ -84,8 +89,8 @@ export default function LaporanPage() {
         setPesertaMagangData(pesertaResponse.data);
       }
     } catch (error: unknown) {
-      console.error('Fetch laporan data error:', error);
-      setError('Failed to fetch laporan data');
+      console.error("Fetch laporan data error:", error);
+      setError("Failed to fetch laporan data");
     } finally {
       setLoading(false);
     }
@@ -96,8 +101,10 @@ export default function LaporanPage() {
   };
 
   // Combine attendance reports with peserta magang data for filtering
-  const combinedData = attendanceReports.map(report => {
-    const peserta = pesertaMagangData.find(p => p.id === report.pesertaMagangId);
+  const combinedData = attendanceReports.map((report) => {
+    const peserta = pesertaMagangData.find(
+      (p) => p.id === report.pesertaMagangId
+    );
     return {
       ...report,
       pesertaMagang: peserta,
@@ -106,8 +113,12 @@ export default function LaporanPage() {
 
   const filteredData = combinedData.filter((report) => {
     const matchesSearch =
-      report.pesertaMagangName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (report.pesertaMagang?.divisi.toLowerCase().includes(searchTerm.toLowerCase()));
+      report.pesertaMagangName
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      report.pesertaMagang?.divisi
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
 
     const matchesStatus =
       statusFilter === "Semua" || report.pesertaMagang?.status === statusFilter;
@@ -118,22 +129,30 @@ export default function LaporanPage() {
   // Statistics for reports
   const stats = {
     total: attendanceReports.length,
-    sangatBaik: attendanceReports.filter(r => r.tingkatKehadiran >= 95).length,
-    baik: attendanceReports.filter(r => r.tingkatKehadiran >= 85 && r.tingkatKehadiran < 95).length,
-    perluDiperhatikan: attendanceReports.filter(r => r.tingkatKehadiran < 85).length,
+    sangatBaik: attendanceReports.filter((r) => r.tingkatKehadiran >= 95)
+      .length,
+    baik: attendanceReports.filter(
+      (r) => r.tingkatKehadiran >= 85 && r.tingkatKehadiran < 95
+    ).length,
+    perluDiperhatikan: attendanceReports.filter((r) => r.tingkatKehadiran < 85)
+      .length,
   };
 
-  const startDate = dateRange.startDate ? new Date(dateRange.startDate).toLocaleDateString("id-ID", { 
-    day: "numeric", 
-    month: "long", 
-    year: "numeric" 
-  }) : "1 Januari 2024";
-  
-  const endDate = dateRange.endDate ? new Date(dateRange.endDate).toLocaleDateString("id-ID", { 
-    day: "numeric", 
-    month: "long", 
-    year: "numeric" 
-  }) : "31 Januari 2024";
+  const startDate = dateRange.startDate
+    ? new Date(dateRange.startDate).toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : "";
+
+  const endDate = dateRange.endDate
+    ? new Date(dateRange.endDate).toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : "";
 
   const handleExport = (format: "excel" | "pdf" | "csv") => {
     // TODO: Implement export functionality
@@ -156,7 +175,7 @@ export default function LaporanPage() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <p className="text-red-600 mb-2">Error: {error}</p>
-          <button 
+          <button
             onClick={fetchData}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
@@ -299,20 +318,27 @@ export default function LaporanPage() {
                 type="date"
                 placeholder="Tanggal Mulai"
                 value={dateRange.startDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                onChange={(e) =>
+                  setDateRange((prev) => ({
+                    ...prev,
+                    startDate: e.target.value,
+                  }))
+                }
                 size="2"
               />
               <TextField.Root
                 type="date"
                 placeholder="Tanggal Selesai"
                 value={dateRange.endDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                onChange={(e) =>
+                  setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+                }
                 size="2"
               />
-                <Button onClick={handleDateRangeChange} size="2">
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  Terapkan
-                </Button>
+              <Button onClick={handleDateRangeChange} size="2">
+                <CalendarIcon className="h-4 w-4 mr-2" />
+                Terapkan
+              </Button>
             </div>
           </Flex>
         </Flex>
@@ -421,6 +447,21 @@ export default function LaporanPage() {
               ))}
             </Table.Body>
           </Table.Root>
+          {filteredData.length === 0 && (
+            <Box className="text-center py-12">
+              <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <Flex direction="column" justify="center">
+                <Text size="3" color="gray" weight="medium">
+                  Tidak ada data Peserta yang ditemukan
+                </Text>
+                <Text size="2" color="gray" className="mt-2">
+                  {searchTerm
+                    ? "Coba ubah kata kunci pencarian"
+                    : "Belum ada riwayat Laporan"}
+                </Text>
+              </Flex>
+            </Box>
+          )}
         </Card>
       </Box>
     </div>

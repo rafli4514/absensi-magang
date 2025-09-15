@@ -19,6 +19,7 @@ import {
   FileTextIcon,
   CalendarIcon,
   MixerHorizontalIcon,
+  ClockIcon,
 } from "@radix-ui/react-icons";
 import Avatar from "../components/Avatar";
 
@@ -282,7 +283,11 @@ export default function PengajuanIzinPage() {
                         className="border-gray-200"
                       />
                       <div>
-                        <Text size="2" weight="medium" className="text-gray-900">
+                        <Text
+                          size="2"
+                          weight="medium"
+                          className="text-gray-900"
+                        >
                           {item.pesertaMagang?.nama}
                         </Text>
                         <Text size="1" color="gray">
@@ -564,6 +569,23 @@ export default function PengajuanIzinPage() {
               ))}
             </Table.Body>
           </Table.Root>
+
+          {filteredPengajuanIzin.length == 0 && (
+            <Box className="text-center py-12">
+              <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <Flex direction="column" justify="center">
+                <Text size="3" color="gray" weight="medium">
+                  Tidak ada data pengajuan izin ditemukan
+                </Text>
+                <Text size="2" color="gray" className="mt-2">
+                  {searchTerm
+                  ? "Coba ubah kata kunci pencarian"
+                  : "Belum ada pengajuan izin"  
+                  }
+                </Text>
+              </Flex>
+            </Box>
+          )}
         </Card>
       </Box>
     </div>

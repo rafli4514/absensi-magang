@@ -12,16 +12,8 @@ import {
   Badge,
   Separator,
 } from "@radix-ui/themes";
-import {
-  MagnifyingGlassIcon,
-} from "@radix-ui/react-icons";
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  Phone,
-  GraduationCap,
-} from "lucide-react";
+import { ClockIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { Calendar, Clock, MapPin, Phone, GraduationCap } from "lucide-react";
 
 // Import services
 import pesertaMagangService from "../services/pesertaMagangService";
@@ -46,15 +38,15 @@ export default function ProfilPesertaMagangPage() {
 
   const fetchData = async () => {
     if (!id) return;
-    
+
     try {
       setLoading(true);
       setError(null);
-      
+
       // Fetch peserta and absensi data in parallel
       const [pesertaResponse, absensiResponse] = await Promise.all([
         pesertaMagangService.getPesertaMagangById(id),
-        absensiService.getAbsensi({ pesertaMagangId: id })
+        absensiService.getAbsensi({ pesertaMagangId: id }),
       ]);
 
       if (pesertaResponse.success && pesertaResponse.data) {
@@ -65,8 +57,8 @@ export default function ProfilPesertaMagangPage() {
         setAbsensi(absensiResponse.data);
       }
     } catch (error: unknown) {
-      console.error('Fetch profil data error:', error);
-      setError('Failed to fetch profil data');
+      console.error("Fetch profil data error:", error);
+      setError("Failed to fetch profil data");
     } finally {
       setLoading(false);
     }
@@ -77,13 +69,14 @@ export default function ProfilPesertaMagangPage() {
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
 
-    const matchesStatus = statusFilter === "Semua" || item.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "Semua" || item.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
 
   if (loading) {
-  return (
+    return (
       <div className="flex items-center justify-center min-h-96">
         <Card className="p-8">
           <Flex direction="column" align="center" gap="4">
@@ -98,17 +91,19 @@ export default function ProfilPesertaMagangPage() {
   }
 
   if (error) {
-  return (
+    return (
       <div className="flex items-center justify-center min-h-96">
         <Card className="p-8">
           <Flex direction="column" align="center" gap="4">
             <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
-              <Text size="4" color="red">!</Text>
+              <Text size="4" color="red">
+                !
+              </Text>
             </div>
             <Text size="3" weight="medium" color="red">
               Error: {error}
             </Text>
-            <button 
+            <button
               onClick={fetchData}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
@@ -314,7 +309,7 @@ export default function ProfilPesertaMagangPage() {
 
             {/* Attendance Table */}
             <Box className="overflow-x-auto">
-              <Table.Root variant="surface">
+              <Table.Root variant="ghost">
                 <Table.Header>
                   <Table.Row>
                     <Table.ColumnHeaderCell className="font-semibold">
@@ -396,15 +391,17 @@ export default function ProfilPesertaMagangPage() {
 
             {filteredAbsensi.length === 0 && (
               <Box className="text-center py-12">
-                <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <Text size="3" color="gray" weight="medium">
-                  Tidak ada data absensi yang ditemukan
-                </Text>
-                <Text size="2" color="gray" className="mt-2">
-                  {searchTerm
-                    ? "Coba ubah kata kunci pencarian"
-                    : "Belum ada riwayat absensi untuk peserta ini"}
-                </Text>
+                <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <Flex direction="column" justify="center">
+                  <Text size="3" color="gray" weight="medium">
+                    Tidak ada data absensi yang ditemukan
+                  </Text>
+                  <Text size="2" color="gray" className="mt-2">
+                    {searchTerm
+                      ? "Coba ubah kata kunci pencarian"
+                      : "Belum ada riwayat absensi untuk peserta ini"}
+                  </Text>
+                </Flex>
               </Box>
             )}
           </Flex>

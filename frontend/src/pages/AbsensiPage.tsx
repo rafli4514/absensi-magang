@@ -19,6 +19,7 @@ import {
   CameraIcon,
   CheckCircledIcon,
   CircleBackslashIcon,
+  ClockIcon,
   CrossCircledIcon,
   DownloadIcon,
   EyeOpenIcon,
@@ -50,7 +51,10 @@ const StatusBadge = ({ status }: { status: Absensi["status"] }) => {
     INVALID: { color: "bg-red-100 text-red-800", label: "Tidak Valid" },
   };
 
-  const config = statusConfig[status] || { color: "bg-gray-100 text-gray-800", label: status };
+  const config = statusConfig[status] || {
+    color: "bg-gray-100 text-gray-800",
+    label: status,
+  };
 
   return (
     <span
@@ -70,7 +74,10 @@ const TypeBadge = ({ tipe }: { tipe: Absensi["tipe"] }) => {
     CUTI: { color: "bg-green-100 text-green-800", label: "Cuti" },
   };
 
-  const config = typeConfig[tipe] || { color: "bg-gray-100 text-gray-800", label: tipe };
+  const config = typeConfig[tipe] || {
+    color: "bg-gray-100 text-gray-800",
+    label: tipe,
+  };
 
   return (
     <span
@@ -102,29 +109,34 @@ export default function AbsensiPage() {
       if (response.success && response.data) {
         setAbsensi(response.data);
       } else {
-        setError(response.message || 'Failed to fetch absensi');
+        setError(response.message || "Failed to fetch absensi");
         setAbsensi([]); // Fallback to empty data
       }
     } catch (error: unknown) {
-      console.error('Fetch absensi error:', error);
-      setError('Failed to fetch absensi');
+      console.error("Fetch absensi error:", error);
+      setError("Failed to fetch absensi");
       setAbsensi([]); // Fallback to empty data
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateStatus = async (id: string, newStatus: Absensi["status"]) => {
+  const handleUpdateStatus = async (
+    id: string,
+    newStatus: Absensi["status"]
+  ) => {
     try {
-      const response = await absensiService.updateAbsensi(id, { status: newStatus });
+      const response = await absensiService.updateAbsensi(id, {
+        status: newStatus,
+      });
       if (response.success) {
         await fetchAbsensi();
       } else {
-        setError(response.message || 'Failed to update absensi status');
+        setError(response.message || "Failed to update absensi status");
       }
     } catch (error: unknown) {
-      console.error('Update absensi status error:', error);
-      setError('Failed to update absensi status');
+      console.error("Update absensi status error:", error);
+      setError("Failed to update absensi status");
     }
   };
 
@@ -199,7 +211,9 @@ export default function AbsensiPage() {
         <Flex direction="column" gap="4">
           <Flex align="center" gap="2">
             <MixerHorizontalIcon width="18" height="18" />
-            <h3 className="text-lg font-semibold text-gray-900">Filter Absensi</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Filter Absensi
+            </h3>
           </Flex>
           <Flex gap="4" wrap="wrap">
             <Flex className="flex items-center w-full relative">
@@ -338,9 +352,7 @@ export default function AbsensiPage() {
                         </Dialog.Trigger>
 
                         <Dialog.Content className="p-8 max-w-2xl mx-auto bg-white rounded-xl shadow-lg">
-                          <Dialog.Title>
-                            Detail Absensi
-                          </Dialog.Title>
+                          <Dialog.Title>Detail Absensi</Dialog.Title>
 
                           <Flex direction="column" gap="6" className="mt-6">
                             {/* Profile Header */}
@@ -501,50 +513,61 @@ export default function AbsensiPage() {
                         <Dialog.Content className="max-w-2xl">
                           <Dialog.Title>Validasi Foto Selfie</Dialog.Title>
                           <Dialog.Description>
-                            Periksa foto selfie untuk memvalidasi kehadiran peserta magang
+                            Periksa foto selfie untuk memvalidasi kehadiran
+                            peserta magang
                           </Dialog.Description>
-                          
+
                           <div className="mt-6">
                             <AspectRatio ratio={1}>
-                              <img 
-                                src={item.selfieUrl || "../assets/papa.jpg"} 
-                                alt="Foto Selfie" 
+                              <img
+                                src={item.selfieUrl || "../assets/papa.jpg"}
+                                alt="Foto Selfie"
                                 className="w-full h-full object-cover rounded-lg"
                               />
                             </AspectRatio>
-                            
+
                             {/* Status Info */}
                             <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <p className="text-sm font-medium text-gray-700">Status Saat Ini:</p>
+                                  <p className="text-sm font-medium text-gray-700">
+                                    Status Saat Ini:
+                                  </p>
                                   <div className="flex items-center gap-2 mt-1">
                                     <StatusIcon status={item.status} />
                                     <StatusBadge status={item.status} />
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-sm text-gray-500">Waktu Absensi:</p>
-                                  <p className="text-sm font-medium">{new Date(item.timestamp).toLocaleString()}</p>
+                                  <p className="text-sm text-gray-500">
+                                    Waktu Absensi:
+                                  </p>
+                                  <p className="text-sm font-medium">
+                                    {new Date(item.timestamp).toLocaleString()}
+                                  </p>
                                 </div>
                               </div>
                             </div>
-                            
+
                             {/* Action Buttons */}
                             <div className="mt-6 flex gap-3 justify-end">
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 color="red"
-                                onClick={() => handleUpdateStatus(item.id, 'INVALID')}
-                                disabled={item.status === 'INVALID'}
+                                onClick={() =>
+                                  handleUpdateStatus(item.id, "INVALID")
+                                }
+                                disabled={item.status === "INVALID"}
                               >
                                 <CrossCircledIcon className="w-4 h-4 mr-2" />
                                 Tandai Tidak Valid
                               </Button>
-                              <Button 
+                              <Button
                                 color="green"
-                                onClick={() => handleUpdateStatus(item.id, 'VALID')}
-                                disabled={item.status === 'VALID'}
+                                onClick={() =>
+                                  handleUpdateStatus(item.id, "VALID")
+                                }
+                                disabled={item.status === "VALID"}
                               >
                                 <CheckCircledIcon className="w-4 h-4 mr-2" />
                                 Tandai Valid
@@ -559,14 +582,23 @@ export default function AbsensiPage() {
               ))}
             </Table.Body>
           </Table.Root>
+          {filteredAbsensi.length === 0 && (
+            <Box className="text-center py-12">
+              <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <Flex direction="column" justify="center">
+                <Text size="3" color="gray" weight="medium">
+                  Tidak ada adata absensi yang ditemukan
+                </Text>
+                <Text size="2" color="gray" className="mt-2">
+                  {searchTerm
+                    ? "Coba ubah kata kunci pencarian"
+                    : "Belum ada riwayat absensi"}
+                </Text>
+              </Flex>
+            </Box>
+          )}
         </Card>
       </Box>
-
-      {filteredAbsensi.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-gray-500">Tidak ada data absensi yang ditemukan</p>
-        </div>
-      )}
     </div>
   );
 }

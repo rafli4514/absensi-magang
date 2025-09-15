@@ -557,7 +557,7 @@ export default function DashboardPage() {
                 <div className="p-3 bg-blue-100 rounded-lg">
                   <Clock className="h-6 w-6 text-blue-600" />
                 </div>
-                <div>
+                <Flex gap="4" align="center">
                   <Text size="4" weight="bold">
                     Aktivitas
                   </Text>
@@ -568,7 +568,7 @@ export default function DashboardPage() {
                         : new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
                     }
                   </Text>
-                </div>
+                </Flex>
               </Flex>
               {refreshing && <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>}
             </Flex>
@@ -630,7 +630,7 @@ export default function DashboardPage() {
                   ))}
                 </Flex>
               ) : (
-                <div className="text-center py-8">
+                <Flex direction="column" justify="center" className="text-center py-8">
                   <Clock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                   <Text size="3" color="gray" weight="medium">
                     {selectedDate === new Date().toISOString().split('T')[0] 
@@ -648,7 +648,7 @@ export default function DashboardPage() {
                       : 'Pilih tanggal lain untuk melihat aktivitas'
                     }
                   </Text>
-                </div>
+                </Flex>
               )}
             </div>
           </Flex>

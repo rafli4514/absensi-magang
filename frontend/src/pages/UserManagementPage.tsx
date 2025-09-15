@@ -11,6 +11,7 @@ import {
   IconButton,
   Select,
   Table,
+  Text,
   TextField,
 } from "@radix-ui/themes/components/index";
 import {
@@ -18,6 +19,7 @@ import {
   Pencil2Icon,
   TrashIcon,
   MixerHorizontalIcon,
+  ClockIcon,
 } from "@radix-ui/react-icons";
 import pesertaMagangService from "../services/pesertaMagangService";
 import Avatar from "../components/Avatar";
@@ -255,7 +257,9 @@ export default function PesertaMagang() {
                 <TextField.Root
                   placeholder="Masukkan nama lengkap"
                   value={formData.nama}
-                  onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nama: e.target.value })
+                  }
                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
@@ -266,12 +270,12 @@ export default function PesertaMagang() {
                 <TextField.Root
                   placeholder="Masukkan Username"
                   value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, username: e.target.value })
+                  }
                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-
-              
 
               {/* Third Row: Nomor HP and Status */}
               <div className="flex flex-col sm:flex-row gap-4">
@@ -282,7 +286,9 @@ export default function PesertaMagang() {
                   <TextField.Root
                     placeholder="Masukkan Nomor HP"
                     value={formData.nomorHp}
-                    onChange={(e) => setFormData({ ...formData, nomorHp: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, nomorHp: e.target.value })
+                    }
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -290,10 +296,15 @@ export default function PesertaMagang() {
                   <label className="block mb-2 font-semibold text-gray-700">
                     Status
                   </label>
-                  <Select.Root 
-                    size="2" 
+                  <Select.Root
+                    size="2"
                     value={formData.status}
-                    onValueChange={(value) => setFormData({ ...formData, status: value as PesertaMagang["status"] })}
+                    onValueChange={(value) =>
+                      setFormData({
+                        ...formData,
+                        status: value as PesertaMagang["status"],
+                      })
+                    }
                   >
                     <Select.Trigger
                       className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -318,7 +329,9 @@ export default function PesertaMagang() {
                   <TextField.Root
                     placeholder="Masukkan Divisi"
                     value={formData.divisi}
-                    onChange={(e) => setFormData({ ...formData, divisi: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, divisi: e.target.value })
+                    }
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -329,7 +342,9 @@ export default function PesertaMagang() {
                   <TextField.Root
                     placeholder="Masukkan Universitas"
                     value={formData.universitas}
-                    onChange={(e) => setFormData({ ...formData, universitas: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, universitas: e.target.value })
+                    }
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -344,7 +359,9 @@ export default function PesertaMagang() {
                   <TextField.Root
                     type="date"
                     value={formData.tanggalMulai}
-                    onChange={(e) => setFormData({ ...formData, tanggalMulai: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, tanggalMulai: e.target.value })
+                    }
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -355,7 +372,12 @@ export default function PesertaMagang() {
                   <TextField.Root
                     type="date"
                     value={formData.tanggalSelesai}
-                    onChange={(e) => setFormData({ ...formData, tanggalSelesai: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        tanggalSelesai: e.target.value,
+                      })
+                    }
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -373,7 +395,9 @@ export default function PesertaMagang() {
                   accept="image/*"
                   className="block w-full text-base file:mr-4 file:py-3 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                 />
-                <p className="mt-2 text-xs text-gray-500">PNG, JPG, atau JPEG.</p>
+                <p className="mt-2 text-xs text-gray-500">
+                  PNG, JPG, atau JPEG.
+                </p>
               </div>
             </div>
 
@@ -389,7 +413,7 @@ export default function PesertaMagang() {
                 </Button>
               </Dialog.Close>
               <Dialog.Close>
-                <Button 
+                <Button
                   className="px-6 py-2 bg-indigo-600 text-white rounded-lg"
                   onClick={handleCreate}
                   disabled={isCreating}
@@ -414,7 +438,9 @@ export default function PesertaMagang() {
         <Flex direction="column" gap="4">
           <Flex align="center" gap="2">
             <MixerHorizontalIcon width="18" height="18" />
-            <h3 className="text-lg font-semibold text-gray-900">Filter Peserta Magang</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Filter Peserta Magang
+            </h3>
           </Flex>
           <Flex gap="4" wrap="wrap">
             <Flex className="flex items-center w-full relative">
@@ -546,8 +572,13 @@ export default function PesertaMagang() {
                               </label>
                               <TextField.Root
                                 placeholder="Masukkan nama lengkap"
-                                value={updateFormData.nama || ''}
-                                onChange={(e) => setUpdateFormData({ ...updateFormData, nama: e.target.value })}
+                                value={updateFormData.nama || ""}
+                                onChange={(e) =>
+                                  setUpdateFormData({
+                                    ...updateFormData,
+                                    nama: e.target.value,
+                                  })
+                                }
                                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                               />
                             </div>
@@ -558,13 +589,16 @@ export default function PesertaMagang() {
                               </label>
                               <TextField.Root
                                 placeholder="Masukkan Username"
-                                value={updateFormData.username || ''}
-                                onChange={(e) => setUpdateFormData({ ...updateFormData, username: e.target.value })}
+                                value={updateFormData.username || ""}
+                                onChange={(e) =>
+                                  setUpdateFormData({
+                                    ...updateFormData,
+                                    username: e.target.value,
+                                  })
+                                }
                                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                               />
                             </div>
-
-                            
 
                             {/* row 3: Nomor HP and Status */}
                             <div className="flex flex-col sm:flex-row gap-4">
@@ -574,8 +608,13 @@ export default function PesertaMagang() {
                                 </label>
                                 <TextField.Root
                                   placeholder="Masukkan Nomor HP"
-                                  value={updateFormData.nomorHp || ''}
-                                  onChange={(e) => setUpdateFormData({ ...updateFormData, nomorHp: e.target.value })}
+                                  value={updateFormData.nomorHp || ""}
+                                  onChange={(e) =>
+                                    setUpdateFormData({
+                                      ...updateFormData,
+                                      nomorHp: e.target.value,
+                                    })
+                                  }
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                               </div>
@@ -585,8 +624,13 @@ export default function PesertaMagang() {
                                 </label>
                                 <Select.Root
                                   size="2"
-                                  value={updateFormData.status || 'AKTIF'}
-                                  onValueChange={(value) => setUpdateFormData({ ...updateFormData, status: value as PesertaMagang['status'] })}
+                                  value={updateFormData.status || "AKTIF"}
+                                  onValueChange={(value) =>
+                                    setUpdateFormData({
+                                      ...updateFormData,
+                                      status: value as PesertaMagang["status"],
+                                    })
+                                  }
                                 >
                                   <Select.Trigger
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -605,7 +649,7 @@ export default function PesertaMagang() {
                                       Selesai
                                     </Select.Item>
                                   </Select.Content>
-                                </Select.Root>  
+                                </Select.Root>
                               </div>
                             </div>
 
@@ -617,8 +661,13 @@ export default function PesertaMagang() {
                                 </label>
                                 <TextField.Root
                                   placeholder="Masukkan Divisi"
-                                  value={updateFormData.divisi || ''}
-                                  onChange={(e) => setUpdateFormData({ ...updateFormData, divisi: e.target.value })}
+                                  value={updateFormData.divisi || ""}
+                                  onChange={(e) =>
+                                    setUpdateFormData({
+                                      ...updateFormData,
+                                      divisi: e.target.value,
+                                    })
+                                  }
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                               </div>
@@ -628,8 +677,13 @@ export default function PesertaMagang() {
                                 </label>
                                 <TextField.Root
                                   placeholder="Masukkan Universitas"
-                                  value={updateFormData.universitas || ''}
-                                  onChange={(e) => setUpdateFormData({ ...updateFormData, universitas: e.target.value })}
+                                  value={updateFormData.universitas || ""}
+                                  onChange={(e) =>
+                                    setUpdateFormData({
+                                      ...updateFormData,
+                                      universitas: e.target.value,
+                                    })
+                                  }
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                               </div>
@@ -643,8 +697,13 @@ export default function PesertaMagang() {
                                 </label>
                                 <TextField.Root
                                   type="date"
-                                  value={updateFormData.tanggalMulai || ''}
-                                  onChange={(e) => setUpdateFormData({ ...updateFormData, tanggalMulai: e.target.value })}
+                                  value={updateFormData.tanggalMulai || ""}
+                                  onChange={(e) =>
+                                    setUpdateFormData({
+                                      ...updateFormData,
+                                      tanggalMulai: e.target.value,
+                                    })
+                                  }
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                               </div>
@@ -654,8 +713,13 @@ export default function PesertaMagang() {
                                 </label>
                                 <TextField.Root
                                   type="date"
-                                  value={updateFormData.tanggalSelesai || ''}
-                                  onChange={(e) => setUpdateFormData({ ...updateFormData, tanggalSelesai: e.target.value })}
+                                  value={updateFormData.tanggalSelesai || ""}
+                                  onChange={(e) =>
+                                    setUpdateFormData({
+                                      ...updateFormData,
+                                      tanggalSelesai: e.target.value,
+                                    })
+                                  }
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                               </div>
@@ -679,7 +743,9 @@ export default function PesertaMagang() {
                                 }}
                                 className="block w-full text-base file:mr-4 file:py-3 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                               />
-                              <p className="mt-2 text-xs text-gray-500">PNG, JPG, atau JPEG.</p>
+                              <p className="mt-2 text-xs text-gray-500">
+                                PNG, JPG, atau JPEG.
+                              </p>
                             </div>
                           </div>
 
@@ -697,7 +763,7 @@ export default function PesertaMagang() {
                             </Dialog.Close>
                             {/* Simpan */}
                             <Dialog.Close>
-                              <Button 
+                              <Button
                                 className="px-6 py-2 bg-indigo-600 text-white rounded-lg"
                                 onClick={() => handleUpdate(item.id)}
                                 disabled={isUpdating === item.id}
@@ -738,8 +804,8 @@ export default function PesertaMagang() {
                               </Button>
                             </AlertDialog.Cancel>
                             <AlertDialog.Action>
-                              <Button 
-                                variant="solid" 
+                              <Button
+                                variant="solid"
                                 color="red"
                                 onClick={() => handleDelete(item.id)}
                               >
@@ -755,6 +821,21 @@ export default function PesertaMagang() {
               ))}
             </Table.Body>
           </Table.Root>
+          {filteredPesertaMagang.length === 0 && (
+            <Box className="text-center py-12">
+              <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <Flex direction="column" justify="center">
+                <Text size="3" color="gray" weight="medium">
+                  Tidak ada data Peserta Magang yang ditemukan
+                </Text>
+                <Text size="3" color="gray" mt="2">
+                  {searchTerm
+                    ? "Coba ubah kata kunci pencarian"
+                    : "Belum ada riwayat Peserta Magang"}
+                </Text>
+              </Flex>
+            </Box>
+          )}
         </Card>
       </Box>
     </div>
