@@ -6,7 +6,7 @@ import {
 } from "@radix-ui/react-icons";
 
 import { LogOut, Users, CalendarDays, Clock, Settings } from "lucide-react";
-import IconnetLogo from "../assets/iconnet-large.png";
+import Logo from "../assets/64eb562e223ee070362018.png";
 import { cn } from "../lib/utils";
 
 const navigation = [
@@ -64,14 +64,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex flex-col h-full mt-2 overflow-hidden">
+        <div className="flex flex-col h-full mt-5 overflow-hidden">
           <div className="flex items-center justify-center h-16 bg-primary-200 space-x-5 flex-shrink-0">
-            <img src={IconnetLogo} alt="Iconnet Logo" className="h-10" />
+            <img src={Logo} alt="Iconnet Logo" className="h-15" />
           </div>
 
           {/* <div className="h-0.5 bg-black mx-6" /> */}
 
-          <nav className="flex-grow mt-2 px-4 overflow-hidden">
+          <nav className="flex-grow mt-5 px-4 overflow-hidden">
             <ul className="space-y-2 overflow-hidden">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href;
