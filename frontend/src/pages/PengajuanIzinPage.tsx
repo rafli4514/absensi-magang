@@ -6,7 +6,6 @@ import {
   Card,
   Dialog,
   Flex,
-  IconButton,
   Select,
   Table,
   TextField,
@@ -15,114 +14,24 @@ import {
 } from "@radix-ui/themes";
 import {
   EyeOpenIcon,
-  MagnifyingGlassIcon,
   CheckCircledIcon,
   CrossCircledIcon,
   FileTextIcon,
   CalendarIcon,
   MixerHorizontalIcon,
 } from "@radix-ui/react-icons";
+import Avatar from "../components/Avatar";
 
-// Mock data - replace with actual API calls
-const mockPengajuanIzin: PengajuanIzin[] = [
-  {
-    id: "1",
-    pesertaMagangId: "1",
-    pesertaMagang: {
-      id: "1",
-      nama: "Ahmad Rizki Pratama",
-      username: "ahmad",
-      divisi: "IT",
-      universitas: "Universitas Indonesia",
-      nomorHp: "08123456789",
-      tanggalMulai: "2025-01-01",
-      tanggalSelesai: "2025-06-30",
-      status: "Aktif",
-      avatar:
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face",
-      createdAt: "2025-01-01",
-      updatedAt: "2025-01-01",
-    },
-    tipe: "sakit",
-    tanggalMulai: "2025-01-15",
-    tanggalSelesai: "2025-01-16",
-    alasan: "Demam tinggi dan perlu istirahat",
-    status: "pending",
-    diajukanPada: "2025-01-14T08:30:00Z",
-    dokumenPendukung: "surat-dokter.pdf",
-    createdAt: "2025-01-14T08:30:00Z",
-  },
-  {
-    id: "2",
-    pesertaMagangId: "2",
-    pesertaMagang: {
-      id: "2",
-      nama: "Siti Nurhaliza",
-      username: "siti",
-      divisi: "Marketing",
-      universitas: "Universitas Gadjah Mada",
-      nomorHp: "08123456790",
-      tanggalMulai: "2025-01-01",
-      tanggalSelesai: "2025-06-30",
-      status: "Aktif",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=32&h=32&fit=crop&crop=face",
-      createdAt: "2025-01-01",
-      updatedAt: "2025-01-01",
-    },
-    tipe: "izin",
-    tanggalMulai: "2025-01-20",
-    tanggalSelesai: "2025-01-20",
-    alasan: "Menghadiri acara keluarga",
-    status: "disetujui",
-    diajukanPada: "2025-01-18T14:20:00Z",
-    disetujuiOleh: "Admin",
-    disetujuiPada: "2025-01-19T09:15:00Z",
-    catatan: "Izin disetujui. Pastikan untuk catch up pekerjaan.",
-    createdAt: "2025-01-18T14:20:00Z",
-    updatedAt: "2025-01-19T09:15:00Z",
-  },
-  {
-    id: "3",
-    pesertaMagangId: "3",
-    pesertaMagang: {
-      id: "3",
-      nama: "Budi Santoso",
-      username: "budi",
-      divisi: "Finance",
-      universitas: "Institut Teknologi Bandung",
-      nomorHp: "08123456791",
-      tanggalMulai: "2025-01-01",
-      tanggalSelesai: "2025-06-30",
-      status: "Aktif",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face",
-      createdAt: "2025-01-01",
-      updatedAt: "2025-01-01",
-    },
-    tipe: "cuti",
-    tanggalMulai: "2025-01-25",
-    tanggalSelesai: "2025-01-27",
-    alasan: "Liburan bersama keluarga",
-    status: "ditolak",
-    diajukanPada: "2025-01-22T16:45:00Z",
-    disetujuiOleh: "Admin",
-    disetujuiPada: "2025-01-23T10:30:00Z",
-    catatan:
-      "Ditolak karena periode sibuk proyek. Silakan ajukan di waktu lain.",
-    createdAt: "2025-01-22T16:45:00Z",
-    updatedAt: "2025-01-23T10:30:00Z",
-  },
-];
+// Data dummy sudah dihapus - menggunakan API real
 
 const StatusBadge = ({ status }: { status: PengajuanIzin["status"] }) => {
   const statusConfig = {
-    pending: { color: "bg-yellow-100 text-yellow-800", label: "Menunggu" },
-    disetujui: { color: "bg-green-100 text-green-800", label: "Disetujui" },
-    ditolak: { color: "bg-red-100 text-red-800", label: "Ditolak" },
+    PENDING: { color: "bg-yellow-100 text-yellow-800", label: "Menunggu" },
+    DISETUJUI: { color: "bg-green-100 text-green-800", label: "Disetujui" },
+    DITOLAK: { color: "bg-red-100 text-red-800", label: "Ditolak" },
   };
 
-  const config = statusConfig[status];
+  const config = statusConfig[status] || { color: "bg-gray-100 text-gray-800", label: status };
 
   return (
     <span
@@ -135,12 +44,12 @@ const StatusBadge = ({ status }: { status: PengajuanIzin["status"] }) => {
 
 const TypeBadge = ({ tipe }: { tipe: PengajuanIzin["tipe"] }) => {
   const typeConfig = {
-    sakit: { color: "bg-red-200 text-red-600", label: "Sakit" },
-    izin: { color: "text-blue-600 bg-blue-200", label: "Izin" },
-    cuti: { color: "text-purple-600 bg-purple-200", label: "Cuti" },
+    SAKIT: { color: "bg-red-200 text-red-600", label: "Sakit" },
+    IZIN: { color: "text-blue-600 bg-blue-200", label: "Izin" },
+    CUTI: { color: "text-purple-600 bg-purple-200", label: "Cuti" },
   };
 
-  const config = typeConfig[tipe];
+  const config = typeConfig[tipe] || { color: "bg-gray-200 text-gray-600", label: tipe };
 
   return (
     <span
@@ -152,8 +61,7 @@ const TypeBadge = ({ tipe }: { tipe: PengajuanIzin["tipe"] }) => {
 };
 
 export default function PengajuanIzinPage() {
-  const [pengajuanIzin, setPengajuanIzin] =
-    useState<PengajuanIzin[]>(mockPengajuanIzin);
+  const [pengajuanIzin, setPengajuanIzin] = useState<PengajuanIzin[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("Semua");
   const [typeFilter, setTypeFilter] = useState<string>("Semua");
@@ -182,7 +90,7 @@ export default function PengajuanIzinPage() {
         item.id === id
           ? {
               ...item,
-              status: "disetujui",
+              status: "DISETUJUI",
               disetujuiOleh: "Admin",
               disetujuiPada: new Date().toISOString(),
               catatan,
@@ -199,7 +107,7 @@ export default function PengajuanIzinPage() {
         item.id === id
           ? {
               ...item,
-              status: "ditolak",
+              status: "DITOLAK",
               disetujuiOleh: "Admin",
               disetujuiPada: new Date().toISOString(),
               catatan,
@@ -213,9 +121,9 @@ export default function PengajuanIzinPage() {
   // Statistics
   const stats = {
     total: pengajuanIzin.length,
-    pending: pengajuanIzin.filter((p) => p.status === "pending").length,
-    disetujui: pengajuanIzin.filter((p) => p.status === "disetujui").length,
-    ditolak: pengajuanIzin.filter((p) => p.status === "ditolak").length,
+    pending: pengajuanIzin.filter((p) => p.status === "PENDING").length,
+    disetujui: pengajuanIzin.filter((p) => p.status === "DISETUJUI").length,
+    ditolak: pengajuanIzin.filter((p) => p.status === "DITOLAK").length,
   };
 
   return (
@@ -302,9 +210,6 @@ export default function PengajuanIzinPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
               />
-              <IconButton variant="surface" color="gray" className="ml-2">
-                <MagnifyingGlassIcon width="18" height="18" />
-              </IconButton>
             </Flex>
             <Select.Root
               size="2"
@@ -315,9 +220,9 @@ export default function PengajuanIzinPage() {
               <Select.Trigger color="indigo" radius="large" />
               <Select.Content color="indigo">
                 <Select.Item value="Semua">Semua Status</Select.Item>
-                <Select.Item value="pending">Menunggu</Select.Item>
-                <Select.Item value="disetujui">Disetujui</Select.Item>
-                <Select.Item value="ditolak">Ditolak</Select.Item>
+                <Select.Item value="PENDING">Menunggu</Select.Item>
+                <Select.Item value="DISETUJUI">Disetujui</Select.Item>
+                <Select.Item value="DITOLAK">Ditolak</Select.Item>
               </Select.Content>
             </Select.Root>
             <Select.Root
@@ -329,9 +234,9 @@ export default function PengajuanIzinPage() {
               <Select.Trigger color="indigo" radius="large" />
               <Select.Content color="indigo">
                 <Select.Item value="Semua">Semua Jenis</Select.Item>
-                <Select.Item value="sakit">Sakit</Select.Item>
-                <Select.Item value="izin">Izin</Select.Item>
-                <Select.Item value="cuti">Cuti</Select.Item>
+                <Select.Item value="SAKIT">Sakit</Select.Item>
+                <Select.Item value="IZIN">Izin</Select.Item>
+                <Select.Item value="CUTI">Cuti</Select.Item>
               </Select.Content>
             </Select.Root>
           </Flex>
@@ -367,25 +272,23 @@ export default function PengajuanIzinPage() {
                 <Table.Row key={item.id} className="hover:bg-gray-50">
                   <Table.Cell>
                     <Flex align="center" gap="3">
-                      <div className="h-8 w-8 flex-shrink-0">
-                        {item.pesertaMagang?.avatar ? (
-                          <img
-                            src={item.pesertaMagang.avatar}
-                            alt={item.pesertaMagang.nama}
-                            className="h-8 w-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center">
-                            <span className="text-xs font-medium text-primary-600">
-                              {item.pesertaMagang?.nama
-                                .split(" ")
-                                .map((n: string) => n[0])
-                                .join("")}
-                            </span>
-                          </div>
-                        )}
+                      <Avatar
+                        src={item.pesertaMagang?.avatar}
+                        alt={item.pesertaMagang?.nama || "Unknown"}
+                        name={item.pesertaMagang?.nama || "Unknown"}
+                        size="md"
+                        showBorder={true}
+                        showHover={true}
+                        className="border-gray-200"
+                      />
+                      <div>
+                        <Text size="2" weight="medium" className="text-gray-900">
+                          {item.pesertaMagang?.nama}
+                        </Text>
+                        <Text size="1" color="gray">
+                          @{item.pesertaMagang?.username}
+                        </Text>
                       </div>
-                      <Text size="2">{item.pesertaMagang?.nama}</Text>
                     </Flex>
                   </Table.Cell>
                   <Table.Cell>
@@ -573,7 +476,7 @@ export default function PengajuanIzinPage() {
                             )}
 
                             {/* Action Section for Pending */}
-                            {item.status === "pending" && (
+                            {item.status === "PENDING" && (
                               <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
                                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                                   <CheckCircledIcon className="w-4 h-4 mr-2 text-yellow-600" />
@@ -625,7 +528,7 @@ export default function PengajuanIzinPage() {
                             )}
 
                             {/* Admin Notes for Processed */}
-                            {item.status !== "pending" && item.catatan && (
+                            {item.status !== "PENDING" && item.catatan && (
                               <div className="bg-white border border-gray-200 rounded-lg p-4">
                                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                                   Catatan Admin

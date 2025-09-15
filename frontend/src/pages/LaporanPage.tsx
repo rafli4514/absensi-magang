@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Download, ChevronDown } from "lucide-react";
 import type { LaporanAbsensi, PesertaMagang } from "../types";
 import {
@@ -8,7 +8,6 @@ import {
   DropdownMenu,
   Flex,
   Grid,
-  IconButton,
   Select,
   Table,
   Text,
@@ -16,142 +15,13 @@ import {
 } from "@radix-ui/themes";
 import {
   CalendarIcon,
-  MagnifyingGlassIcon,
   MixerHorizontalIcon,
 } from "@radix-ui/react-icons";
 
-// Mock data for attendance reports matching LaporanAbsensi interface
-const attendanceReports: LaporanAbsensi[] = [
-  {
-    pesertaMagangId: "1",
-    pesertaMagangName: "Ahmad Rizki Pratama",
-    totalHari: 22,
-    hadir: 20,
-    tidakHadir: 1,
-    terlambat: 1,
-    tingkatKehadiran: 95,
-    periode: {
-      mulai: "2024-01-01",
-    },
-  },
-  {
-    pesertaMagangId: "2",
-    pesertaMagangName: "Siti Nurhaliza",
-    totalHari: 22,
-    hadir: 19,
-    tidakHadir: 0,
-    terlambat: 2,
-    tingkatKehadiran: 100,
-    periode: {
-      mulai: "2024-01-01",
-    },
-  },
-  {
-    pesertaMagangId: "3",
-    pesertaMagangName: "Budi Santoso",
-    totalHari: 22,
-    hadir: 18,
-    tidakHadir: 2,
-    terlambat: 1,
-    tingkatKehadiran: 86,
-    periode: {
-      mulai: "2024-01-01",
-    },
-  },
-  {
-    pesertaMagangId: "4",
-    pesertaMagangName: "Dewi Sartika",
-    totalHari: 22,
-    hadir: 21,
-    tidakHadir: 0,
-    terlambat: 0,
-    tingkatKehadiran: 100,
-    periode: {
-      mulai: "2024-01-01",
-    },
-  },
-  {
-    pesertaMagangId: "5",
-    pesertaMagangName: "Eko Prasetyo",
-    totalHari: 22,
-    hadir: 17,
-    tidakHadir: 3,
-    terlambat: 1,
-    tingkatKehadiran: 82,
-    periode: {
-      mulai: "2024-01-01",
-    },
-  },
-];
-
-// Mock peserta magang data for status filtering
-const pesertaMagangData: PesertaMagang[] = [
-  {
-    id: "1",
-    nama: "Ahmad Rizki Pratama",
-    username: "ahmad",
-    divisi: "IT",
-    universitas: "Universitas Indonesia",
-    nomorHp: "08123456789",
-    tanggalMulai: "2024-01-01",
-    tanggalSelesai: "2024-06-30",
-    status: "Aktif",
-    createdAt: "2024-01-01",
-    updatedAt: "2024-01-01",
-  },
-  {
-    id: "2",
-    nama: "Siti Nurhaliza",
-    username: "siti",
-    divisi: "Marketing",
-    universitas: "Universitas Gadjah Mada",
-    nomorHp: "08123456790",
-    tanggalMulai: "2024-01-01",
-    tanggalSelesai: "2024-06-30",
-    status: "Aktif",
-    createdAt: "2024-01-01",
-    updatedAt: "2024-01-01",
-  },
-  {
-    id: "3",
-    nama: "Budi Santoso",
-    username: "budi",
-    divisi: "Finance",
-    universitas: "Institut Teknologi Bandung",
-    nomorHp: "08123456791",
-    tanggalMulai: "2023-07-01",
-    tanggalSelesai: "2023-12-31",
-    status: "Selesai",
-    createdAt: "2023-07-01",
-    updatedAt: "2023-12-31",
-  },
-  {
-    id: "4",
-    nama: "Dewi Sartika",
-    username: "dewi",
-    divisi: "HR",
-    universitas: "Universitas Diponegoro",
-    nomorHp: "08123456792",
-    tanggalMulai: "2024-01-01",
-    tanggalSelesai: "2024-06-30",
-    status: "Nonaktif",
-    createdAt: "2024-01-01",
-    updatedAt: "2024-02-15",
-  },
-  {
-    id: "5",
-    nama: "Eko Prasetyo",
-    username: "eko",
-    divisi: "Operations",
-    universitas: "Universitas Brawijaya",
-    nomorHp: "08123456793",
-    tanggalMulai: "2024-01-01",
-    tanggalSelesai: "2024-06-30",
-    status: "Aktif",
-    createdAt: "2024-01-01",
-    updatedAt: "2024-01-01",
-  },
-];
+// Import services
+import dashboardService from "../services/dashboardService";
+import pesertaMagangService from "../services/pesertaMagangService";
+import Avatar from "../components/Avatar";
 
 const getAttendanceRateBadge = (rate: number) => {
   if (rate >= 95) {
@@ -175,11 +45,55 @@ const getAttendanceRateBadge = (rate: number) => {
   }
 };
 
-export default function Laporan() {
+export default function LaporanPage() {
+  const [attendanceReports, setAttendanceReports] = useState<LaporanAbsensi[]>([]);
+  const [pesertaMagangData, setPesertaMagangData] = useState<PesertaMagang[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("Semua");
-  const startDate = "1 Januari 2024";
-  const endDate = "31 Januari 2024";
+  const [dateRange, setDateRange] = useState({
+    startDate: "",
+    endDate: "",
+  });
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch attendance report and peserta magang data in parallel
+      const [attendanceResponse, pesertaResponse] = await Promise.all([
+        dashboardService.getAttendanceReport({
+          startDate: dateRange.startDate || undefined,
+          endDate: dateRange.endDate || undefined,
+        }),
+        pesertaMagangService.getPesertaMagang()
+      ]);
+
+      if (attendanceResponse.success && attendanceResponse.data) {
+        setAttendanceReports(attendanceResponse.data);
+      }
+
+      if (pesertaResponse.success && pesertaResponse.data) {
+        setPesertaMagangData(pesertaResponse.data);
+      }
+    } catch (error: unknown) {
+      console.error('Fetch laporan data error:', error);
+      setError('Failed to fetch laporan data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDateRangeChange = () => {
+    fetchData();
+  };
 
   // Combine attendance reports with peserta magang data for filtering
   const combinedData = attendanceReports.map(report => {
@@ -209,6 +123,50 @@ export default function Laporan() {
     perluDiperhatikan: attendanceReports.filter(r => r.tingkatKehadiran < 85).length,
   };
 
+  const startDate = dateRange.startDate ? new Date(dateRange.startDate).toLocaleDateString("id-ID", { 
+    day: "numeric", 
+    month: "long", 
+    year: "numeric" 
+  }) : "1 Januari 2024";
+  
+  const endDate = dateRange.endDate ? new Date(dateRange.endDate).toLocaleDateString("id-ID", { 
+    day: "numeric", 
+    month: "long", 
+    year: "numeric" 
+  }) : "31 Januari 2024";
+
+  const handleExport = (format: "excel" | "pdf" | "csv") => {
+    // TODO: Implement export functionality
+    console.log(`Exporting to ${format}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading laporan...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-600 mb-2">Error: {error}</p>
+          <button 
+            onClick={fetchData}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page header */}
@@ -230,15 +188,15 @@ export default function Laporan() {
               </Button>
             </DropdownMenu.Trigger>
             <DropdownMenu.Content>
-              <DropdownMenu.Item onClick={() => console.log("Generate Excel")}>
+              <DropdownMenu.Item onClick={() => handleExport("excel")}>
                 <Download className="h-4 w-4 mr-2" />
                 Excel (.xlsx)
               </DropdownMenu.Item>
-              <DropdownMenu.Item onClick={() => console.log("Generate PDF")}>
+              <DropdownMenu.Item onClick={() => handleExport("pdf")}>
                 <Download className="h-4 w-4 mr-2" />
                 PDF
               </DropdownMenu.Item>
-              <DropdownMenu.Item onClick={() => console.log("Generate CSV")}>
+              <DropdownMenu.Item onClick={() => handleExport("csv")}>
                 <Download className="h-4 w-4 mr-2" />
                 CSV
               </DropdownMenu.Item>
@@ -319,9 +277,6 @@ export default function Laporan() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
               />
-              <IconButton variant="surface" color="gray" className="ml-2">
-                <MagnifyingGlassIcon width="18" height="18" />
-              </IconButton>
             </Flex>
             <div className="flex items-center">
               <Select.Root
@@ -333,11 +288,31 @@ export default function Laporan() {
                 <Select.Trigger color="indigo" radius="large" />
                 <Select.Content color="indigo">
                   <Select.Item value="Semua">Semua Status</Select.Item>
-                  <Select.Item value="Aktif">Aktif</Select.Item>
-                  <Select.Item value="Nonaktif">Nonaktif</Select.Item>
-                  <Select.Item value="Selesai">Selesai</Select.Item>
+                  <Select.Item value="AKTIF">Aktif</Select.Item>
+                  <Select.Item value="NONAKTIF">Nonaktif</Select.Item>
+                  <Select.Item value="SELESAI">Selesai</Select.Item>
                 </Select.Content>
               </Select.Root>
+            </div>
+            <div className="flex items-center gap-2">
+              <TextField.Root
+                type="date"
+                placeholder="Tanggal Mulai"
+                value={dateRange.startDate}
+                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                size="2"
+              />
+              <TextField.Root
+                type="date"
+                placeholder="Tanggal Selesai"
+                value={dateRange.endDate}
+                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                size="2"
+              />
+                <Button onClick={handleDateRangeChange} size="2">
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  Terapkan
+                </Button>
             </div>
           </Flex>
         </Flex>
@@ -379,14 +354,32 @@ export default function Laporan() {
                   className="hover:bg-gray-50"
                 >
                   <Table.Cell>
-                    <Text size="2">{record.pesertaMagangName}</Text>
+                    <div className="flex items-center">
+                      <Avatar
+                        src={record.pesertaMagang?.avatar}
+                        alt={record.pesertaMagangName}
+                        name={record.pesertaMagangName}
+                        size="md"
+                        showBorder={true}
+                        showHover={true}
+                        className="border-gray-200"
+                      />
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {record.pesertaMagangName}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {record.pesertaMagang?.divisi || "Tidak tersedia"}
+                        </div>
+                      </div>
+                    </div>
                   </Table.Cell>
                   <Table.Cell>
                     <span
                       className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        record.pesertaMagang?.status === "Aktif"
+                        record.pesertaMagang?.status === "AKTIF"
                           ? "bg-green-100 text-green-800"
-                          : record.pesertaMagang?.status === "Nonaktif"
+                          : record.pesertaMagang?.status === "NONAKTIF"
                           ? "bg-gray-100 text-gray-800"
                           : "bg-blue-100 text-blue-800"
                       }`}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import type { PesertaMagang } from "../types/index";
 import {
@@ -15,38 +15,21 @@ import {
 } from "@radix-ui/themes/components/index";
 import {
   EyeOpenIcon,
-  MagnifyingGlassIcon,
   Pencil2Icon,
   TrashIcon,
   MixerHorizontalIcon,
 } from "@radix-ui/react-icons";
-
-// Mock data - replace with actual API calls
-const mockPesertaMagang: PesertaMagang[] = [
-  {
-    id: "1",
-    nama: "Mamad Supratman",
-    username: "Mamad",
-    divisi: "IT",
-    universitas: "Universitas Apa Coba",
-    nomorHp: "08123456789",
-    tanggalMulai: "2025-09-04",
-    tanggalSelesai: "2026-01-04",
-    status: "Aktif",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face",
-    createdAt: "2025-08-01",
-    updatedAt: "2025-08-01",
-  },
-];
+import pesertaMagangService from "../services/pesertaMagangService";
+import Avatar from "../components/Avatar";
 
 const StatusBadge = ({ status }: { status: PesertaMagang["status"] }) => {
   const statusConfig = {
-    Aktif: { color: "bg-success-100 text-success-800", label: "Aktif" },
-    Nonaktif: { color: "bg-gray-100 text-gray-800", label: "Tidak Aktif" },
-    Selesai: { color: "bg-primary-100 text-primary-800", label: "Selesai" },
+    AKTIF: { color: "bg-success-100 text-success-800", label: "Aktif" },
+    NONAKTIF: { color: "bg-gray-100 text-gray-800", label: "Tidak Aktif" },
+    SELESAI: { color: "bg-primary-100 text-primary-800", label: "Selesai" },
   };
 
-  const config = statusConfig[status];
+  const config = statusConfig[status] || { color: "bg-gray-100 text-gray-800", label: status };
 
   return (
     <span
@@ -58,9 +41,160 @@ const StatusBadge = ({ status }: { status: PesertaMagang["status"] }) => {
 };
 
 export default function PesertaMagang() {
-  const [pesertaMagang] = useState<PesertaMagang[]>(mockPesertaMagang);
+  const [pesertaMagang, setPesertaMagang] = useState<PesertaMagang[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("Semua");
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState<string | null>(null);
+
+  // Form states for create/edit
+  const [formData, setFormData] = useState({
+    nama: "",
+    username: "",
+    divisi: "",
+    universitas: "",
+    nomorHp: "",
+    tanggalMulai: "",
+    tanggalSelesai: "",
+    status: "AKTIF" as PesertaMagang["status"],
+  });
+
+  const [updateFormData, setUpdateFormData] = useState<Partial<PesertaMagang>>({});
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchPesertaMagang();
+  }, []);
+
+  const fetchPesertaMagang = async () => {
+    try {
+      setLoading(true);
+      const response = await pesertaMagangService.getPesertaMagang();
+      if (response.success && response.data) {
+        setPesertaMagang(response.data);
+      } else {
+        setError(response.message || 'Failed to fetch peserta magang');
+      }
+    } catch (error: unknown) {
+      console.error('Fetch peserta magang error:', error);
+      setError('Failed to fetch peserta magang');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    try {
+      setIsCreating(true);
+      const response = await pesertaMagangService.createPesertaMagang(formData);
+      if (response.success) {
+        await fetchPesertaMagang();
+        setFormData({
+          nama: "",
+          username: "",
+          divisi: "",
+          universitas: "",
+          nomorHp: "",
+          tanggalMulai: "",
+          tanggalSelesai: "",
+          status: "AKTIF",
+        });
+      } else {
+        setError(response.message || 'Failed to create peserta magang');
+      }
+    } catch (error: unknown) {
+      console.error('Create peserta magang error:', error);
+      setError('Failed to create peserta magang');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleUpdate = async (id: string) => {
+    try {
+      setIsUpdating(id);
+      const response = await pesertaMagangService.updatePesertaMagang(id, updateFormData);
+      if (response.success) {
+        await fetchPesertaMagang();
+        setUpdateFormData({});
+      } else {
+        setError(response.message || 'Failed to update peserta magang');
+      }
+    } catch (error: unknown) {
+      console.error('Update peserta magang error:', error);
+      setError('Failed to update peserta magang');
+    } finally {
+      setIsUpdating(null);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const response = await pesertaMagangService.deletePesertaMagang(id);
+      if (response.success) {
+        await fetchPesertaMagang();
+      } else {
+        setError(response.message || 'Failed to delete peserta magang');
+      }
+    } catch (error: unknown) {
+      console.error('Delete peserta magang error:', error);
+      setError('Failed to delete peserta magang');
+    }
+  };
+
+  const initializeUpdateForm = (item: PesertaMagang) => {
+    setUpdateFormData({
+      nama: item.nama,
+      username: item.username,
+      divisi: item.divisi,
+      universitas: item.universitas,
+      nomorHp: item.nomorHp,
+      tanggalMulai: item.tanggalMulai,
+      tanggalSelesai: item.tanggalSelesai,
+      status: item.status,
+      avatar: item.avatar,
+    });
+  };
+
+  const handleAvatarUpload = async (id: string, file: File) => {
+    try {
+      console.log('Uploading avatar for ID:', id);
+      console.log('File:', file);
+      
+      const formData = new FormData();
+      formData.append('avatar', file);
+      
+      const response = await fetch(`http://localhost:3000/api/peserta-magang/${id}/upload-avatar`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: formData,
+      });
+
+      console.log('Response status:', response.status);
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Upload result:', result);
+        if (result.success) {
+          await fetchPesertaMagang();
+          setUpdateFormData({ ...updateFormData, avatar: result.data.avatarUrl });
+        } else {
+          setError(result.message || 'Failed to upload avatar');
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('Upload error response:', errorText);
+        setError(`Failed to upload avatar: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      setError('Failed to upload avatar: ' + (error as Error).message);
+    }
+  };
 
   const filteredPesertaMagang = pesertaMagang.filter((item) => {
     const matchesSearch =
@@ -74,8 +208,26 @@ export default function PesertaMagang() {
     return matchesSearch && matchesStatus;
   });
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading peserta magang...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Error message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+          {error}
+        </div>
+      )}
+
       {/* Page header */}
       <div className="flex justify-between items-center">
         <div>
@@ -102,6 +254,8 @@ export default function PesertaMagang() {
                 </label>
                 <TextField.Root
                   placeholder="Masukkan nama lengkap"
+                  value={formData.nama}
+                  onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
@@ -111,6 +265,8 @@ export default function PesertaMagang() {
                 </label>
                 <TextField.Root
                   placeholder="Masukkan Username"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
@@ -125,6 +281,8 @@ export default function PesertaMagang() {
                   </label>
                   <TextField.Root
                     placeholder="Masukkan Nomor HP"
+                    value={formData.nomorHp}
+                    onChange={(e) => setFormData({ ...formData, nomorHp: e.target.value })}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -132,16 +290,20 @@ export default function PesertaMagang() {
                   <label className="block mb-2 font-semibold text-gray-700">
                     Status
                   </label>
-                  <Select.Root size="2" defaultValue="Aktif">
+                  <Select.Root 
+                    size="2" 
+                    value={formData.status}
+                    onValueChange={(value) => setFormData({ ...formData, status: value as PesertaMagang["status"] })}
+                  >
                     <Select.Trigger
                       className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       color="indigo"
                       radius="large"
                     />
                     <Select.Content color="indigo">
-                      <Select.Item value="Aktif">Aktif</Select.Item>
-                      <Select.Item value="Nonaktif">Tidak Aktif</Select.Item>
-                      <Select.Item value="Selesai">Selesai</Select.Item>
+                      <Select.Item value="AKTIF">Aktif</Select.Item>
+                      <Select.Item value="NONAKTIF">Tidak Aktif</Select.Item>
+                      <Select.Item value="SELESAI">Selesai</Select.Item>
                     </Select.Content>
                   </Select.Root>
                 </div>
@@ -155,6 +317,8 @@ export default function PesertaMagang() {
                   </label>
                   <TextField.Root
                     placeholder="Masukkan Divisi"
+                    value={formData.divisi}
+                    onChange={(e) => setFormData({ ...formData, divisi: e.target.value })}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -164,6 +328,8 @@ export default function PesertaMagang() {
                   </label>
                   <TextField.Root
                     placeholder="Masukkan Universitas"
+                    value={formData.universitas}
+                    onChange={(e) => setFormData({ ...formData, universitas: e.target.value })}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -177,6 +343,8 @@ export default function PesertaMagang() {
                   </label>
                   <TextField.Root
                     type="date"
+                    value={formData.tanggalMulai}
+                    onChange={(e) => setFormData({ ...formData, tanggalMulai: e.target.value })}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -186,6 +354,8 @@ export default function PesertaMagang() {
                   </label>
                   <TextField.Root
                     type="date"
+                    value={formData.tanggalSelesai}
+                    onChange={(e) => setFormData({ ...formData, tanggalSelesai: e.target.value })}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -219,8 +389,19 @@ export default function PesertaMagang() {
                 </Button>
               </Dialog.Close>
               <Dialog.Close>
-                <Button className="px-6 py-2 bg-indigo-600 text-white rounded-lg">
-                  Simpan
+                <Button 
+                  className="px-6 py-2 bg-indigo-600 text-white rounded-lg"
+                  onClick={handleCreate}
+                  disabled={isCreating}
+                >
+                  {isCreating ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Menyimpan...
+                    </div>
+                  ) : (
+                    "Simpan"
+                  )}
                 </Button>
               </Dialog.Close>
             </div>
@@ -244,9 +425,6 @@ export default function PesertaMagang() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
               />
-              <IconButton variant="surface" color="gray" className="ml-2">
-                <MagnifyingGlassIcon width="18" height="18" />
-              </IconButton>
             </Flex>
             <div className="flex items-center">
               <Select.Root
@@ -258,9 +436,9 @@ export default function PesertaMagang() {
                 <Select.Trigger color="indigo" radius="large" />
                 <Select.Content color="indigo">
                   <Select.Item value="Semua">Semua Status</Select.Item>
-                  <Select.Item value="Aktif">Aktif</Select.Item>
-                  <Select.Item value="Nonaktif">Tidak Aktif</Select.Item>
-                  <Select.Item value="Selesai">Selesai</Select.Item>
+                  <Select.Item value="AKTIF">Aktif</Select.Item>
+                  <Select.Item value="NONAKTIF">Tidak Aktif</Select.Item>
+                  <Select.Item value="SELESAI">Selesai</Select.Item>
                 </Select.Content>
               </Select.Root>
             </div>
@@ -288,24 +466,15 @@ export default function PesertaMagang() {
                 <Table.Row key={item.id} className="hover:bg-gray-50">
                   <Table.Cell>
                     <div className="flex items-center">
-                      <div className="h-10 w-10 flex-shrink-0">
-                        {item.avatar ? (
-                          <img
-                            src={item.avatar}
-                            alt={item.nama}
-                            className="h-10 w-10 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                            <span className="text-sm font-medium text-primary-600">
-                              {item.nama
-                                .split(" ")
-                                .map((n: string) => n[0])
-                                .join("")}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                      <Avatar
+                        src={item.avatar}
+                        alt={item.nama}
+                        name={item.nama}
+                        size="lg"
+                        showBorder={true}
+                        showHover={true}
+                        className="border-gray-200"
+                      />
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
                           {item.nama}
@@ -357,6 +526,7 @@ export default function PesertaMagang() {
                           <IconButton
                             color="blue"
                             variant="outline"
+                            onClick={() => initializeUpdateForm(item)}
                           >
                             <Pencil2Icon width="18" height="18" />
                           </IconButton>
@@ -376,7 +546,8 @@ export default function PesertaMagang() {
                               </label>
                               <TextField.Root
                                 placeholder="Masukkan nama lengkap"
-                                defaultValue={item.nama}
+                                value={updateFormData.nama || ''}
+                                onChange={(e) => setUpdateFormData({ ...updateFormData, nama: e.target.value })}
                                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                               />
                             </div>
@@ -387,7 +558,8 @@ export default function PesertaMagang() {
                               </label>
                               <TextField.Root
                                 placeholder="Masukkan Username"
-                                defaultValue={item.username}
+                                value={updateFormData.username || ''}
+                                onChange={(e) => setUpdateFormData({ ...updateFormData, username: e.target.value })}
                                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                               />
                             </div>
@@ -402,7 +574,8 @@ export default function PesertaMagang() {
                                 </label>
                                 <TextField.Root
                                   placeholder="Masukkan Nomor HP"
-                                  defaultValue={item.nomorHp}
+                                  value={updateFormData.nomorHp || ''}
+                                  onChange={(e) => setUpdateFormData({ ...updateFormData, nomorHp: e.target.value })}
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                               </div>
@@ -412,7 +585,8 @@ export default function PesertaMagang() {
                                 </label>
                                 <Select.Root
                                   size="2"
-                                  defaultValue={item.status}
+                                  value={updateFormData.status || 'AKTIF'}
+                                  onValueChange={(value) => setUpdateFormData({ ...updateFormData, status: value as PesertaMagang['status'] })}
                                 >
                                   <Select.Trigger
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -443,7 +617,8 @@ export default function PesertaMagang() {
                                 </label>
                                 <TextField.Root
                                   placeholder="Masukkan Divisi"
-                                  defaultValue={item.divisi}
+                                  value={updateFormData.divisi || ''}
+                                  onChange={(e) => setUpdateFormData({ ...updateFormData, divisi: e.target.value })}
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                               </div>
@@ -453,7 +628,8 @@ export default function PesertaMagang() {
                                 </label>
                                 <TextField.Root
                                   placeholder="Masukkan Universitas"
-                                  defaultValue={item.universitas}
+                                  value={updateFormData.universitas || ''}
+                                  onChange={(e) => setUpdateFormData({ ...updateFormData, universitas: e.target.value })}
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                               </div>
@@ -467,7 +643,8 @@ export default function PesertaMagang() {
                                 </label>
                                 <TextField.Root
                                   type="date"
-                                  defaultValue={item.tanggalMulai}
+                                  value={updateFormData.tanggalMulai || ''}
+                                  onChange={(e) => setUpdateFormData({ ...updateFormData, tanggalMulai: e.target.value })}
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                               </div>
@@ -477,7 +654,8 @@ export default function PesertaMagang() {
                                 </label>
                                 <TextField.Root
                                   type="date"
-                                  defaultValue={item.tanggalSelesai}
+                                  value={updateFormData.tanggalSelesai || ''}
+                                  onChange={(e) => setUpdateFormData({ ...updateFormData, tanggalSelesai: e.target.value })}
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                               </div>
@@ -493,6 +671,12 @@ export default function PesertaMagang() {
                               <input
                                 type="file"
                                 accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    handleAvatarUpload(item.id, file);
+                                  }
+                                }}
                                 className="block w-full text-base file:mr-4 file:py-3 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                               />
                               <p className="mt-2 text-xs text-gray-500">PNG, JPG, atau JPEG.</p>
@@ -513,8 +697,19 @@ export default function PesertaMagang() {
                             </Dialog.Close>
                             {/* Simpan */}
                             <Dialog.Close>
-                              <Button className="px-6 py-2 bg-indigo-600 text-white rounded-lg">
-                                Simpan
+                              <Button 
+                                className="px-6 py-2 bg-indigo-600 text-white rounded-lg"
+                                onClick={() => handleUpdate(item.id)}
+                                disabled={isUpdating === item.id}
+                              >
+                                {isUpdating === item.id ? (
+                                  <div className="flex items-center">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    Menyimpan...
+                                  </div>
+                                ) : (
+                                  "Simpan"
+                                )}
                               </Button>
                             </Dialog.Close>
                           </div>
@@ -543,7 +738,11 @@ export default function PesertaMagang() {
                               </Button>
                             </AlertDialog.Cancel>
                             <AlertDialog.Action>
-                              <Button variant="solid" color="red">
+                              <Button 
+                                variant="solid" 
+                                color="red"
+                                onClick={() => handleDelete(item.id)}
+                              >
                                 Hapus
                               </Button>
                             </AlertDialog.Action>
