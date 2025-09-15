@@ -1,6 +1,7 @@
 const { Router } = require('express');
 import {
   getDashboardStats,
+  getDailyStats,
   getAttendanceReport,
   getMonthlyStats,
 } from '../controllers/dashboardController';
@@ -12,6 +13,7 @@ const router = Router();
 router.use(authenticateToken);
 
 router.get('/stats', getDashboardStats);
+router.get('/daily-stats', getDailyStats);
 router.get('/attendance-report', getAttendanceReport);
 router.get('/monthly-stats', getMonthlyStats);
 

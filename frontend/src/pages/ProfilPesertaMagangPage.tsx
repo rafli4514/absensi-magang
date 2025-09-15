@@ -145,15 +145,9 @@ export default function ProfilPesertaMagangPage() {
   return (
     <div className="space-y-8">
       {/* Page header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
-        <Flex direction="column" gap="2">
-          <Text size="6" weight="bold">
-            Profil Peserta Magang
-          </Text>
-          <Text size="3" className="text-white opacity-90">
-            Detail informasi dan riwayat absensi peserta magang
-          </Text>
-        </Flex>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Manajemen peserta </h1>
+        <p className="text-gray-600">Kelola data peserta magang/PKL</p>
       </div>
 
       {/* Profile Card */}
@@ -161,7 +155,7 @@ export default function ProfilPesertaMagangPage() {
         <Box p="6">
           <Flex direction="column" gap="6">
             {/* Profile Header */}
-          <Flex align="center" gap="6">
+            <Flex align="center" gap="6">
               <Avatar
                 src={peserta.avatar}
                 alt={peserta.nama}
@@ -170,7 +164,7 @@ export default function ProfilPesertaMagangPage() {
                 showBorder={true}
                 showHover={true}
               />
-              
+
               <Box className="flex-1">
                 <Flex direction="column" gap="2">
                   <Text size="6" weight="bold" className="text-gray-900">
@@ -181,7 +175,7 @@ export default function ProfilPesertaMagangPage() {
                   </Text>
                   <Flex align="center" gap="2" wrap="wrap">
                     <Badge color="blue" variant="soft" size="2">
-                  {peserta.divisi}
+                      {peserta.divisi}
                     </Badge>
                     <Badge color="purple" variant="soft" size="2">
                       {peserta.universitas}
@@ -189,60 +183,103 @@ export default function ProfilPesertaMagangPage() {
                   </Flex>
                 </Flex>
               </Box>
-          </Flex>
+            </Flex>
 
             <Separator size="4" />
 
-          {/* Profile Details */}
-          <Grid columns={{ initial: "1", md: "2" }} gap="6">
+            {/* Profile Details */}
+            <Grid columns={{ initial: "1", md: "2" }} gap="6">
               <Box>
-                <Text size="3" weight="bold" color="gray" mb="4" className="flex items-center gap-2">
+                <Text
+                  size="3"
+                  weight="bold"
+                  color="gray"
+                  mb="4"
+                  className="flex items-center gap-2"
+                >
                   <Phone className="h-4 w-4" />
                   Informasi Kontak
                 </Text>
                 <Flex direction="column" gap="3">
-                  <Flex align="center" gap="3" className="p-3 bg-gray-50 rounded-lg">
+                  <Flex
+                    align="center"
+                    gap="3"
+                    className="p-3 bg-gray-50 rounded-lg"
+                  >
                     <Phone className="h-5 w-5 text-blue-600" />
-                    <Text size="2" weight="medium">{peserta.nomorHp}</Text>
+                    <Text size="2" weight="medium">
+                      {peserta.nomorHp}
+                    </Text>
                   </Flex>
-                  <Flex align="center" gap="3" className="p-3 bg-gray-50 rounded-lg">
+                  <Flex
+                    align="center"
+                    gap="3"
+                    className="p-3 bg-gray-50 rounded-lg"
+                  >
                     <GraduationCap className="h-5 w-5 text-green-600" />
-                    <Text size="2" weight="medium">{peserta.universitas}</Text>
+                    <Text size="2" weight="medium">
+                      {peserta.universitas}
+                    </Text>
                   </Flex>
                 </Flex>
               </Box>
-              
+
               <Box>
-                <Text size="3" weight="bold" color="gray" mb="4" className="flex items-center gap-2">
+                <Text
+                  size="3"
+                  weight="bold"
+                  color="gray"
+                  mb="4"
+                  className="flex items-center gap-2"
+                >
                   <Calendar className="h-4 w-4" />
                   Periode Magang
                 </Text>
                 <Flex direction="column" gap="3">
-                  <Flex align="center" gap="3" className="p-3 bg-gray-50 rounded-lg">
+                  <Flex
+                    align="center"
+                    gap="3"
+                    className="p-3 bg-gray-50 rounded-lg"
+                  >
                     <Calendar className="h-5 w-5 text-purple-600" />
                     <Text size="2" weight="medium">
-                      {new Date(peserta.tanggalMulai).toLocaleDateString("id-ID")} -{" "}
-                      {new Date(peserta.tanggalSelesai).toLocaleDateString("id-ID")}
-                </Text>
+                      {new Date(peserta.tanggalMulai).toLocaleDateString(
+                        "id-ID"
+                      )}{" "}
+                      -{" "}
+                      {new Date(peserta.tanggalSelesai).toLocaleDateString(
+                        "id-ID"
+                      )}
+                    </Text>
                   </Flex>
-                  <Flex align="center" gap="3" className="p-3 bg-gray-50 rounded-lg">
+                  <Flex
+                    align="center"
+                    gap="3"
+                    className="p-3 bg-gray-50 rounded-lg"
+                  >
                     <Clock className="h-5 w-5 text-orange-600" />
                     <Text size="2" weight="medium">
-                      Status: 
-                      <Badge 
-                        color={peserta.status === "AKTIF" ? "green" : peserta.status === "NONAKTIF" ? "red" : "gray"} 
-                        variant="soft" 
-                        size="1" 
+                      Status:
+                      <Badge
+                        color={
+                          peserta.status === "AKTIF"
+                            ? "green"
+                            : peserta.status === "NONAKTIF"
+                            ? "red"
+                            : "gray"
+                        }
+                        variant="soft"
+                        size="1"
                         className="ml-2"
                       >
                         {peserta.status}
                       </Badge>
-                </Text>
+                    </Text>
                   </Flex>
                 </Flex>
               </Box>
-          </Grid>
-        </Flex>
+            </Grid>
+          </Flex>
         </Box>
       </Card>
 
@@ -254,14 +291,14 @@ export default function ProfilPesertaMagangPage() {
             <Flex align="center" justify="between">
               <Text size="4" weight="bold" className="text-gray-900">
                 Riwayat Absensi
-            </Text>
+              </Text>
               <Badge color="blue" variant="soft" size="2">
                 {filteredAbsensi.length} dari {absensi.length} catatan
               </Badge>
-          </Flex>
+            </Flex>
 
-      {/* Filters */}
-          <Flex gap="4" wrap="wrap">
+            {/* Filters */}
+            <Flex gap="4" wrap="wrap">
               <TextField.Root
                 placeholder="Cari berdasarkan tipe absensi..."
                 value={searchTerm}
@@ -273,13 +310,13 @@ export default function ProfilPesertaMagangPage() {
                   <MagnifyingGlassIcon height="16" width="16" />
                 </TextField.Slot>
               </TextField.Root>
-        </Flex>
+            </Flex>
 
             {/* Attendance Table */}
             <Box className="overflow-x-auto">
               <Table.Root variant="surface">
-            <Table.Header>
-              <Table.Row>
+                <Table.Header>
+                  <Table.Row>
                     <Table.ColumnHeaderCell className="font-semibold">
                       Tanggal & Waktu
                     </Table.ColumnHeaderCell>
@@ -292,75 +329,87 @@ export default function ProfilPesertaMagangPage() {
                     <Table.ColumnHeaderCell className="font-semibold">
                       Lokasi
                     </Table.ColumnHeaderCell>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
                   {filteredAbsensi.map((item) => (
                     <Table.Row key={item.id} className="hover:bg-gray-50">
-                  <Table.Cell>
+                      <Table.Cell>
                         <Flex direction="column" gap="1">
-                          <Text size="2" weight="bold" className="text-gray-900">
-                            {new Date(item.timestamp).toLocaleDateString("id-ID", {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })}
+                          <Text
+                            size="2"
+                            weight="bold"
+                            className="text-gray-900"
+                          >
+                            {new Date(item.timestamp).toLocaleDateString(
+                              "id-ID",
+                              {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              }
+                            )}
                           </Text>
                           <Text size="1" color="gray" className="font-medium">
-                            {new Date(item.timestamp).toLocaleTimeString("id-ID", {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                    </Text>
+                            {new Date(item.timestamp).toLocaleTimeString(
+                              "id-ID",
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
+                          </Text>
                         </Flex>
-                  </Table.Cell>
-                  <Table.Cell>
-                        <Badge 
-                          color={item.tipe === "MASUK" ? "green" : "red"} 
-                          variant="soft" 
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Badge
+                          color={item.tipe === "MASUK" ? "green" : "red"}
+                          variant="soft"
                           size="2"
                         >
                           {item.tipe}
                         </Badge>
-                  </Table.Cell>
-                  <Table.Cell>
-                        <Badge 
-                          color={item.status === "VALID" ? "green" : "red"} 
-                          variant="soft" 
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Badge
+                          color={item.status === "VALID" ? "green" : "red"}
+                          variant="soft"
                           size="2"
                         >
                           {item.status}
                         </Badge>
-                  </Table.Cell>
-                  <Table.Cell>
+                      </Table.Cell>
+                      <Table.Cell>
                         <Flex align="center" gap="2">
                           <MapPin className="h-4 w-4 text-gray-500" />
                           <Text size="2" color="gray" className="font-medium">
                             {item.lokasi?.alamat || "Tidak tersedia"}
-                    </Text>
-                    </Flex>
-                  </Table.Cell>
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table.Root>
-      </Box>
+                          </Text>
+                        </Flex>
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table.Root>
+            </Box>
 
-      {filteredAbsensi.length === 0 && (
+            {filteredAbsensi.length === 0 && (
               <Box className="text-center py-12">
                 <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <Text size="3" color="gray" weight="medium">
-              Tidak ada data absensi yang ditemukan
-            </Text>
+                  Tidak ada data absensi yang ditemukan
+                </Text>
                 <Text size="2" color="gray" className="mt-2">
-                  {searchTerm ? "Coba ubah kata kunci pencarian" : "Belum ada riwayat absensi untuk peserta ini"}
+                  {searchTerm
+                    ? "Coba ubah kata kunci pencarian"
+                    : "Belum ada riwayat absensi untuk peserta ini"}
                 </Text>
               </Box>
-              )}
-            </Flex>
+            )}
+          </Flex>
         </Box>
-            </Card>
+      </Card>
     </div>
   );
 }

@@ -63,9 +63,22 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       }),
     ]);
 
-    // Calculate attendance rate (simplified calculation)
+    // Get unique attendees to avoid counting duplicates
+    const uniqueAttendees = await prisma.absensi.groupBy({
+      by: ['pesertaMagangId'],
+      where: {
+        tipe: 'MASUK',
+        createdAt: {
+          gte: startOfDay,
+          lt: endOfDay,
+        },
+      },
+    });
+
+    // Calculate attendance rate with proper logic (capped at 100%)
+    const actualAttendees = uniqueAttendees.length;
     const tingkatKehadiran = pesertaMagangAktif > 0 
-      ? Math.round((absensiMasukHariIni / pesertaMagangAktif) * 100) 
+      ? Math.min(100, Math.round((actualAttendees / pesertaMagangAktif) * 100))
       : 0;
 
     const dashboardStats = {
@@ -221,5 +234,120 @@ export const getMonthlyStats = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Monthly stats error:', error);
     sendError(res, 'Failed to retrieve monthly stats');
+  }
+};
+
+export const getDailyStats = async (req: Request, res: Response) => {
+  try {
+    const { date } = req.query;
+    
+    // Parse the date or use today
+    const targetDate = date ? new Date(date as string) : new Date();
+    const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1);
+
+    // Get counts in parallel for better performance
+    const [
+      totalPesertaMagang,
+      pesertaMagangAktif,
+      absensiMasukHariIni,
+      absensiKeluarHariIni,
+      aktivitasBaruBaruIni,
+      uniqueAttendees,
+    ] = await Promise.all([
+      // Get total peserta magang
+      prisma.pesertaMagang.count(),
+
+      // Get active peserta magang
+      prisma.pesertaMagang.count({
+        where: { status: 'AKTIF' },
+      }),
+
+      // Get selected day's attendance - masuk
+      prisma.absensi.count({
+        where: {
+          tipe: 'MASUK',
+          createdAt: {
+            gte: startOfDay,
+            lt: endOfDay,
+          },
+        },
+      }),
+
+      // Get selected day's attendance - keluar
+      prisma.absensi.count({
+        where: {
+          tipe: 'KELUAR',
+          createdAt: {
+            gte: startOfDay,
+            lt: endOfDay,
+          },
+        },
+      }),
+
+      // Get activities for the selected day
+      prisma.absensi.findMany({
+        where: {
+          createdAt: {
+            gte: startOfDay,
+            lt: endOfDay,
+          },
+        },
+        include: {
+          pesertaMagang: {
+            select: {
+              id: true,
+              nama: true,
+              username: true,
+              divisi: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20, // Show more activities for daily view
+      }),
+
+      // Get unique attendees to avoid counting duplicates
+      prisma.absensi.groupBy({
+        by: ['pesertaMagangId'],
+        where: {
+          tipe: 'MASUK',
+          createdAt: {
+            gte: startOfDay,
+            lt: endOfDay,
+          },
+        },
+      }),
+    ]);
+
+    // Calculate attendance rate with proper logic (capped at 100%)
+    const actualAttendees = uniqueAttendees.length;
+    const tingkatKehadiran = pesertaMagangAktif > 0 
+      ? Math.min(100, Math.round((actualAttendees / pesertaMagangAktif) * 100))
+      : 0;
+
+    const dashboardStats = {
+      totalPesertaMagang,
+      pesertaMagangAktif,
+      absensiMasukHariIni,
+      absensiKeluarHariIni,
+      tingkatKehadiran,
+      aktivitasBaruBaruIni: aktivitasBaruBaruIni.map(item => ({
+        id: item.id,
+        pesertaMagangId: item.pesertaMagangId,
+        pesertaMagang: item.pesertaMagang,
+        tipe: item.tipe,
+        timestamp: item.timestamp,
+        lokasi: item.lokasi,
+        status: item.status,
+        catatan: item.catatan,
+        createdAt: item.createdAt,
+      })),
+    };
+
+    sendSuccess(res, `Dashboard stats for ${startOfDay.toDateString()} retrieved successfully`, dashboardStats);
+  } catch (error) {
+    console.error('Daily dashboard stats error:', error);
+    sendError(res, 'Failed to retrieve daily dashboard stats');
   }
 };
