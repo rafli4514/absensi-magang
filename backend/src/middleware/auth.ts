@@ -2,6 +2,21 @@ import { type Request, type Response, type NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { ApiResponse } from '../types';
 
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        username: string;
+        email?: string;
+        role: string;
+        nama?: string;
+        divisi?: string;
+      };
+    }
+  }
+}
+
 interface AuthRequest extends Request {
   user?: {
     id: string;
@@ -49,7 +64,7 @@ export const requireAdmin = (
   res: Response<ApiResponse>,
   next: NextFunction
 ) => {
-  if (req.user?.role !== 'admin') {
+  if (req.user?.role !== 'ADMIN') {
     return res.status(403).json({
       success: false,
       message: 'Admin access required',

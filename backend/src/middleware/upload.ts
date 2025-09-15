@@ -1,11 +1,12 @@
 import multer = require('multer');
 import path = require('path');
-import { config } from '../config';
 
 // Storage configuration
 const storage = multer.diskStorage({
   destination: (req: any, file: any, cb: any) => {
-    cb(null, config.uploadPath);
+    const uploadPath = path.join(__dirname, '..', 'uploads');
+    console.log('Upload destination:', uploadPath);
+    cb(null, uploadPath);
   },
   filename: (req: any, file: any, cb: any) => {
     // Generate unique filename
@@ -28,7 +29,7 @@ const fileFilter = (req: any, file: any, cb: any) => {
 export const upload = multer({
   storage,
   limits: {
-    fileSize: config.maxFileSize, // 5MB
+    fileSize: 5 * 1024 * 1024, // 5MB
   },
   fileFilter,
 });

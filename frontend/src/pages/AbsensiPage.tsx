@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Absensi, PesertaMagang } from "../types";
 import { formatDateTime } from "../lib/utils";
 import {
@@ -23,99 +23,20 @@ import {
   DownloadIcon,
   EyeOpenIcon,
   InfoCircledIcon,
-  MagnifyingGlassIcon,
   MixerHorizontalIcon,
 } from "@radix-ui/react-icons";
-import Gambar from "../assets/papa.jpg"
+import absensiService from "../services/absensiService";
+import Avatar from "../components/Avatar";
 
-// Mock data - replace with actual API calls
-const mockAbsensi: Absensi[] = [
-  {
-    id: "1",
-    pesertaMagangId: "1",
-    pesertaMagang: {
-      id: "1",
-      nama: "Mamad Supratman",
-      username: "Mamad",
-      divisi: "IT",
-      universitas: "Universitas Apa Coba",
-      nomorHp: "08123456789",
-      tanggalMulai: "2025-09-04",
-      tanggalSelesai: "2026-01-04",
-      status: "Aktif",
-      createdAt: "2025-08-01",
-      updatedAt: "2025-08-01",
-    },
-    tipe: "Masuk",
-    timestamp: new Date().toISOString(),
-    lokasi: {
-      latitude: -6.2088,
-      longitude: 106.8456,
-      alamat: "Jakarta, Indonesia",
-    },
-    selfieUrl: Gambar,
-    qrCodeData: "QR123",
-    status: "valid",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    pesertaMagangId: "1",
-    pesertaMagang: {
-      id: "1",
-      nama: "Mamad Supratman",
-      username: "Mamad",
-      divisi: "IT",
-      universitas: "Universitas Apa Coba",
-      nomorHp: "08123456789",
-      tanggalMulai: "2025-09-04",
-      tanggalSelesai: "2026-01-04",
-      status: "Aktif",
-      createdAt: "2025-08-01",
-      updatedAt: "2025-08-01",
-    },
-    tipe: "Izin",
-    timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-    lokasi: {
-      latitude: -6.2088,
-      longitude: 106.8456,
-      alamat: "Jakarta, Indonesia",
-    },
-    qrCodeData: "QR456",
-    status: "valid",
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: "3",
-    pesertaMagangId: "1",
-    pesertaMagang: {
-      id: "1",
-      nama: "Mamad Supratman",
-      username: "Mamad",
-      divisi: "IT",
-      universitas: "Universitas Apa Coba",
-      nomorHp: "08123456789",
-      tanggalMulai: "2025-09-04",
-      tanggalSelesai: "2026-01-04",
-      status: "Aktif",
-      createdAt: "2025-08-01",
-      updatedAt: "2025-08-01",
-    },
-    tipe: "Sakit",
-    timestamp: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-    qrCodeData: "QR789",
-    status: "valid",
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-  },
-];
+// Data dummy sudah dihapus - menggunakan API real
 
 const StatusIcon = ({ status }: { status: Absensi["status"] }) => {
   switch (status) {
-    case "valid":
+    case "VALID":
       return <CheckCircledIcon color="green" />;
-    case "Terlambat":
+    case "TERLAMBAT":
       return <InfoCircledIcon color="orange" />;
-    case "invalid":
+    case "INVALID":
       return <CrossCircledIcon color="red" />;
     default:
       return <CircleBackslashIcon color="gray" />;
@@ -124,12 +45,12 @@ const StatusIcon = ({ status }: { status: Absensi["status"] }) => {
 
 const StatusBadge = ({ status }: { status: Absensi["status"] }) => {
   const statusConfig = {
-    valid: { color: "bg-green-100 text-green-800", label: "Valid" },
-    Terlambat: { color: "bg-yellow-100 text-yellow-800", label: "Terlambat" },
-    invalid: { color: "bg-red-100 text-red-800", label: "Tidak Valid" },
+    VALID: { color: "bg-green-100 text-green-800", label: "Valid" },
+    TERLAMBAT: { color: "bg-yellow-100 text-yellow-800", label: "Terlambat" },
+    INVALID: { color: "bg-red-100 text-red-800", label: "Tidak Valid" },
   };
 
-  const config = statusConfig[status];
+  const config = statusConfig[status] || { color: "bg-gray-100 text-gray-800", label: status };
 
   return (
     <span
@@ -142,11 +63,11 @@ const StatusBadge = ({ status }: { status: Absensi["status"] }) => {
 
 const TypeBadge = ({ tipe }: { tipe: Absensi["tipe"] }) => {
   const typeConfig = {
-    Masuk: { color: "bg-blue-100 text-blue-800", label: "Masuk" },
-    Keluar: { color: "bg-purple-100 text-purple-800", label: "Keluar" },
-    Izin: { color: "bg-orange-100 text-orange-800", label: "Izin" },
-    Sakit: { color: "bg-red-100 text-red-800", label: "Sakit" },
-    Cuti: { color: "bg-green-100 text-green-800", label: "Cuti" },
+    MASUK: { color: "bg-blue-100 text-blue-800", label: "Masuk" },
+    KELUAR: { color: "bg-purple-100 text-purple-800", label: "Keluar" },
+    IZIN: { color: "bg-orange-100 text-orange-800", label: "Izin" },
+    SAKIT: { color: "bg-red-100 text-red-800", label: "Sakit" },
+    CUTI: { color: "bg-green-100 text-green-800", label: "Cuti" },
   };
 
   const config = typeConfig[tipe] || { color: "bg-gray-100 text-gray-800", label: tipe };
@@ -161,11 +82,51 @@ const TypeBadge = ({ tipe }: { tipe: Absensi["tipe"] }) => {
 };
 
 export default function AbsensiPage() {
-  const [Absensi] = useState<Absensi[]>(mockAbsensi);
+  const [absensi, setAbsensi] = useState<Absensi[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("Semua");
   const [typeFilter, setTypeFilter] = useState<string>("Semua");
   const [dateFilter, setDateFilter] = useState("");
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchAbsensi();
+  }, []);
+
+  const fetchAbsensi = async () => {
+    try {
+      setLoading(true);
+      const response = await absensiService.getAbsensi();
+      if (response.success && response.data) {
+        setAbsensi(response.data);
+      } else {
+        setError(response.message || 'Failed to fetch absensi');
+        setAbsensi([]); // Fallback to empty data
+      }
+    } catch (error: unknown) {
+      console.error('Fetch absensi error:', error);
+      setError('Failed to fetch absensi');
+      setAbsensi([]); // Fallback to empty data
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async (id: string, newStatus: Absensi["status"]) => {
+    try {
+      const response = await absensiService.updateAbsensi(id, { status: newStatus });
+      if (response.success) {
+        await fetchAbsensi();
+      } else {
+        setError(response.message || 'Failed to update absensi status');
+      }
+    } catch (error: unknown) {
+      console.error('Update absensi status error:', error);
+      setError('Failed to update absensi status');
+    }
+  };
 
   const hasPesertaMagang = (
     record: Absensi
@@ -173,7 +134,7 @@ export default function AbsensiPage() {
     return record.pesertaMagang !== undefined && record.pesertaMagang !== null;
   };
 
-  const filteredAbsensi = Absensi.filter(hasPesertaMagang).filter((record) => {
+  const filteredAbsensi = absensi.filter(hasPesertaMagang).filter((record) => {
     const matchesSearch =
       record.pesertaMagang.nama
         .toLowerCase()
@@ -194,8 +155,26 @@ export default function AbsensiPage() {
     return matchesSearch && matchesStatus && matchesType && matchesDate;
   });
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading absensi...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Error message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+          {error}
+        </div>
+      )}
+
       {/* Page header */}
       <div className="flex justify-between items-center">
         {/* Judul */}
@@ -209,11 +188,10 @@ export default function AbsensiPage() {
         </div>
 
         {/* Export button */}
-        <button className="btn-primary flex items-center">
-          <Button>
-            <DownloadIcon /> Export Data
-          </Button>
-        </button>
+        <Button className="flex items-center">
+          <DownloadIcon className="w-4 h-4 mr-2" />
+          Export Data
+        </Button>
       </div>
 
       {/* Filters */}
@@ -232,9 +210,6 @@ export default function AbsensiPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
               />
-              <IconButton variant="surface" color="gray" className="ml-2">
-                <MagnifyingGlassIcon width="18" height="18" />
-              </IconButton>
             </Flex>
             <div className="flex items-center">
               <Select.Root
@@ -246,9 +221,9 @@ export default function AbsensiPage() {
                 <Select.Trigger color="indigo" radius="large" />
                 <Select.Content color="indigo">
                   <Select.Item value="Semua">Semua Status</Select.Item>
-                  <Select.Item value="valid">Valid</Select.Item>
-                  <Select.Item value="Terlambat">Terlambat</Select.Item>
-                  <Select.Item value="invalid">Tidak Valid</Select.Item>
+                  <Select.Item value="VALID">Valid</Select.Item>
+                  <Select.Item value="TERLAMBAT">Terlambat</Select.Item>
+                  <Select.Item value="INVALID">Tidak Valid</Select.Item>
                 </Select.Content>
               </Select.Root>
             </div>
@@ -262,11 +237,11 @@ export default function AbsensiPage() {
                 <Select.Trigger color="indigo" radius="large" />
                 <Select.Content color="indigo">
                   <Select.Item value="Semua">Semua Tipe</Select.Item>
-                  <Select.Item value="Masuk">Masuk</Select.Item>
-                  <Select.Item value="Keluar">Keluar</Select.Item>
-                  <Select.Item value="Izin">Izin</Select.Item>
-                  <Select.Item value="Sakit">Sakit</Select.Item>
-                  <Select.Item value="Cuti">Cuti</Select.Item>
+                  <Select.Item value="MASUK">Masuk</Select.Item>
+                  <Select.Item value="KELUAR">Keluar</Select.Item>
+                  <Select.Item value="IZIN">Izin</Select.Item>
+                  <Select.Item value="SAKIT">Sakit</Select.Item>
+                  <Select.Item value="CUTI">Cuti</Select.Item>
                 </Select.Content>
               </Select.Root>
             </div>
@@ -308,26 +283,24 @@ export default function AbsensiPage() {
                 <Table.Row key={item.id} className="hover:bg-gray-50">
                   <Table.Cell>
                     <div className="flex items-center">
-                      <div className="h-10 w-10 flex-shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                          <span className="text-sm font-medium text-primary-600">
-                            {item.pesertaMagang.nama
-                              .split(" ")
-                              .map((n: string) => n[0])
-                              .join("")}
-                          </span>
-                        </div>
-                      </div>
+                      <Avatar
+                        src={item.pesertaMagang.avatar}
+                        alt={item.pesertaMagang.nama}
+                        name={item.pesertaMagang.nama}
+                        size="md"
+                        showBorder={true}
+                        showHover={true}
+                        className="border-gray-200"
+                      />
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
                           {item.pesertaMagang.nama}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {item.pesertaMagang.username}
+                          @{item.pesertaMagang.username}
                         </div>
                       </div>
                     </div>
-                    {/* Nama Peserta */}
                   </Table.Cell>
                   <Table.Cell>
                     <TypeBadge tipe={item.tipe} />
@@ -373,20 +346,32 @@ export default function AbsensiPage() {
                             {/* Profile Header */}
                             <Grid columns="2" gap="6" width="auto">
                               <AspectRatio ratio={1}>
-                                {" "}
                                 <img
                                   src={item.selfieUrl}
                                   alt="Selfie"
-                                  className="w-75 h-75 object-cover shadow-xl rounded-lg"
+                                  className="w-full h-full object-cover shadow-xl rounded-lg"
                                 />
                               </AspectRatio>
                               <div className="flex flex-col justify-center">
-                                <Text className="text-2xl font-semibold text-gray-900">
-                                  {item.pesertaMagang.nama}
-                                </Text>
-                                <Text className="text-gray-600">
-                                  {item.pesertaMagang.username}
-                                </Text>
+                                <div className="flex items-center gap-4 mb-4">
+                                  <Avatar
+                                    src={item.pesertaMagang.avatar}
+                                    alt={item.pesertaMagang.nama}
+                                    name={item.pesertaMagang.nama}
+                                    size="lg"
+                                    showBorder={true}
+                                    showHover={false}
+                                    className="border-gray-200"
+                                  />
+                                  <div>
+                                    <Text className="text-2xl font-semibold text-gray-900">
+                                      {item.pesertaMagang.nama}
+                                    </Text>
+                                    <Text className="text-gray-600">
+                                      @{item.pesertaMagang.username}
+                                    </Text>
+                                  </div>
+                                </div>
                               </div>
                             </Grid>
 
@@ -550,22 +535,16 @@ export default function AbsensiPage() {
                               <Button 
                                 variant="outline" 
                                 color="red"
-                                onClick={() => {
-                                  // TODO: Update status to invalid
-                                  console.log('Set status to invalid for:', item.id);
-                                }}
-                                disabled={item.status === 'invalid'}
+                                onClick={() => handleUpdateStatus(item.id, 'INVALID')}
+                                disabled={item.status === 'INVALID'}
                               >
                                 <CrossCircledIcon className="w-4 h-4 mr-2" />
                                 Tandai Tidak Valid
                               </Button>
                               <Button 
                                 color="green"
-                                onClick={() => {
-                                  // TODO: Update status to valid
-                                  console.log('Set status to valid for:', item.id);
-                                }}
-                                disabled={item.status === 'valid'}
+                                onClick={() => handleUpdateStatus(item.id, 'VALID')}
+                                disabled={item.status === 'VALID'}
                               >
                                 <CheckCircledIcon className="w-4 h-4 mr-2" />
                                 Tandai Valid

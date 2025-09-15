@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  role      Role     @default(USER)
+  isActive  Boolean  @default(true)
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model PesertaMagang {
+  id             String          @id @default(cuid())
+  nama           String
+  username       String          @unique
+  divisi         String
+  universitas    String
+  nomorHp        String
+  tanggalMulai   String
+  tanggalSelesai String
+  status         StatusPeserta   @default(AKTIF)
+  avatar         String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  absensi        Absensi[]
+  pengajuanIzin  PengajuanIzin[]
+
+  @@map("peserta_magang")
+}
+
+model Absensi {
+  id              String        @id @default(cuid())
+  pesertaMagangId String
+  tipe            TipeAbsensi
+  timestamp       String
+  lokasi          Json?
+  selfieUrl       String?
+  qrCodeData      String?
+  status          StatusAbsensi @default(VALID)
+  catatan         String?
+  ipAddress       String?
+  device          String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  pesertaMagang   PesertaMagang @relation(fields: [pesertaMagangId], references: [id], onDelete: Cascade)
+
+  @@map("absensi")
+}
+
+model PengajuanIzin {
+  id               String          @id @default(cuid())
+  pesertaMagangId  String
+  tipe             TipeIzin
+  tanggalMulai     String
+  tanggalSelesai   String
+  alasan           String
+  status           StatusPengajuan @default(PENDING)
+  dokumenPendukung String?
+  disetujuiOleh    String?
+  disetujuiPada    String?
+  catatan          String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  pesertaMagang    PesertaMagang   @relation(fields: [pesertaMagangId], references: [id], onDelete: Cascade)
+
+  @@map("pengajuan_izin")
+}
+
+model Settings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  category  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum StatusPeserta {
+  AKTIF
+  NONAKTIF
+  SELESAI
+}
+
+enum TipeAbsensi {
+  MASUK
+  KELUAR
+  IZIN
+  SAKIT
+  CUTI
+}
+
+enum StatusAbsensi {
+  VALID
+  INVALID
+  TERLAMBAT
+}
+
+enum TipeIzin {
+  SAKIT
+  IZIN
+  CUTI
+}
+
+enum StatusPengajuan {
+  PENDING
+  DISETUJUI
+  DITOLAK
+}

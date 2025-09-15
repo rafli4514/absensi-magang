@@ -1,815 +1,366 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import type { PesertaMagang, Absensi } from "../types";
-import { formatDateTime } from "../lib/utils";
-
-// UI Components
 import {
   Box,
-  Button,
   Card,
-  Dialog,
   Flex,
   Grid,
-  IconButton,
-  Select,
   Table,
   Text,
   TextField,
+  Badge,
+  Separator,
 } from "@radix-ui/themes";
-
-// Icons
 import {
-  CameraIcon,
-  CheckCircledIcon,
-  CircleBackslashIcon,
-  CrossCircledIcon,
-  DownloadIcon,
-  EyeOpenIcon,
-  MixerHorizontalIcon,
-  CalendarIcon,
-  Pencil2Icon,
-  TrashIcon,
-  FileTextIcon,
+  MagnifyingGlassIcon,
 } from "@radix-ui/react-icons";
-
 import {
-  User,
-  Building,
+  Calendar,
+  Clock,
+  MapPin,
   Phone,
+  GraduationCap,
 } from "lucide-react";
 
-// =====================================
-// Mock Data - Replace with API calls
-// =====================================
-
-const mockPeserta: PesertaMagang = {
-  id: "1",
-  nama: "Ahmad Rizki Pratama",
-  username: "ahmad",
-  divisi: "IT",
-  universitas: "Universitas Indonesia",
-  nomorHp: "08123456789",
-  tanggalMulai: "2024-01-01",
-  tanggalSelesai: "2024-06-30",
-  status: "Aktif",
-  avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-  createdAt: "2024-01-01",
-  updatedAt: "2024-01-01",
-};
-
-const mockAbsensi: Absensi[] = [
-  {
-    id: "1",
-    pesertaMagangId: "1",
-    tipe: "Masuk",
-    timestamp: "2024-01-15T08:30:00Z",
-    lokasi: {
-      latitude: -6.2088,
-      longitude: 106.8456,
-      alamat: "Jakarta, Indonesia",
-    },
-    selfieUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-    qrCodeData: "QR123",
-    status: "valid",
-    createdAt: "2024-01-15T08:30:00Z",
-  },
-  {
-    id: "2",
-    pesertaMagangId: "1",
-    tipe: "Keluar",
-    timestamp: "2024-01-15T17:00:00Z",
-    lokasi: {
-      latitude: -6.2088,
-      longitude: 106.8456,
-      alamat: "Jakarta, Indonesia",
-    },
-    qrCodeData: "QR456",
-    status: "valid",
-    createdAt: "2024-01-15T17:00:00Z",
-  },
-  {
-    id: "3",
-    pesertaMagangId: "1",
-    tipe: "Masuk",
-    timestamp: "2024-01-16T08:45:00Z",
-    qrCodeData: "QR789",
-    status: "Terlambat",
-    createdAt: "2024-01-16T08:45:00Z",
-  },
-  {
-    id: "4",
-    pesertaMagangId: "1",
-    tipe: "Izin",
-    timestamp: "2024-01-17T09:00:00Z",
-    qrCodeData: "QR101",
-    status: "valid",
-    createdAt: "2024-01-17T09:00:00Z",
-  },
-];
-
-// =====================================
-// Helper Components
-// =====================================
-
-const StatusIcon = ({ status }: { status: Absensi["status"] }) => {
-  switch (status) {
-    case "valid":
-      return <CheckCircledIcon color="green" />;
-    case "Terlambat":
-      return <CircleBackslashIcon color="orange" />;
-    case "invalid":
-      return <CrossCircledIcon color="red" />;
-    default:
-      return <CircleBackslashIcon color="gray" />;
-  }
-};
-
-const StatusBadge = ({ status }: { status: Absensi["status"] }) => {
-  const statusConfig = {
-    valid: { color: "bg-green-100 text-green-800", label: "Valid" },
-    Terlambat: { color: "bg-yellow-100 text-yellow-800", label: "Terlambat" },
-    invalid: { color: "bg-red-100 text-red-800", label: "Tidak Valid" },
-  };
-
-  const config = statusConfig[status];
-
-  return (
-    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
-      {config.label}
-    </span>
-  );
-};
-
-const TypeBadge = ({ tipe }: { tipe: Absensi["tipe"] }) => {
-  const typeConfig = {
-    Masuk: { color: "bg-blue-100 text-blue-800", label: "Masuk" },
-    Keluar: { color: "bg-purple-100 text-purple-800", label: "Keluar" },
-    Izin: { color: "bg-orange-100 text-orange-800", label: "Izin" },
-    Sakit: { color: "bg-red-100 text-red-800", label: "Sakit" },
-    Cuti: { color: "bg-green-100 text-green-800", label: "Cuti" },
-  };
-
-  const config = typeConfig[tipe] || { color: "bg-gray-100 text-gray-800", label: tipe };
-
-  return (
-    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
-      {config.label}
-    </span>
-  );
-};
-
-const getAttendanceRateBadge = (rate: number) => {
-  if (rate >= 95) {
-    return (
-      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-        Sangat Baik
-      </span>
-    );
-  } else if (rate >= 85) {
-    return (
-      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-        Baik
-      </span>
-    );
-  } else {
-    return (
-      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-        Perlu Diperhatikan
-      </span>
-    );
-  }
-};
-
-// =====================================
-// Custom Hooks for State Management
-// =====================================
-
-const useDialogState = () => {
-  const [selectedRecord, setSelectedRecord] = useState<Absensi | null>(null);
-  const [showDetailDialog, setShowDetailDialog] = useState(false);
-  const [showSelfieDialog, setShowSelfieDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-  return {
-    selectedRecord,
-    setSelectedRecord,
-    showDetailDialog,
-    setShowDetailDialog,
-    showSelfieDialog,
-    setShowSelfieDialog,
-    showEditDialog,
-    setShowEditDialog,
-    showDeleteDialog,
-    setShowDeleteDialog,
-  };
-};
-
-const useFilters = () => {
-  const [statusFilter, setStatusFilter] = useState<string>("Semua");
-  const [typeFilter, setTypeFilter] = useState<string>("Semua");
-
-  return { statusFilter, setStatusFilter, typeFilter, setTypeFilter };
-};
-
-const useAttendanceStats = (absensi: Absensi[]) => {
-  const stats = {
-    totalAbsensi: absensi.length,
-    valid: absensi.filter(a => a.status === 'valid').length,
-    terlambat: absensi.filter(a => a.status === 'Terlambat').length,
-    invalid: absensi.filter(a => a.status === 'invalid').length,
-    masuk: absensi.filter(a => a.tipe === 'Masuk').length,
-    keluar: absensi.filter(a => a.tipe === 'Keluar').length,
-    izin: absensi.filter(a => a.tipe === 'Izin').length,
-  };
-
-  const totalHariKerja = 22; // Assuming 22 working days in a month
-  const hadir = stats.valid + stats.terlambat;
-  const tingkatKehadiran = totalHariKerja > 0 ? (hadir / totalHariKerja) * 100 : 0;
-
-  return { stats, tingkatKehadiran };
-};
-
-// =====================================
-// Main Component
-// =====================================
+// Import services
+import pesertaMagangService from "../services/pesertaMagangService";
+import absensiService from "../services/absensiService";
+import Avatar from "../components/Avatar";
 
 export default function ProfilPesertaMagangPage() {
   const { id } = useParams<{ id: string }>();
-  // TODO: Use id to fetch specific peserta data from API
+  const [peserta, setPeserta] = useState<PesertaMagang | null>(null);
+  const [absensi, setAbsensi] = useState<Absensi[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter] = useState<string>("Semua");
 
-  // ============ Data States ============
-  const [peserta] = useState<PesertaMagang>(mockPeserta);
-  const [absensi] = useState<Absensi[]>(mockAbsensi);
+  // Fetch data on component mount
+  useEffect(() => {
+    if (id) {
+      fetchData();
+    }
+  }, [id]);
 
-  // ============ UI States ============
-  const filters = useFilters();
-  const dialogState = useDialogState();
-  const [editForm, setEditForm] = useState({
-    status: "valid" as Absensi["status"],
-    notes: "",
+  const fetchData = async () => {
+    if (!id) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch peserta and absensi data in parallel
+      const [pesertaResponse, absensiResponse] = await Promise.all([
+        pesertaMagangService.getPesertaMagangById(id),
+        absensiService.getAbsensi({ pesertaMagangId: id })
+      ]);
+
+      if (pesertaResponse.success && pesertaResponse.data) {
+        setPeserta(pesertaResponse.data);
+      }
+
+      if (absensiResponse.success && absensiResponse.data) {
+        setAbsensi(absensiResponse.data);
+      }
+    } catch (error: unknown) {
+      console.error('Fetch profil data error:', error);
+      setError('Failed to fetch profil data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredAbsensi = absensi.filter((item) => {
+    const matchesSearch = item.tipe
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === "Semua" || item.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
   });
 
-  // ============ Computed Values ============
-  const { stats, tingkatKehadiran } = useAttendanceStats(absensi);
-
-  const filteredAbsensi = absensi.filter((record) => {
-    const matchesStatus = filters.statusFilter === "Semua" || record.status === filters.statusFilter;
-    const matchesType = filters.typeFilter === "Semua" || record.tipe === filters.typeFilter;
-    return matchesStatus && matchesType;
-  });
-
-  // ============ Action Handlers ============
-  const handleViewDetail = (record: Absensi) => {
-    dialogState.setSelectedRecord(record);
-    dialogState.setShowDetailDialog(true);
-  };
-
-  const handleViewSelfie = (record: Absensi) => {
-    dialogState.setSelectedRecord(record);
-    dialogState.setShowSelfieDialog(true);
-  };
-
-  const handleEditStatus = (record: Absensi) => {
-    dialogState.setSelectedRecord(record);
-    setEditForm({
-      status: record.status,
-      notes: "",
-    });
-    dialogState.setShowEditDialog(true);
-  };
-
-  const handleDeleteRecord = (record: Absensi) => {
-    dialogState.setSelectedRecord(record);
-    dialogState.setShowDeleteDialog(true);
-  };
-
-  const handleDownloadProof = (record: Absensi) => {
-    // TODO: Implement actual download functionality
-    console.log('Download proof for record:', record.id);
-    alert('Fitur download bukti akan diimplementasikan');
-  };
-
-  const handleEditSubmit = () => {
-    // TODO: Implement API call to update record
-    console.log('Update record:', dialogState.selectedRecord?.id, 'with:', editForm);
-    alert('Status berhasil diperbarui');
-    dialogState.setShowEditDialog(false);
-    dialogState.setSelectedRecord(null);
-  };
-
-  const handleDeleteConfirm = () => {
-    // TODO: Implement API call to delete record
-    console.log('Delete record:', dialogState.selectedRecord?.id);
-    alert('Record berhasil dihapus');
-    dialogState.setShowDeleteDialog(false);
-    dialogState.setSelectedRecord(null);
-  };
-
-  // ============ Render ============
+  if (loading) {
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+      <div className="flex items-center justify-center min-h-96">
+        <Card className="p-8">
+          <Flex direction="column" align="center" gap="4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <Text size="3" weight="medium" color="gray">
+              Memuat profil peserta...
+            </Text>
+          </Flex>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+  return (
+      <div className="flex items-center justify-center min-h-96">
+        <Card className="p-8">
+          <Flex direction="column" align="center" gap="4">
+            <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+              <Text size="4" color="red">!</Text>
+            </div>
+            <Text size="3" weight="medium" color="red">
+              Error: {error}
+            </Text>
+            <button 
+              onClick={fetchData}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              Coba Lagi
+            </button>
+          </Flex>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!peserta) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <Card className="p-8">
+          <Flex direction="column" align="center" gap="4">
+            <Avatar
+              src={null}
+              alt="User not found"
+              name=""
+              size="lg"
+              showBorder={false}
+              showHover={false}
+            />
+            <Text size="3" weight="medium" color="gray">
+              Peserta tidak ditemukan
+            </Text>
+          </Flex>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Page header */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
+        <Flex direction="column" gap="2">
+          <Text size="6" weight="bold">
             Profil Peserta Magang
-          </h1>
-          <p className="text-gray-600">
-            Detail informasi dan laporan kehadiran {peserta.nama}
-          </p>
-        </div>
-        <Button size="2">
-          <DownloadIcon className="mr-2" />
-          Export Laporan
-        </Button>
+          </Text>
+          <Text size="3" className="text-white opacity-90">
+            Detail informasi dan riwayat absensi peserta magang
+          </Text>
+        </Flex>
       </div>
 
-      {/* Profile Information */}
-      <Card>
-        <Flex direction="column" gap="6" className="p-6">
+      {/* Profile Card */}
+      <Card className="shadow-lg">
+        <Box p="6">
+          <Flex direction="column" gap="6">
+            {/* Profile Header */}
           <Flex align="center" gap="6">
-            <div className="h-24 w-24 flex-shrink-0">
-              {peserta.avatar ? (
-                <img
-                  src={peserta.avatar}
-                  alt={peserta.nama}
-                  className="h-24 w-24 rounded-full object-cover border-4 border-blue-100"
-                />
-              ) : (
-                <div className="h-24 w-24 rounded-full bg-primary-100 flex items-center justify-center border-4 border-blue-100">
-                  <span className="text-2xl font-medium text-primary-600">
-                    {peserta.nama.split(" ").map((n: string) => n[0]).join("")}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="flex-1">
-              <h2 className="text-3xl font-bold text-gray-900">{peserta.nama}</h2>
-              <p className="text-lg text-gray-600">@{peserta.username}</p>
-              <div className="flex items-center gap-4 mt-2">
-                <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${
-                  peserta.status === "Aktif"
-                    ? "bg-green-100 text-green-800"
-                    : peserta.status === "Nonaktif"
-                    ? "bg-gray-100 text-gray-800"
-                    : "bg-blue-100 text-blue-800"
-                }`}>
-                  {peserta.status}
-                </span>
-                <span className="inline-flex px-3 py-1 text-sm font-medium rounded-full bg-blue-100 text-blue-800">
+              <Avatar
+                src={peserta.avatar}
+                alt={peserta.nama}
+                name={peserta.nama}
+                size="xl"
+                showBorder={true}
+                showHover={true}
+              />
+              
+              <Box className="flex-1">
+                <Flex direction="column" gap="2">
+                  <Text size="6" weight="bold" className="text-gray-900">
+                    {peserta.nama}
+                  </Text>
+                  <Text size="3" color="gray" className="font-medium">
+                    @{peserta.username}
+                  </Text>
+                  <Flex align="center" gap="2" wrap="wrap">
+                    <Badge color="blue" variant="soft" size="2">
                   {peserta.divisi}
-                </span>
-              </div>
-            </div>
+                    </Badge>
+                    <Badge color="purple" variant="soft" size="2">
+                      {peserta.universitas}
+                    </Badge>
+                  </Flex>
+                </Flex>
+              </Box>
           </Flex>
+
+            <Separator size="4" />
 
           {/* Profile Details */}
           <Grid columns={{ initial: "1", md: "2" }} gap="6">
-            <div className="space-y-4">
-              <div>
-                <Text size="2" weight="bold" className="flex items-center gap-2">
-                  <Building className="h-4 w-4" />
-                  Universitas
-                </Text>
-                <Text size="3" className="text-gray-900">{peserta.universitas}</Text>
-              </div>
-              <div>
-                <Text size="2" weight="bold" className="flex items-center gap-2">
+              <Box>
+                <Text size="3" weight="bold" color="gray" mb="4" className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
-                  Nomor Telepon
+                  Informasi Kontak
                 </Text>
-                <Text size="3" className="text-gray-900">{peserta.nomorHp}</Text>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <Text size="2" weight="bold" className="flex items-center gap-2">
-                  <CalendarIcon className="h-4 w-4" />
+                <Flex direction="column" gap="3">
+                  <Flex align="center" gap="3" className="p-3 bg-gray-50 rounded-lg">
+                    <Phone className="h-5 w-5 text-blue-600" />
+                    <Text size="2" weight="medium">{peserta.nomorHp}</Text>
+                  </Flex>
+                  <Flex align="center" gap="3" className="p-3 bg-gray-50 rounded-lg">
+                    <GraduationCap className="h-5 w-5 text-green-600" />
+                    <Text size="2" weight="medium">{peserta.universitas}</Text>
+                  </Flex>
+                </Flex>
+              </Box>
+              
+              <Box>
+                <Text size="3" weight="bold" color="gray" mb="4" className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
                   Periode Magang
                 </Text>
-                <Text size="3" className="text-gray-900">
-                  {new Date(peserta.tanggalMulai).toLocaleDateString('id-ID')} - {new Date(peserta.tanggalSelesai).toLocaleDateString('id-ID')}
+                <Flex direction="column" gap="3">
+                  <Flex align="center" gap="3" className="p-3 bg-gray-50 rounded-lg">
+                    <Calendar className="h-5 w-5 text-purple-600" />
+                    <Text size="2" weight="medium">
+                      {new Date(peserta.tanggalMulai).toLocaleDateString("id-ID")} -{" "}
+                      {new Date(peserta.tanggalSelesai).toLocaleDateString("id-ID")}
                 </Text>
-              </div>
-              <div>
-                <Text size="2" weight="bold" className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Bergabung Sejak
+                  </Flex>
+                  <Flex align="center" gap="3" className="p-3 bg-gray-50 rounded-lg">
+                    <Clock className="h-5 w-5 text-orange-600" />
+                    <Text size="2" weight="medium">
+                      Status: 
+                      <Badge 
+                        color={peserta.status === "AKTIF" ? "green" : peserta.status === "NONAKTIF" ? "red" : "gray"} 
+                        variant="soft" 
+                        size="1" 
+                        className="ml-2"
+                      >
+                        {peserta.status}
+                      </Badge>
                 </Text>
-                <Text size="3" className="text-gray-900">
-                  {new Date(peserta.createdAt).toLocaleDateString('id-ID')}
-                </Text>
-              </div>
-            </div>
+                  </Flex>
+                </Flex>
+              </Box>
           </Grid>
         </Flex>
+        </Box>
       </Card>
 
-      {/* Attendance Statistics */}
-      <Grid columns={{ initial: "1", md: "4" }} gap="4">
-        <Card>
-          <Flex direction="column" p="4">
-            <Text size="2" weight="bold" color="gray">
-              Total Absensi
+      {/* Attendance Records */}
+      <Card className="shadow-lg">
+        <Box p="6">
+          <Flex direction="column" gap="6">
+            {/* Header */}
+            <Flex align="center" justify="between">
+              <Text size="4" weight="bold" className="text-gray-900">
+                Riwayat Absensi
             </Text>
-            <Text size="6" weight="bold">
-              {stats.totalAbsensi}
-            </Text>
-            <Text size="1" color="gray">
-              Record bulan ini
-            </Text>
+              <Badge color="blue" variant="soft" size="2">
+                {filteredAbsensi.length} dari {absensi.length} catatan
+              </Badge>
           </Flex>
-        </Card>
-        <Card>
-          <Flex direction="column" p="4">
-            <Text size="2" weight="bold" color="gray">
-              Tingkat Kehadiran
-            </Text>
-            <Text size="6" weight="bold" color="green">
-              {tingkatKehadiran.toFixed(1)}%
-            </Text>
-            <div className="flex justify-start">
-              {getAttendanceRateBadge(tingkatKehadiran)}
-            </div>
-          </Flex>
-        </Card>
-        <Card>
-          <Flex direction="column" p="4">
-            <Text size="2" weight="bold" color="gray">
-              Terlambat
-            </Text>
-            <Text size="6" weight="bold" color="orange">
-              {stats.terlambat}
-            </Text>
-            <Text size="1" color="gray">
-              Kali terlambat
-            </Text>
-          </Flex>
-        </Card>
-        <Card>
-          <Flex direction="column" p="4">
-            <Text size="2" weight="bold" color="gray">
-              Izin/Sakit
-            </Text>
-            <Text size="6" weight="bold" color="blue">
-              {stats.izin}
-            </Text>
-            <Text size="1" color="gray">
-              Hari izin/sakit
-            </Text>
-          </Flex>
-        </Card>
-      </Grid>
 
       {/* Filters */}
-      <Box className="bg-white p-4 shadow-md rounded-2xl">
-        <Flex direction="column" gap="4">
-          <Flex align="center" gap="2">
-            <MixerHorizontalIcon width="18" height="18" />
-            <Text weight="bold">Filter Riwayat Absensi</Text>
-          </Flex>
           <Flex gap="4" wrap="wrap">
-            <div className="flex items-center">
-              <Select.Root
-                size="2"
-                defaultValue="Semua"
-                value={filters.statusFilter}
-                onValueChange={(value) => filters.setStatusFilter(value)}
+              <TextField.Root
+                placeholder="Cari berdasarkan tipe absensi..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1 min-w-64"
+                size="3"
               >
-                <Select.Trigger color="indigo" radius="large" />
-                <Select.Content color="indigo">
-                  <Select.Item value="Semua">Semua Status</Select.Item>
-                  <Select.Item value="valid">Valid</Select.Item>
-                  <Select.Item value="Terlambat">Terlambat</Select.Item>
-                  <Select.Item value="invalid">Tidak Valid</Select.Item>
-                </Select.Content>
-              </Select.Root>
-            </div>
-            <div className="flex items-center">
-              <Select.Root
-                size="2"
-                defaultValue="Semua"
-                value={filters.typeFilter}
-                onValueChange={(value) => filters.setTypeFilter(value)}
-              >
-                <Select.Trigger color="indigo" radius="large" />
-                <Select.Content color="indigo">
-                  <Select.Item value="Semua">Semua Tipe</Select.Item>
-                  <Select.Item value="Masuk">Masuk</Select.Item>
-                  <Select.Item value="Keluar">Keluar</Select.Item>
-                  <Select.Item value="Izin">Izin</Select.Item>
-                  <Select.Item value="Sakit">Sakit</Select.Item>
-                  <Select.Item value="Cuti">Cuti</Select.Item>
-                </Select.Content>
-              </Select.Root>
-            </div>
-          </Flex>
+                <TextField.Slot>
+                  <MagnifyingGlassIcon height="16" width="16" />
+                </TextField.Slot>
+              </TextField.Root>
         </Flex>
-      </Box>
 
-      {/* Attendance History */}
-      <Box>
-        <Card>
-          <Flex direction="column" p="4" gap="2">
-            <Flex align="center" gap="2">
-              <CalendarIcon width="18" height="18" />
-              <Text weight="bold">Riwayat Absensi</Text>
-            </Flex>
-            <Text size="2" color="gray">
-              {filteredAbsensi.length} record ditemukan
-            </Text>
-          </Flex>
-          <Table.Root variant="ghost">
+            {/* Attendance Table */}
+            <Box className="overflow-x-auto">
+              <Table.Root variant="surface">
             <Table.Header>
               <Table.Row>
-                <Table.ColumnHeaderCell>Tanggal</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>Tipe</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>Waktu</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>Lokasi</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>Aksi</Table.ColumnHeaderCell>
+                    <Table.ColumnHeaderCell className="font-semibold">
+                      Tanggal & Waktu
+                    </Table.ColumnHeaderCell>
+                    <Table.ColumnHeaderCell className="font-semibold">
+                      Tipe
+                    </Table.ColumnHeaderCell>
+                    <Table.ColumnHeaderCell className="font-semibold">
+                      Status
+                    </Table.ColumnHeaderCell>
+                    <Table.ColumnHeaderCell className="font-semibold">
+                      Lokasi
+                    </Table.ColumnHeaderCell>
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {filteredAbsensi.map((record) => (
-                <Table.Row key={record.id} className="hover:bg-gray-50">
+                  {filteredAbsensi.map((item) => (
+                    <Table.Row key={item.id} className="hover:bg-gray-50">
                   <Table.Cell>
-                    <Text size="2">
-                      {new Date(record.timestamp).toLocaleDateString("id-ID")}
+                        <Flex direction="column" gap="1">
+                          <Text size="2" weight="bold" className="text-gray-900">
+                            {new Date(item.timestamp).toLocaleDateString("id-ID", {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </Text>
+                          <Text size="1" color="gray" className="font-medium">
+                            {new Date(item.timestamp).toLocaleTimeString("id-ID", {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
                     </Text>
+                        </Flex>
                   </Table.Cell>
                   <Table.Cell>
-                    <TypeBadge tipe={record.tipe} />
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Text size="2" color="gray">
-                      {formatDateTime(record.createdAt)}
-                    </Text>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Text size="2" color="gray">
-                      {record.lokasi?.alamat || "Tidak tersedia"}
-                    </Text>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Flex gap="2" align="center">
-                      <StatusIcon status={record.status} />
-                      <StatusBadge status={record.status} />
-                    </Flex>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Flex gap="1" wrap="wrap">
-                      <IconButton
-                        size="1"
-                        variant="outline"
-                        color="blue"
-                        onClick={() => handleViewDetail(record)}
-                        title="Lihat Detail"
-                      >
-                        <EyeOpenIcon width="14" height="14" />
-                      </IconButton>
-                      {record.selfieUrl && (
-                        <IconButton
-                          size="1"
-                          variant="outline"
-                          color="green"
-                          onClick={() => handleViewSelfie(record)}
-                          title="Lihat Selfie"
+                        <Badge 
+                          color={item.tipe === "MASUK" ? "green" : "red"} 
+                          variant="soft" 
+                          size="2"
                         >
-                          <CameraIcon width="14" height="14" />
-                        </IconButton>
-                      )}
-                      <IconButton
-                        size="1"
-                        variant="outline"
-                        color="orange"
-                        onClick={() => handleEditStatus(record)}
-                        title="Edit Status"
-                      >
-                        <Pencil2Icon width="14" height="14" />
-                      </IconButton>
-                      <IconButton
-                        size="1"
-                        variant="outline"
-                        color="red"
-                        onClick={() => handleDeleteRecord(record)}
-                        title="Hapus Record"
-                      >
-                        <TrashIcon width="14" height="14" />
-                      </IconButton>
-                      <IconButton
-                        size="1"
-                        variant="outline"
-                        color="purple"
-                        onClick={() => handleDownloadProof(record)}
-                        title="Download Bukti"
-                      >
-                        <FileTextIcon width="14" height="14" />
-                      </IconButton>
+                          {item.tipe}
+                        </Badge>
+                  </Table.Cell>
+                  <Table.Cell>
+                        <Badge 
+                          color={item.status === "VALID" ? "green" : "red"} 
+                          variant="soft" 
+                          size="2"
+                        >
+                          {item.status}
+                        </Badge>
+                  </Table.Cell>
+                  <Table.Cell>
+                        <Flex align="center" gap="2">
+                          <MapPin className="h-4 w-4 text-gray-500" />
+                          <Text size="2" color="gray" className="font-medium">
+                            {item.lokasi?.alamat || "Tidak tersedia"}
+                    </Text>
                     </Flex>
                   </Table.Cell>
                 </Table.Row>
               ))}
             </Table.Body>
           </Table.Root>
-        </Card>
       </Box>
 
       {filteredAbsensi.length === 0 && (
-        <Card>
-          <Flex direction="column" align="center" p="8">
-            <Text size="3" color="gray">
+              <Box className="text-center py-12">
+                <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <Text size="3" color="gray" weight="medium">
               Tidak ada data absensi yang ditemukan
             </Text>
-          </Flex>
-        </Card>
-      )}
-
-      {/* ============ Dialog Components ============ */}
-
-      {/* Detail Dialog */}
-      <Dialog.Root open={dialogState.showDetailDialog} onOpenChange={dialogState.setShowDetailDialog}>
-        <Dialog.Content style={{ maxWidth: 600 }}>
-          <Dialog.Title>Detail Absensi</Dialog.Title>
-          <Dialog.Description>
-            Informasi lengkap record absensi
-          </Dialog.Description>
-
-          {dialogState.selectedRecord && (
-            <Flex direction="column" gap="4" mt="4">
-              <Grid columns={{ initial: "1", md: "2" }} gap="4">
-                <div>
-                  <Text size="2" weight="bold">Tipe</Text>
-                  <div className="mt-1">
-                    <TypeBadge tipe={dialogState.selectedRecord.tipe} />
-                  </div>
-                </div>
-                <div>
-                  <Text size="2" weight="bold">Status</Text>
-                  <div className="mt-1">
-                    <StatusBadge status={dialogState.selectedRecord.status} />
-                  </div>
-                </div>
-                <div>
-                  <Text size="2" weight="bold">Tanggal</Text>
-                  <Text size="3">{new Date(dialogState.selectedRecord.timestamp).toLocaleDateString('id-ID')}</Text>
-                </div>
-                <div>
-                  <Text size="2" weight="bold">Waktu</Text>
-                  <Text size="3">{formatDateTime(dialogState.selectedRecord.createdAt)}</Text>
-                </div>
-              </Grid>
-
-              <div>
-                <Text size="2" weight="bold">Lokasi</Text>
-                <Text size="3">{dialogState.selectedRecord.lokasi?.alamat || "Tidak tersedia"}</Text>
-              </div>
-
-              {dialogState.selectedRecord.qrCodeData && (
-                <div>
-                  <Text size="2" weight="bold">QR Code</Text>
-                  <Text size="3" className="font-mono">{dialogState.selectedRecord.qrCodeData}</Text>
-                </div>
-              )}
-
-              {dialogState.selectedRecord.selfieUrl && (
-                <div>
-                  <Text size="2" weight="bold">Foto Selfie</Text>
-                  <div className="mt-2">
-                    <img
-                      src={dialogState.selectedRecord.selfieUrl}
-                      alt="Selfie"
-                      className="w-32 h-32 object-cover rounded-lg border"
-                    />
-                  </div>
-                </div>
+                <Text size="2" color="gray" className="mt-2">
+                  {searchTerm ? "Coba ubah kata kunci pencarian" : "Belum ada riwayat absensi untuk peserta ini"}
+                </Text>
+              </Box>
               )}
             </Flex>
-          )}
-
-          <Flex gap="3" mt="6" justify="end">
-            <Dialog.Close>
-              <Button variant="soft" color="gray">
-                Tutup
-              </Button>
-            </Dialog.Close>
-          </Flex>
-        </Dialog.Content>
-      </Dialog.Root>
-
-      {/* Selfie Dialog */}
-      <Dialog.Root open={dialogState.showSelfieDialog} onOpenChange={dialogState.setShowSelfieDialog}>
-        <Dialog.Content style={{ maxWidth: 500 }}>
-          <Dialog.Title>Foto Selfie</Dialog.Title>
-          <Dialog.Description>
-            Foto selfie saat absensi
-          </Dialog.Description>
-
-          {dialogState.selectedRecord?.selfieUrl && (
-            <Flex justify="center" mt="4">
-              <img
-                src={dialogState.selectedRecord.selfieUrl}
-                alt="Selfie"
-                className="max-w-full max-h-96 object-contain rounded-lg border"
-              />
-            </Flex>
-          )}
-
-          <Flex gap="3" mt="6" justify="end">
-            <Dialog.Close>
-              <Button variant="soft" color="gray">
-                Tutup
-              </Button>
-            </Dialog.Close>
-          </Flex>
-        </Dialog.Content>
-      </Dialog.Root>
-
-      {/* Edit Status Dialog */}
-      <Dialog.Root open={dialogState.showEditDialog} onOpenChange={dialogState.setShowEditDialog}>
-        <Dialog.Content style={{ maxWidth: 500 }}>
-          <Dialog.Title>Edit Status Absensi</Dialog.Title>
-          <Dialog.Description>
-            Ubah status validasi absensi
-          </Dialog.Description>
-
-          <Flex direction="column" gap="4" mt="4">
-            <div>
-              <Text size="2" weight="bold" mb="2">Status</Text>
-              <Select.Root
-                value={editForm.status}
-                onValueChange={(value) => setEditForm({ ...editForm, status: value as Absensi["status"] })}
-              >
-                <Select.Trigger />
-                <Select.Content>
-                  <Select.Item value="valid">Valid</Select.Item>
-                  <Select.Item value="Terlambat">Terlambat</Select.Item>
-                  <Select.Item value="invalid">Tidak Valid</Select.Item>
-                </Select.Content>
-              </Select.Root>
-            </div>
-
-            <div>
-              <Text size="2" weight="bold" mb="2">Catatan (Opsional)</Text>
-              <TextField.Root
-                placeholder="Tambahkan catatan..."
-                value={editForm.notes}
-                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-              />
-            </div>
-          </Flex>
-
-          <Flex gap="3" mt="6" justify="end">
-            <Dialog.Close>
-              <Button variant="soft" color="gray">
-                Batal
-              </Button>
-            </Dialog.Close>
-            <Button onClick={handleEditSubmit}>
-              Simpan Perubahan
-            </Button>
-          </Flex>
-        </Dialog.Content>
-      </Dialog.Root>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog.Root open={dialogState.showDeleteDialog} onOpenChange={dialogState.setShowDeleteDialog}>
-        <Dialog.Content style={{ maxWidth: 450 }}>
-          <Dialog.Title>Hapus Record Absensi</Dialog.Title>
-          <Dialog.Description>
-            Apakah Anda yakin ingin menghapus record absensi ini? Tindakan ini tidak dapat dibatalkan.
-          </Dialog.Description>
-
-          {dialogState.selectedRecord && (
-            <Card mt="4">
-              <Flex direction="column" gap="2">
-                <Text size="2">
-                  <strong>Tipe:</strong> <TypeBadge tipe={dialogState.selectedRecord.tipe} />
-                </Text>
-                <Text size="2">
-                  <strong>Tanggal:</strong> {new Date(dialogState.selectedRecord.timestamp).toLocaleDateString('id-ID')}
-                </Text>
-                <Text size="2">
-                  <strong>Status:</strong> <StatusBadge status={dialogState.selectedRecord.status} />
-                </Text>
-              </Flex>
+        </Box>
             </Card>
-          )}
-
-          <Flex gap="3" mt="6" justify="end">
-            <Dialog.Close>
-              <Button variant="soft" color="gray">
-                Batal
-              </Button>
-            </Dialog.Close>
-            <Button variant="solid" color="red" onClick={handleDeleteConfirm}>
-              Hapus Record
-            </Button>
-          </Flex>
-        </Dialog.Content>
-      </Dialog.Root>
     </div>
   );
 }

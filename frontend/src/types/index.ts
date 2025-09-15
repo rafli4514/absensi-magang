@@ -1,9 +1,9 @@
 export interface User {
   id: string;
-  nama: string;
   username: string;
-  role: "admin" | "student";
-  avatar?: string;
+  role: "ADMIN" | "USER";
+  isActive: boolean;
+  avatar?: string | null;
   createdAt: string; 
   updatedAt: string; 
 }
@@ -17,7 +17,7 @@ export interface PesertaMagang {
   nomorHp: string;
   tanggalMulai: string;
   tanggalSelesai: string; 
-  status: "Aktif" | "Nonaktif" | "Selesai";
+  status: "AKTIF" | "NONAKTIF" | "SELESAI";
   avatar?: string;
   createdAt: string;
   updatedAt: string;
@@ -28,7 +28,7 @@ export interface Absensi {
   pesertaMagangId: string;
   // Embedded pesertaMagang is optional when the API expands relations
   pesertaMagang?: PesertaMagang;
-  tipe: "Masuk" | "Keluar" | "Izin" | "Sakit" | "Cuti";
+  tipe: "MASUK" | "KELUAR" | "IZIN" | "SAKIT" | "CUTI";
   timestamp: string;
   lokasi?: {
     latitude: number;
@@ -37,7 +37,7 @@ export interface Absensi {
   };
   selfieUrl?: string;
   qrCodeData: string;
-  status: "valid" | "invalid" | "Terlambat";
+  status: "VALID" | "INVALID" | "TERLAMBAT";
   catatan?: string;
   createdAt: string;
   updatedAt?: string; 
@@ -62,11 +62,11 @@ export interface PengajuanIzin {
   id: string;
   pesertaMagangId: string;
   pesertaMagang?: PesertaMagang;
-  tipe: "sakit" | "izin" | "cuti";
+  tipe: "SAKIT" | "IZIN" | "CUTI";
   tanggalMulai: string;
   tanggalSelesai: string;
   alasan: string;
-  status: "pending" | "disetujui" | "ditolak";
+  status: "PENDING" | "DISETUJUI" | "DITOLAK";
   diajukanPada: string;
   dokumenPendukung?: string;
   disetujuiOleh?: string;

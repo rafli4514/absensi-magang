@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import IconnetLogo from "../assets/iconnet-large.png";
+import authService from "../services/authService";
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -10,18 +11,34 @@ export default function Login() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await authService.login({
+        username: formData.username,
+        password: formData.password,
+      });
+
+      if (response.success) {
+        navigate("/");
+      } else {
+        setError(response.message || "Login failed");
+      }
+    } catch (error: unknown) {
+      console.error("Login error:", error);
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message || "Login failed. Please try again."
+        : "Login failed. Please try again.";
+      setError(errorMessage);
+    } finally {
       setIsLoading(false);
-      // For demo purposes, accept any email/password
-      navigate("/");
-    }, 1500);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,6 +150,12 @@ export default function Login() {
                 </a>
               </div>
             </div>
+
+            {error && (
+              <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-md">
+                {error}
+              </div>
+            )}
 
             <div>
               <button

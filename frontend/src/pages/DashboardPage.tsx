@@ -1,4 +1,7 @@
 
+// React
+import { useState, useEffect } from "react";
+
 // UI Components
 import {
   Card,
@@ -21,91 +24,10 @@ import {
 // Types
 import type { DashboardStats, Absensi } from "../types";
 
-// =====================================
-// Mock Data - Replace with API calls
-// =====================================
+// Services
+import dashboardService from "../services/dashboardService";
 
-const mockStats: DashboardStats = {
-  totalPesertaMagang: 25,
-  pesertaMagangAktif: 23,
-  absensiMasukHariIni: 20,
-  absensiKeluarHariIni: 3,
-  tingkatKehadiran: 87.5,
-  aktivitasBaruBaruIni: [
-    {
-      id: "1",
-      pesertaMagangId: "1",
-      pesertaMagang: {
-        id: "1",
-        nama: "Ahmad Rizki Pratama",
-        username: "ahmad",
-        divisi: "IT",
-        universitas: "Universitas Indonesia",
-        nomorHp: "08123456789",
-        tanggalMulai: "2024-01-01",
-        tanggalSelesai: "2024-06-30",
-        status: "Aktif",
-        createdAt: "2024-01-01",
-        updatedAt: "2024-01-01",
-      },
-      tipe: "Masuk",
-      timestamp: new Date().toISOString(),
-      lokasi: {
-        latitude: -6.2088,
-        longitude: 106.8456,
-        alamat: "Jakarta, Indonesia",
-      },
-      selfieUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-      qrCodeData: "QR123",
-      status: "valid",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: "2",
-      pesertaMagangId: "2",
-      pesertaMagang: {
-        id: "2",
-        nama: "Siti Nurhaliza",
-        username: "siti",
-        divisi: "HR",
-        universitas: "Universitas Gadjah Mada",
-        nomorHp: "08198765432",
-        tanggalMulai: "2024-01-01",
-        tanggalSelesai: "2024-06-30",
-        status: "Aktif",
-        createdAt: "2024-01-01",
-        updatedAt: "2024-01-01",
-      },
-      tipe: "Masuk",
-      timestamp: new Date().toISOString(),
-      qrCodeData: "QR456",
-      status: "Terlambat",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: "3",
-      pesertaMagangId: "3",
-      pesertaMagang: {
-        id: "3",
-        nama: "Budi Santoso",
-        username: "budi",
-        divisi: "Finance",
-        universitas: "Institut Teknologi Bandung",
-        nomorHp: "08134567890",
-        tanggalMulai: "2024-01-01",
-        tanggalSelesai: "2024-06-30",
-        status: "Aktif",
-        createdAt: "2024-01-01",
-        updatedAt: "2024-01-01",
-      },
-      tipe: "Izin",
-      timestamp: new Date().toISOString(),
-      qrCodeData: "QR789",
-      status: "valid",
-      createdAt: new Date().toISOString(),
-    },
-  ],
-};
+// Data dummy sudah dihapus - menggunakan API real
 
 // =====================================
 // Helper Components
@@ -113,12 +35,12 @@ const mockStats: DashboardStats = {
 
 const StatusBadge = ({ status }: { status: Absensi["status"] }) => {
   const statusConfig = {
-    valid: { color: "bg-green-100 text-green-800", label: "Tepat Waktu" },
-    Terlambat: { color: "bg-yellow-100 text-yellow-800", label: "Terlambat" },
-    invalid: { color: "bg-red-100 text-red-800", label: "Tidak Valid" },
+    VALID: { color: "bg-green-100 text-green-800", label: "Tepat Waktu" },
+    TERLAMBAT: { color: "bg-yellow-100 text-yellow-800", label: "Terlambat" },
+    INVALID: { color: "bg-red-100 text-red-800", label: "Tidak Valid" },
   };
 
-  const config = statusConfig[status];
+  const config = statusConfig[status] || { color: "bg-gray-100 text-gray-800", label: status };
 
   return (
     <span
@@ -131,11 +53,11 @@ const StatusBadge = ({ status }: { status: Absensi["status"] }) => {
 
 const TypeBadge = ({ tipe }: { tipe: Absensi["tipe"] }) => {
   const typeConfig = {
-    Masuk: { color: "bg-blue-100 text-blue-800", label: "Masuk" },
-    Keluar: { color: "bg-purple-100 text-purple-800", label: "Keluar" },
-    Izin: { color: "bg-orange-100 text-orange-800", label: "Izin" },
-    Sakit: { color: "bg-red-100 text-red-800", label: "Sakit" },
-    Cuti: { color: "bg-green-100 text-green-800", label: "Cuti" },
+    MASUK: { color: "bg-blue-100 text-blue-800", label: "Masuk" },
+    KELUAR: { color: "bg-purple-100 text-purple-800", label: "Keluar" },
+    IZIN: { color: "bg-orange-100 text-orange-800", label: "Izin" },
+    SAKIT: { color: "bg-red-100 text-red-800", label: "Sakit" },
+    CUTI: { color: "bg-green-100 text-green-800", label: "Cuti" },
   };
 
   const config = typeConfig[tipe] || { color: "bg-gray-100 text-gray-800", label: tipe };
@@ -154,8 +76,48 @@ const TypeBadge = ({ tipe }: { tipe: Absensi["tipe"] }) => {
 // =====================================
 
 const useDashboardData = () => {
-  // TODO: Replace with actual API calls
-  return { stats: mockStats };
+  const [stats, setStats] = useState<DashboardStats>({
+    totalPesertaMagang: 0,
+    pesertaMagangAktif: 0,
+    absensiMasukHariIni: 0,
+    absensiKeluarHariIni: 0,
+    tingkatKehadiran: 0,
+    aktivitasBaruBaruIni: [],
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const response = await dashboardService.getStats();
+        if (response.success && response.data) {
+          setStats(response.data);
+        } else {
+          setError(response.message || 'Failed to fetch dashboard stats');
+        }
+      } catch (error: unknown) {
+        console.error('Dashboard stats error:', error);
+        setError('Failed to fetch dashboard stats');
+        // Fallback to mock data on error
+        setStats({
+          totalPesertaMagang: 0,
+          pesertaMagangAktif: 0,
+          absensiMasukHariIni: 0,
+          absensiKeluarHariIni: 0,
+          tingkatKehadiran: 0,
+          aktivitasBaruBaruIni: [],
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  return { stats, loading, error };
 };
 
 // =====================================
@@ -164,7 +126,29 @@ const useDashboardData = () => {
 
 export default function DashboardPage() {
   // ============ Data ============
-  const { stats } = useDashboardData();
+  const { stats, loading, error } = useDashboardData();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-600 mb-2">Error: {error}</p>
+          <p className="text-gray-600 text-sm">Showing fallback data</p>
+        </div>
+      </div>
+    );
+  }
 
   // ============ Render ============
   return (
@@ -309,15 +293,15 @@ export default function DashboardPage() {
             {stats.aktivitasBaruBaruIni.map((activity) => (
               <Flex key={activity.id} align="center" gap="4" className="p-4 bg-gray-50 rounded-lg">
                 <div className={`p-2 rounded-lg ${
-                  activity.status === "valid"
+                  activity.status === "VALID"
                     ? "bg-green-100"
-                    : activity.status === "Terlambat"
+                    : activity.status === "TERLAMBAT"
                     ? "bg-yellow-100"
                     : "bg-red-100"
                 }`}>
-                  {activity.status === "valid" ? (
+                  {activity.status === "VALID" ? (
                     <CheckCircle className="h-4 w-4 text-green-600" />
-                  ) : activity.status === "Terlambat" ? (
+                  ) : activity.status === "TERLAMBAT" ? (
                     <AlertCircle className="h-4 w-4 text-yellow-600" />
                   ) : (
                     <XCircle className="h-4 w-4 text-red-600" />
