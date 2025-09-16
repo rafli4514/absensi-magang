@@ -67,26 +67,26 @@ const PengaturanPageContent = () => {
   });
   const [originalSettings, setOriginalSettings] =
     useState<AppSettings>(settings);
-  
+
   // UI states
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isTestingLocation, setIsTestingLocation] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
-  
+
   // Messages
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  
+
   // Location search
   const [locationQuery, setLocationQuery] = useState("");
   const [locationResults, setLocationResults] = useState<
     Array<{ address: string; latitude: number; longitude: number }>
   >([]);
   const [showLocationResults, setShowLocationResults] = useState(false);
-  
+
   // Quick location presets
   const [showPresetLocations, setShowPresetLocations] = useState(false);
 
@@ -142,7 +142,7 @@ const PengaturanPageContent = () => {
       icon: "🌴",
     },
   ];
-  
+
   // Location test results
   const [locationTestResult, setLocationTestResult] = useState<{
     distance: number;
@@ -153,7 +153,7 @@ const PengaturanPageContent = () => {
   // Load settings on component mount
   useEffect(() => {
     let isMounted = true;
-    
+
     const initializeSettings = async () => {
       try {
         if (isMounted) {
@@ -166,9 +166,9 @@ const PengaturanPageContent = () => {
         }
       }
     };
-    
+
     initializeSettings();
-    
+
     return () => {
       isMounted = false;
     };
@@ -179,7 +179,7 @@ const PengaturanPageContent = () => {
     try {
       setIsLoading(true);
       setErrorMessage("");
-      
+
       const response = await pengaturanService.getSettings();
       if (response && response.success && response.data) {
         setSettings(response.data);
@@ -193,7 +193,7 @@ const PengaturanPageContent = () => {
         error instanceof Error ? error.message : "Gagal memuat pengaturan";
       setErrorMessage(errorMessage);
       console.error("Load settings error:", error);
-      
+
       // Use local settings as fallback
       const localSettings = pengaturanService.getLocalSettings();
       setSettings(localSettings);
@@ -220,7 +220,7 @@ const PengaturanPageContent = () => {
         );
         return;
       }
-      
+
       const response = await pengaturanService.updateSettings(settings);
       if (response.success) {
         setOriginalSettings(settings);
@@ -243,14 +243,14 @@ const PengaturanPageContent = () => {
     try {
       setIsGettingLocation(true);
       setErrorMessage("");
-      
+
       // Check if geolocation is supported
       if (!navigator.geolocation) {
         throw new Error("Geolocation is not supported by this browser");
       }
-      
+
       const location = await pengaturanService.getCurrentLocation();
-      
+
       if (
         location &&
         typeof location.latitude === "number" &&
@@ -300,13 +300,13 @@ const PengaturanPageContent = () => {
         }, 4000);
         return;
       }
-      
+
       const response = await pengaturanService.testLocation(
         settings.location.latitude,
         settings.location.longitude,
         settings.location.radius
       );
-      
+
       if (response.success && response.data) {
         setLocationTestResult(response.data);
         if (response.data.isWithinRange) {
@@ -339,18 +339,18 @@ const PengaturanPageContent = () => {
       setErrorMessage("Masukkan query pencarian lokasi");
       return;
     }
-    
+
     try {
       setIsSearchingLocation(true);
       setErrorMessage("");
       setLocationResults([]);
-      
+
       const results = await pengaturanService.searchLocation(locationQuery);
-      
+
       if (Array.isArray(results)) {
         setLocationResults(results);
         setShowLocationResults(true);
-        
+
         if (results.length === 0) {
           setErrorMessage("Tidak ada lokasi yang ditemukan");
         }
@@ -451,13 +451,13 @@ const PengaturanPageContent = () => {
       settings.location.latitude,
       settings.location.longitude
     );
-    
+
     if (validation.isValid) {
       setSuccessMessage("Koordinat valid!");
     } else {
       setErrorMessage(validation.message);
     }
-    
+
     setTimeout(() => {
       setSuccessMessage("");
       setErrorMessage("");
@@ -546,7 +546,7 @@ const PengaturanPageContent = () => {
               <div className="flex items-center">
                 <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
                 <div>
-                <p className="text-red-800 font-medium">{errorMessage}</p>
+                  <p className="text-red-800 font-medium">{errorMessage}</p>
                   {validationErrors.length > 0 && (
                     <ul className="text-red-700 text-sm mt-2 list-disc list-inside">
                       {validationErrors.map((error, index) => (
@@ -818,7 +818,7 @@ const PengaturanPageContent = () => {
                   useRadius={settings.location.useRadius}
                   radius={settings.location.radius}
                 />
-                </div>
+              </div>
 
               {/* Quick Location Selection */}
               <div>
@@ -894,27 +894,27 @@ const PengaturanPageContent = () => {
                 </div>
                 {/* Location Search Results */}
                 <Fragment>
-                {showLocationResults && locationResults.length > 0 && (
-                  <div className="mt-2 border border-gray-200 rounded-lg bg-white shadow-lg max-h-60 overflow-y-auto">
-                    {locationResults.map((result, index) => (
-                      <div
+                  {showLocationResults && locationResults.length > 0 && (
+                    <div className="mt-2 border border-gray-200 rounded-lg bg-white shadow-lg max-h-60 overflow-y-auto">
+                      {locationResults.map((result, index) => (
+                        <div
                           key={`${result.latitude.toFixed(
                             6
                           )}-${result.longitude.toFixed(6)}-${index}`}
-                        className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                        onClick={() => selectLocation(result)}
-                      >
-                        <p className="text-sm text-gray-900 truncate">
-                          {result.address}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {result.latitude.toFixed(6)},{" "}
-                          {result.longitude.toFixed(6)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                          className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                          onClick={() => selectLocation(result)}
+                        >
+                          <p className="text-sm text-gray-900 truncate">
+                            {result.address}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {result.latitude.toFixed(6)},{" "}
+                            {result.longitude.toFixed(6)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </Fragment>
               </div>
 
@@ -1040,41 +1040,39 @@ const PengaturanPageContent = () => {
 
                 {/* Radius Setting - Only show if useRadius is enabled */}
                 {settings.location.useRadius && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Radius Area PLN (meter)
-                  </label>
-                  <Select.Root
-                    value={settings.location.radius.toString()}
-                    onValueChange={(value) =>
-                      setSettings({
-                        ...settings,
-                        location: {
-                          ...settings.location,
-                          radius: parseInt(value),
-                        },
-                      })
-                    }
-                  >
-                    <Select.Trigger />
-                    <Select.Content>
+                    </label>
+                    <Select.Root
+                      value={settings.location.radius.toString()}
+                      onValueChange={(value) =>
+                        setSettings({
+                          ...settings,
+                          location: {
+                            ...settings.location,
+                            radius: parseInt(value),
+                          },
+                        })
+                      }
+                    >
+                      <Select.Trigger />
+                      <Select.Content>
                         <Select.Item value="25">25 meter</Select.Item>
                         <Select.Item value="50">50 meter</Select.Item>
-                      <Select.Item value="100">
-                        100 meter (Direkomendasikan)
-                      </Select.Item>
-                        <Select.Item value="200">
-                          200 meter
-                      </Select.Item>
+                        <Select.Item value="100">
+                          100 meter (Direkomendasikan)
+                        </Select.Item>
+                        <Select.Item value="200">200 meter</Select.Item>
                         <Select.Item value="500">500 meter</Select.Item>
                         <Select.Item value="1000">1000 meter</Select.Item>
-                    </Select.Content>
-                  </Select.Root>
-                  <p className="text-xs text-gray-500 mt-1">
+                      </Select.Content>
+                    </Select.Root>
+                    <p className="text-xs text-gray-500 mt-1">
                       Radius menentukan jarak maksimal dari kantor PLN untuk
                       absensi valid
-                  </p>
-                </div>
+                    </p>
+                  </div>
                 )}
 
                 {/* Radius Status Info */}
@@ -1144,47 +1142,47 @@ const PengaturanPageContent = () => {
                 </div>
                 {/* Location Test Result */}
                 <Fragment>
-                {locationTestResult && (
-                  <div
-                    className={`mt-4 p-4 rounded-lg ${
-                      locationTestResult.isWithinRange
-                        ? "bg-green-50 border border-green-200"
-                        : "bg-red-50 border border-red-200"
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      {locationTestResult.isWithinRange ? (
-                        <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                      ) : (
-                        <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
-                      )}
-                      <div>
-                        <p
-                          className={`font-medium ${
-                            locationTestResult.isWithinRange
-                              ? "text-green-800"
-                              : "text-red-800"
-                          }`}
-                        >
-                          {locationTestResult.isWithinRange
-                            ? "Test Lokasi Berhasil!"
-                            : "Test Lokasi Gagal!"}
-                        </p>
-                        <p
-                          className={`text-sm ${
-                            locationTestResult.isWithinRange
-                              ? "text-green-700"
-                              : "text-red-700"
-                          }`}
-                        >
+                  {locationTestResult && (
+                    <div
+                      className={`mt-4 p-4 rounded-lg ${
+                        locationTestResult.isWithinRange
+                          ? "bg-green-50 border border-green-200"
+                          : "bg-red-50 border border-red-200"
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        {locationTestResult.isWithinRange ? (
+                          <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                        ) : (
+                          <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+                        )}
+                        <div>
+                          <p
+                            className={`font-medium ${
+                              locationTestResult.isWithinRange
+                                ? "text-green-800"
+                                : "text-red-800"
+                            }`}
+                          >
+                            {locationTestResult.isWithinRange
+                              ? "Test Lokasi Berhasil!"
+                              : "Test Lokasi Gagal!"}
+                          </p>
+                          <p
+                            className={`text-sm ${
+                              locationTestResult.isWithinRange
+                                ? "text-green-700"
+                                : "text-red-700"
+                            }`}
+                          >
                             {settings.location.useRadius
                               ? `Jarak dari kantor: ${locationTestResult.distance}m (Radius: ${settings.location.radius}m)`
                               : "Radius tidak digunakan - absensi diizinkan dari mana saja"}
-                        </p>
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
                 </Fragment>
               </div>
             </div>
@@ -1273,9 +1271,8 @@ const PengaturanPageContent = () => {
           </Flex>
         </Card>
       </Box>
-
       {/* Save Settings */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-end items-center">
         <div className="text-sm text-gray-500">
           {hasUnsavedChanges() && (
             <span className="text-orange-600">
@@ -1284,22 +1281,22 @@ const PengaturanPageContent = () => {
           )}
         </div>
         <div className="flex gap-4">
-        <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
-          Batal
-        </Button>
-        <Button
-          onClick={saveSettings}
-          disabled={isSaving || !hasUnsavedChanges()}
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Menyimpan...
-            </>
-          ) : (
-            "Simpan Pengaturan"
-          )}
-        </Button>
+          <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+            Batal
+          </Button>
+          <Button
+            onClick={saveSettings}
+            disabled={isSaving || !hasUnsavedChanges()}
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Menyimpan...
+              </>
+            ) : (
+              "Simpan Pengaturan"
+            )}
+          </Button>
         </div>
       </div>
 
@@ -1356,35 +1353,35 @@ class ErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center max-w-md mx-auto p-6">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
-            Terjadi Kesalahan
-          </h2>
-          <p className="text-gray-600 mb-4">
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center max-w-md mx-auto p-6">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              Terjadi Kesalahan
+            </h2>
+            <p className="text-gray-600 mb-4">
               {this.state.error?.message ||
                 "Terjadi kesalahan yang tidak terduga di halaman pengaturan."}
-          </p>
-          <div className="space-y-2">
+            </p>
+            <div className="space-y-2">
               <button
                 onClick={() => window.location.reload()}
                 className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Muat Ulang Halaman
+              >
+                Muat Ulang Halaman
               </button>
               <button
                 onClick={() => this.setState({ hasError: false, error: null })}
                 className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-            >
-              Coba Lagi
+              >
+                Coba Lagi
               </button>
+            </div>
           </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
     return this.props.children;
   }

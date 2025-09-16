@@ -62,7 +62,7 @@ export default function InteractiveMap({
   onLocationChange, 
   height = "300px",
   useRadius = false,
-  radius = 100,
+  radius = 0,
 }: InteractiveMapProps) {
   const [isLoaded, setIsLoaded] = useState(false);
 
