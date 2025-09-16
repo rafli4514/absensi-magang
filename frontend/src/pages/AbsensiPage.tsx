@@ -28,6 +28,7 @@ import {
 } from "@radix-ui/react-icons";
 import absensiService from "../services/absensiService";
 import Avatar from "../components/Avatar";
+import { parseQRCodeData, formatQRCodeType, getQRCodeTypeColor } from "../lib/qrCodeUtils";
 
 // Data dummy sudah dihapus - menggunakan API real
 
@@ -438,19 +439,50 @@ export default function AbsensiPage() {
                               )}
 
                               {/* QR Code Data */}
-                              <Flex
-                                direction="row"
-                                justify="between"
-                                align="center"
-                                className="py-3 border-b border-gray-200"
-                              >
-                                <Text className="text-lg font-medium text-gray-700">
+                              <div className="py-3 border-b border-gray-200">
+                                <Text className="text-lg font-medium text-gray-700 mb-2">
                                   QR Code Data
                                 </Text>
-                                <Text className="text-lg text-gray-900">
-                                  {item.qrCodeData}
-                                </Text>
-                              </Flex>
+                                <div className="bg-gray-50 p-3 rounded-lg">
+                                  {(() => {
+                                    const qrData = parseQRCodeData(item.qrCodeData);
+                                    if (qrData) {
+                                      return (
+                                        <div className="space-y-2 text-sm">
+                                          <div className="flex justify-between">
+                                            <span className="text-gray-600">Type:</span>
+                                            <span className={`px-2 py-1 rounded-full text-xs ${getQRCodeTypeColor(qrData.type)}`}>
+                                              {formatQRCodeType(qrData.type)}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="text-gray-600">Session ID:</span>
+                                            <span className="font-mono text-xs">{qrData.sessionId}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="text-gray-600">Location:</span>
+                                            <span>{qrData.location}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="text-gray-600">Valid Until:</span>
+                                            <span>{new Date(qrData.validUntil).toLocaleString("id-ID")}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="text-gray-600">Generated:</span>
+                                            <span>{new Date(qrData.timestamp).toLocaleString("id-ID")}</span>
+                                          </div>
+                                        </div>
+                                      );
+                                    } else {
+                                      return (
+                                        <Text className="text-sm text-gray-600 font-mono">
+                                          {item.qrCodeData}
+                                        </Text>
+                                      );
+                                    }
+                                  })()}
+                                </div>
+                              </div>
 
                               {/* Status */}
                               <Flex

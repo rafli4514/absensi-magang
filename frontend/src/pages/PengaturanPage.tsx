@@ -1,5 +1,13 @@
-import { useState, useEffect } from "react";
-import { QrCode, Clock, MapPin, Calendar, Shield, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
+import React, { useState, useEffect, Fragment } from "react";
+import {
+  Clock,
+  MapPin,
+  Calendar,
+  Shield,
+  CheckCircle,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
 import {
   Box,
   Button,
@@ -13,59 +21,182 @@ import {
   AlertDialog,
 } from "@radix-ui/themes";
 import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import pengaturanService, { type AppSettings } from "../services/pengaturanService";
+import pengaturanService, {
+  type AppSettings,
+} from "../services/pengaturanService";
+import InteractiveMap from "../components/InteractiveMap";
 
-export default function PengaturanPage() {
+// Error Boundary Component
+const PengaturanPageContent = () => {
   // Main settings state
-  const [settings, setSettings] = useState<AppSettings>(pengaturanService.getLocalSettings());
-  const [originalSettings, setOriginalSettings] = useState<AppSettings>(pengaturanService.getLocalSettings());
-  
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    try {
+      return pengaturanService.getLocalSettings();
+    } catch (error) {
+      console.error("Failed to load local settings:", error);
+      // Return default settings if local settings fail
+      return {
+        attendance: {
+          allowLateCheckIn: true,
+          lateThreshold: 15,
+          requireLocation: true,
+          allowRemoteCheckIn: false,
+        },
+        schedule: {
+          workStartTime: "08:00",
+          workEndTime: "17:00",
+          breakStartTime: "12:00",
+          breakEndTime: "13:00",
+          workDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        },
+        location: {
+          officeAddress:
+            "PT PLN Icon Plus Kantor Perwakilan Aceh, Jl. Teuku Umar, Banda Aceh",
+          latitude: 5.5454249,
+          longitude: 95.3175582,
+          radius: 100,
+        },
+        security: {
+          faceVerification: false,
+          ipWhitelist: false,
+          sessionTimeout: 60,
+        },
+      };
+    }
+  });
+  const [originalSettings, setOriginalSettings] =
+    useState<AppSettings>(settings);
+
   // UI states
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
   const [isTestingLocation, setIsTestingLocation] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
-  
+
   // Messages
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
   // Location search
-  const [locationQuery, setLocationQuery] = useState('');
-  const [locationResults, setLocationResults] = useState<Array<{ address: string; latitude: number; longitude: number }>>([]);
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationResults, setLocationResults] = useState<
+    Array<{ address: string; latitude: number; longitude: number }>
+  >([]);
   const [showLocationResults, setShowLocationResults] = useState(false);
-  
-  // QR Code
-  const [currentQRCode, setCurrentQRCode] = useState<string>('');
-  const [qrExpiresAt, setQrExpiresAt] = useState<string>('');
-  const [qrImageError, setQrImageError] = useState<boolean>(false);
-  
+
+  // Quick location presets
+  const [showPresetLocations, setShowPresetLocations] = useState(false);
+
+  // Preset locations for easy selection (with stable IDs)
+  const presetLocations = [
+    {
+      id: "pln-aceh",
+      name: "PLN Icon Plus Aceh",
+      address:
+        "PT PLN Icon Plus Kantor Perwakilan Aceh, Jl. Teuku Umar, Banda Aceh",
+      latitude: 5.5454249,
+      longitude: 95.3175582,
+      icon: "🏢",
+    },
+    {
+      id: "pln-jakarta",
+      name: "PLN Pusat Jakarta",
+      address: "PT PLN (Persero) Kantor Pusat, Jl. Trunojoyo, Jakarta Selatan",
+      latitude: -6.2088,
+      longitude: 106.8456,
+      icon: "🏛️",
+    },
+    {
+      id: "pln-medan",
+      name: "PLN Medan",
+      address: "PT PLN Wilayah Sumatera Utara, Medan",
+      latitude: 3.5952,
+      longitude: 98.6722,
+      icon: "⚡",
+    },
+    {
+      id: "pln-surabaya",
+      name: "PLN Surabaya",
+      address: "PT PLN Wilayah Jawa Timur, Surabaya",
+      latitude: -7.2575,
+      longitude: 112.7521,
+      icon: "🔌",
+    },
+    {
+      id: "pln-makassar",
+      name: "PLN Makassar",
+      address: "PT PLN Wilayah Sulawesi Selatan, Makassar",
+      latitude: -5.1477,
+      longitude: 119.4327,
+      icon: "💡",
+    },
+    {
+      id: "pln-denpasar",
+      name: "PLN Denpasar",
+      address: "PT PLN Wilayah Bali, Denpasar",
+      latitude: -8.6705,
+      longitude: 115.2126,
+      icon: "🌴",
+    },
+  ];
+
   // Location test results
-  const [locationTestResult, setLocationTestResult] = useState<{ distance: number; isWithinRange: boolean } | null>(null);
+  const [locationTestResult, setLocationTestResult] = useState<{
+    distance: number;
+    isWithinRange: boolean;
+  } | null>(null);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
 
   // Load settings on component mount
   useEffect(() => {
-    loadSettings();
+    let isMounted = true;
+
+    const initializeSettings = async () => {
+      try {
+        if (isMounted) {
+          await loadSettings();
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error("Failed to initialize settings:", error);
+          setErrorMessage("Gagal memuat pengaturan awal");
+        }
+      }
+    };
+
+    initializeSettings();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Load settings from server
   const loadSettings = async () => {
     try {
       setIsLoading(true);
-      setErrorMessage('');
-      
+      setErrorMessage("");
+
       const response = await pengaturanService.getSettings();
-      if (response.success && response.data) {
+      if (response && response.success && response.data) {
         setSettings(response.data);
         setOriginalSettings(response.data);
         pengaturanService.saveLocalSettings(response.data);
+      } else {
+        throw new Error(response?.message || "Failed to load settings");
       }
     } catch (error: unknown) {
-      setErrorMessage((error as Error).message || 'Gagal memuat pengaturan');
-      console.error('Load settings error:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Gagal memuat pengaturan";
+      setErrorMessage(errorMessage);
+      console.error("Load settings error:", error);
+
+      // Use local settings as fallback
+      const localSettings = pengaturanService.getLocalSettings();
+      setSettings(localSettings);
+      setOriginalSettings(localSettings);
     } finally {
       setIsLoading(false);
     }
@@ -75,45 +206,34 @@ export default function PengaturanPage() {
   const saveSettings = async () => {
     try {
       setIsSaving(true);
-      setErrorMessage('');
-      setSuccessMessage('');
-      
+      setErrorMessage("");
+      setSuccessMessage("");
+      setValidationErrors([]);
+
+      // Validate settings before saving
+      const validation = pengaturanService.validateSettings(settings);
+      if (!validation.isValid) {
+        setValidationErrors(validation.errors);
+        setErrorMessage(
+          "Terdapat kesalahan pada pengaturan. Silakan periksa kembali."
+        );
+        return;
+      }
+
       const response = await pengaturanService.updateSettings(settings);
       if (response.success) {
         setOriginalSettings(settings);
         pengaturanService.saveLocalSettings(settings);
-        setSuccessMessage('Pengaturan berhasil disimpan!');
-        setTimeout(() => setSuccessMessage(''), 3000);
+        setSuccessMessage("Pengaturan berhasil disimpan!");
+        setTimeout(() => setSuccessMessage(""), 3000);
       } else {
-        throw new Error(response.message || 'Failed to save settings');
+        throw new Error(response.message || "Failed to save settings");
       }
     } catch (error: unknown) {
-      setErrorMessage((error as Error).message || 'Gagal menyimpan pengaturan');
-      console.error('Save settings error:', error);
+      setErrorMessage((error as Error).message || "Gagal menyimpan pengaturan");
+      console.error("Save settings error:", error);
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  // Generate QR Code
-  const generateQRCode = async () => {
-    try {
-      setIsGeneratingQR(true);
-      setErrorMessage('');
-      
-      const response = await pengaturanService.generateQRCode();
-      if (response.success && response.data) {
-        setCurrentQRCode(response.data.qrCode);
-        setQrExpiresAt(response.data.expiresAt);
-        setQrImageError(false);
-        setSuccessMessage('QR Code baru berhasil dibuat!');
-        setTimeout(() => setSuccessMessage(''), 3000);
-      }
-    } catch (error: unknown) {
-      setErrorMessage((error as Error).message || 'Gagal membuat QR Code');
-      console.error('Generate QR error:', error);
-    } finally {
-      setIsGeneratingQR(false);
     }
   };
 
@@ -121,22 +241,38 @@ export default function PengaturanPage() {
   const getCurrentLocation = async () => {
     try {
       setIsGettingLocation(true);
-      setErrorMessage('');
-      
+      setErrorMessage("");
+
+      // Check if geolocation is supported
+      if (!navigator.geolocation) {
+        throw new Error("Geolocation is not supported by this browser");
+      }
+
       const location = await pengaturanService.getCurrentLocation();
-      setSettings({
-        ...settings,
-        location: {
-          ...settings.location,
-          latitude: location.latitude,
-          longitude: location.longitude
-        }
-      });
-      setSuccessMessage('Lokasi berhasil diambil!');
-      setTimeout(() => setSuccessMessage(''), 3000);
+
+      if (
+        location &&
+        typeof location.latitude === "number" &&
+        typeof location.longitude === "number"
+      ) {
+        setSettings((prevSettings) => ({
+          ...prevSettings,
+          location: {
+            ...prevSettings.location,
+            latitude: location.latitude,
+            longitude: location.longitude,
+          },
+        }));
+        setSuccessMessage("Lokasi berhasil diambil!");
+        setTimeout(() => setSuccessMessage(""), 3000);
+      } else {
+        throw new Error("Invalid location data received");
+      }
     } catch (error: unknown) {
-      setErrorMessage((error as Error).message || 'Gagal mengambil lokasi');
-      console.error('Get location error:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Gagal mengambil lokasi";
+      setErrorMessage(errorMessage);
+      console.error("Get location error:", error);
     } finally {
       setIsGettingLocation(false);
     }
@@ -146,30 +282,36 @@ export default function PengaturanPage() {
   const testLocation = async () => {
     try {
       setIsTestingLocation(true);
-      setErrorMessage('');
+      setErrorMessage("");
       setLocationTestResult(null);
-      
+
       const response = await pengaturanService.testLocation(
         settings.location.latitude,
         settings.location.longitude,
         settings.location.radius
       );
-      
+
       if (response.success && response.data) {
         setLocationTestResult(response.data);
         if (response.data.isWithinRange) {
-          setSuccessMessage(`Test lokasi berhasil! Jarak: ${response.data.distance}m`);
+          setSuccessMessage(
+            `Test lokasi berhasil! Jarak: ${response.data.distance}m`
+          );
         } else {
-          setErrorMessage(`Test lokasi gagal! Jarak: ${response.data.distance}m (melebihi radius ${settings.location.radius}m)`);
+          setErrorMessage(
+            `Test lokasi gagal! Jarak: ${response.data.distance}m (melebihi radius ${settings.location.radius}m)`
+          );
         }
         setTimeout(() => {
-          setSuccessMessage('');
-          setErrorMessage('');
+          setSuccessMessage("");
+          setErrorMessage("");
         }, 5000);
       }
     } catch (error: unknown) {
-      setErrorMessage((error as Error).message || 'Gagal melakukan test lokasi');
-      console.error('Test location error:', error);
+      setErrorMessage(
+        (error as Error).message || "Gagal melakukan test lokasi"
+      );
+      console.error("Test location error:", error);
     } finally {
       setIsTestingLocation(false);
     }
@@ -177,37 +319,114 @@ export default function PengaturanPage() {
 
   // Search location
   const searchLocation = async () => {
-    if (!locationQuery.trim()) return;
-    
+    if (!locationQuery.trim()) {
+      setErrorMessage("Masukkan query pencarian lokasi");
+      return;
+    }
+
     try {
       setIsSearchingLocation(true);
-      setErrorMessage('');
-      
+      setErrorMessage("");
+      setLocationResults([]);
+
       const results = await pengaturanService.searchLocation(locationQuery);
-      setLocationResults(results);
-      setShowLocationResults(true);
+
+      if (Array.isArray(results)) {
+        setLocationResults(results);
+        setShowLocationResults(true);
+
+        if (results.length === 0) {
+          setErrorMessage("Tidak ada lokasi yang ditemukan");
+        }
+      } else {
+        throw new Error("Invalid search results format");
+      }
     } catch (error: unknown) {
-      setErrorMessage((error as Error).message || 'Gagal mencari lokasi');
-      console.error('Search location error:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Gagal mencari lokasi";
+      setErrorMessage(errorMessage);
+      console.error("Search location error:", error);
+      setLocationResults([]);
+      setShowLocationResults(false);
     } finally {
       setIsSearchingLocation(false);
     }
   };
 
   // Select location from search results
-  const selectLocation = (result: { address: string; latitude: number; longitude: number }) => {
-    setSettings({
-      ...settings,
-      location: {
-        ...settings.location,
-        officeAddress: result.address,
-        latitude: result.latitude,
-        longitude: result.longitude
-      }
-    });
-    setShowLocationResults(false);
-    setLocationQuery('');
-    setLocationResults([]);
+  const selectLocation = (result: {
+    address: string;
+    latitude: number;
+    longitude: number;
+  }) => {
+    try {
+      setSettings((prevSettings) => ({
+        ...prevSettings,
+        location: {
+          ...prevSettings.location,
+          officeAddress: result.address,
+          latitude: result.latitude,
+          longitude: result.longitude,
+        },
+      }));
+      setShowLocationResults(false);
+      setLocationQuery("");
+      setLocationResults([]);
+      setSuccessMessage("Lokasi berhasil dipilih!");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (error) {
+      console.error("Select location error:", error);
+      setErrorMessage("Gagal memilih lokasi");
+    }
+  };
+
+  // Select preset location
+  const selectPresetLocation = (location: {
+    id: string;
+    name: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    icon: string;
+  }) => {
+    try {
+      setSettings((prevSettings) => ({
+        ...prevSettings,
+        location: {
+          ...prevSettings.location,
+          officeAddress: location.address,
+          latitude: location.latitude,
+          longitude: location.longitude,
+        },
+      }));
+      setShowPresetLocations(false);
+      setSuccessMessage(`Lokasi ${location.name} berhasil dipilih!`);
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (error) {
+      console.error("Select preset location error:", error);
+      setErrorMessage("Gagal memilih lokasi preset");
+    }
+  };
+
+  // Handle map click/drag to set coordinates
+  const handleMapLocationChange = (lat: number, lng: number) => {
+    try {
+      setSettings((prevSettings) => ({
+        ...prevSettings,
+        location: {
+          ...prevSettings.location,
+          latitude: lat,
+          longitude: lng,
+        },
+      }));
+      setSuccessMessage(
+        `Koordinat diupdate: ${lat.toFixed(6)}, ${lng.toFixed(6)}`
+      );
+      setTimeout(() => setSuccessMessage(""), 2000);
+    } catch (error) {
+      console.error("Map location change error:", error);
+      setErrorMessage("Gagal mengupdate koordinat dari peta");
+    }
   };
 
   // Validate coordinates
@@ -216,16 +435,16 @@ export default function PengaturanPage() {
       settings.location.latitude,
       settings.location.longitude
     );
-    
+
     if (validation.isValid) {
-      setSuccessMessage('Koordinat valid!');
+      setSuccessMessage("Koordinat valid!");
     } else {
       setErrorMessage(validation.message);
     }
-    
+
     setTimeout(() => {
-      setSuccessMessage('');
-      setErrorMessage('');
+      setSuccessMessage("");
+      setErrorMessage("");
     }, 3000);
   };
 
@@ -248,14 +467,15 @@ export default function PengaturanPage() {
   const confirmCancel = () => {
     setSettings(originalSettings);
     setShowUnsavedDialog(false);
-    setSuccessMessage('Perubahan dibatalkan');
-    setTimeout(() => setSuccessMessage(''), 3000);
+    setSuccessMessage("Perubahan dibatalkan");
+    setTimeout(() => setSuccessMessage(""), 3000);
   };
 
   // Clear messages
   const clearMessages = () => {
-    setSuccessMessage('');
-    setErrorMessage('');
+    setSuccessMessage("");
+    setErrorMessage("");
+    setValidationErrors([]);
   };
 
   // Show loading spinner
@@ -309,7 +529,16 @@ export default function PengaturanPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
-                <p className="text-red-800 font-medium">{errorMessage}</p>
+                <div>
+                  <p className="text-red-800 font-medium">{errorMessage}</p>
+                  {validationErrors.length > 0 && (
+                    <ul className="text-red-700 text-sm mt-2 list-disc list-inside">
+                      {validationErrors.map((error, index) => (
+                        <li key={index}>{error}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
               <Button variant="ghost" size="1" onClick={clearMessages}>
                 ×
@@ -318,135 +547,6 @@ export default function PengaturanPage() {
           </div>
         </Card>
       )}
-
-      {/* QR Code Settings */}
-      <Box>
-        <Card>
-          <Flex direction="column" p="4" gap="4">
-            <Flex align="center" gap="2">
-              <QrCode className="h-5 w-5" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                Pengaturan QR Code
-              </h3>
-            </Flex>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">
-                      Generate QR Otomatis
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      QR code dihasilkan secara otomatis untuk setiap sesi
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.qr.autoGenerate}
-                    onCheckedChange={(checked) =>
-                      setSettings({
-                        ...settings,
-                        qr: { ...settings.qr, autoGenerate: checked },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Periode Validitas QR (menit)
-                  </label>
-                  <Select.Root
-                    value={settings.qr.validityPeriod.toString()}
-                    onValueChange={(value) =>
-                      setSettings({
-                        ...settings,
-                        qr: { ...settings.qr, validityPeriod: parseInt(value) },
-                      })
-                    }
-                  >
-                    <Select.Trigger />
-                    <Select.Content>
-                      <Select.Item value="5">5 menit</Select.Item>
-                      <Select.Item value="10">10 menit</Select.Item>
-                      <Select.Item value="15">15 menit</Select.Item>
-                      <Select.Item value="30">30 menit</Select.Item>
-                    </Select.Content>
-                  </Select.Root>
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
-                onClick={generateQRCode}
-                disabled={isGeneratingQR}
-              >
-                {isGeneratingQR ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Membuat QR...
-                  </>
-                ) : (
-                  "Generate QR Code Baru"
-                )}
-              </Button>
-            </div>
-            {currentQRCode && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
-                <div className="text-center">
-                  <div className="mb-2">
-                    {!qrImageError ? (
-                      <img
-                        src={`data:image/png;base64,${currentQRCode}`}
-                        alt="QR Code"
-                        className="mx-auto border-2 border-gray-300 rounded-lg shadow-sm bg-white"
-                        style={{ width: "200px", height: "200px" }}
-                        onError={(e) => {
-                          console.error("QR Code image failed to load:", e);
-                          console.log(
-                            "QR Code data length:",
-                            currentQRCode.length
-                          );
-                          console.log(
-                            "QR Code data preview:",
-                            currentQRCode.substring(0, 100) + "..."
-                          );
-                          setQrImageError(true);
-                        }}
-                        onLoad={() => {
-                          console.log("QR Code image loaded successfully");
-                        }}
-                      />
-                    ) : (
-                      <div
-                        className="mx-auto border-2 border-dashed border-gray-300 rounded-lg bg-white flex items-center justify-center"
-                        style={{ width: "200px", height: "200px" }}
-                      >
-                        <div className="text-center text-gray-500">
-                          <QrCode className="h-12 w-12 mx-auto mb-2" />
-                          <p className="text-xs">QR Code gagal dimuat</p>
-                          <p className="text-xs">Coba generate ulang</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    QR Code berlaku hingga:{" "}
-                    {new Date(qrExpiresAt).toLocaleString("id-ID")}
-                  </p>
-                  {qrImageError && (
-                    <p className="text-xs text-red-600 mt-1">
-                      Gambar QR Code tidak dapat ditampilkan. Silakan generate
-                      ulang.
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-          </Flex>
-        </Card>
-      </Box>
 
       {/* Attendance Settings */}
       <Box>
@@ -689,34 +789,73 @@ export default function PengaturanPage() {
               </h3>
             </Flex>
             <div className="space-y-6">
-              {/* Map Display */}
+              {/* Interactive Map Display */}
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Peta Lokasi Kantor
+                  Peta Interaktif - Klik untuk Set Lokasi
                 </label>
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <iframe
-                    src="https://www.openstreetmap.org/export/embed.html?bbox=106.8456%2C-6.2088%2C106.8456%2C-6.2088&layer=mapnik&marker=-6.2088%2C106.8456"
-                    width="100%"
-                    height="300"
-                    style={{ border: 0 }}
-                    title="OpenStreetMap"
-                  ></iframe>
+                <InteractiveMap
+                  latitude={settings.location.latitude}
+                  longitude={settings.location.longitude}
+                  onLocationChange={handleMapLocationChange}
+                  height="350px"
+                />
+              </div>
+
+              {/* Quick Location Selection */}
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <Button
+                    variant="ghost"
+                    size="1"
+                    onClick={() => setShowPresetLocations(!showPresetLocations)}
+                  >
+                    {showPresetLocations ? "Sembunyikan" : "Tampilkan Pilihan"}
+                  </Button>
                 </div>
-                <p className="text-xs text-gray-500">
-                  Klik pada peta OpenStreetMap untuk mendapatkan koordinat yang
-                  tepat, atau gunakan form di bawah ini.
-                </p>
+
+                <Fragment>
+                  {showPresetLocations && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4 p-4 bg-gray-50 rounded-lg border">
+                      {presetLocations.map((location) => (
+                        <div
+                          key={location.id}
+                          className="p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all duration-200 group"
+                          onClick={() => selectPresetLocation(location)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="text-2xl group-hover:scale-110 transition-transform">
+                              {location.icon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-sm font-medium text-gray-900 truncate">
+                                {location.name}
+                              </h4>
+                              <p className="text-xs text-gray-500 truncate">
+                                {location.address.split(",")[0]}
+                              </p>
+                              <div className="flex items-center text-xs text-gray-400 mt-1">
+                                <MapPin className="h-3 w-3 mr-1" />
+                                {location.latitude.toFixed(4)},{" "}
+                                {location.longitude.toFixed(4)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Fragment>
               </div>
 
               {/* Address Search */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cari Lokasi
+                  Cari Lokasi Manual
                 </label>
                 <div className="flex gap-2">
                   <TextField.Root
-                    placeholder="Masukkan nama tempat atau alamat..."
+                    placeholder="Cari lokasi (contoh: PLN Icon Plus Aceh)"
                     className="flex-1"
                     value={locationQuery}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -736,32 +875,36 @@ export default function PengaturanPage() {
                   </IconButton>
                 </div>
                 {/* Location Search Results */}
-                {showLocationResults && locationResults.length > 0 && (
-                  <div className="mt-2 border border-gray-200 rounded-lg bg-white shadow-lg max-h-60 overflow-y-auto">
-                    {locationResults.map((result, index) => (
-                      <div
-                        key={index}
-                        className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                        onClick={() => selectLocation(result)}
-                      >
-                        <p className="text-sm text-gray-900 truncate">
-                          {result.address}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {result.latitude.toFixed(6)},{" "}
-                          {result.longitude.toFixed(6)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <Fragment>
+                  {showLocationResults && locationResults.length > 0 && (
+                    <div className="mt-2 border border-gray-200 rounded-lg bg-white shadow-lg max-h-60 overflow-y-auto">
+                      {locationResults.map((result, index) => (
+                        <div
+                          key={`${result.latitude.toFixed(
+                            6
+                          )}-${result.longitude.toFixed(6)}-${index}`}
+                          className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                          onClick={() => selectLocation(result)}
+                        >
+                          <p className="text-sm text-gray-900 truncate">
+                            {result.address}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {result.latitude.toFixed(6)},{" "}
+                            {result.longitude.toFixed(6)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Fragment>
               </div>
 
               {/* Coordinates Input */}
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Lokasi Kantor Utama
+                    Alamat
                   </label>
                   <TextField.Root
                     placeholder="Masukkan alamat lengkap kantor"
@@ -784,7 +927,7 @@ export default function PengaturanPage() {
                       Latitude
                     </label>
                     <TextField.Root
-                      placeholder="-6.2088"
+                      placeholder="Masukkan latitude (contoh: 5.5454249)"
                       type="number"
                       step="0.000001"
                       value={settings.location.latitude.toString()}
@@ -804,7 +947,7 @@ export default function PengaturanPage() {
                       Longitude
                     </label>
                     <TextField.Root
-                      placeholder="106.8456"
+                      placeholder="Masukkan longitude (contoh: 95.3175582)"
                       type="number"
                       step="0.000001"
                       value={settings.location.longitude.toString()}
@@ -823,18 +966,22 @@ export default function PengaturanPage() {
 
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
+                    variant="solid"
                     size="2"
                     onClick={getCurrentLocation}
                     disabled={isGettingLocation}
+                    className="bg-green-600 hover:bg-green-700"
                   >
                     {isGettingLocation ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Mengambil...
+                        Mendeteksi Lokasi...
                       </>
                     ) : (
-                      "Dapatkan Lokasi Saat Ini"
+                      <>
+                        <MapPin className="h-4 w-4 mr-2" />
+                        Gunakan Lokasi Saya
+                      </>
                     )}
                   </Button>
                   <Button
@@ -842,7 +989,7 @@ export default function PengaturanPage() {
                     size="2"
                     onClick={validateCoordinates}
                   >
-                    Validasi Koordinat
+                    ✓ Validasi Koordinat
                   </Button>
                 </div>
               </div>
@@ -851,7 +998,7 @@ export default function PengaturanPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Radius Lokasi (meter)
+                    Radius Area PLN (meter)
                   </label>
                   <Select.Root
                     value={settings.location.radius.toString()}
@@ -880,25 +1027,9 @@ export default function PengaturanPage() {
                     </Select.Content>
                   </Select.Root>
                   <p className="text-xs text-gray-500 mt-1">
-                    Radius menentukan jarak maksimal untuk check-in valid
+                    Radius menentukan jarak maksimal dari kantor PLN untuk
+                    absensi valid
                   </p>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-blue-800 mb-2">
-                    Tips Pengaturan Lokasi
-                  </h4>
-                  <ul className="text-xs text-blue-700 space-y-1">
-                    <li>
-                      • Pastikan koordinat akurat untuk menghindari check-in
-                      tidak valid
-                    </li>
-                    <li>• Radius 100 meter direkomendasikan untuk kantor</li>
-                    <li>
-                      • Gunakan OpenStreetMap untuk mencari koordinat tepat
-                    </li>
-                    <li>• Test lokasi setelah menyimpan pengaturan</li>
-                  </ul>
                 </div>
 
                 <div className="flex justify-between items-center">
@@ -923,51 +1054,53 @@ export default function PengaturanPage() {
                         Menyimpan...
                       </>
                     ) : (
-                      "Simpan Lokasi"
+                      "Simpan Lokasi PLN"
                     )}
                   </Button>
                 </div>
                 {/* Location Test Result */}
-                {locationTestResult && (
-                  <div
-                    className={`mt-4 p-4 rounded-lg ${
-                      locationTestResult.isWithinRange
-                        ? "bg-green-50 border border-green-200"
-                        : "bg-red-50 border border-red-200"
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      {locationTestResult.isWithinRange ? (
-                        <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                      ) : (
-                        <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
-                      )}
-                      <div>
-                        <p
-                          className={`font-medium ${
-                            locationTestResult.isWithinRange
-                              ? "text-green-800"
-                              : "text-red-800"
-                          }`}
-                        >
-                          {locationTestResult.isWithinRange
-                            ? "Test Lokasi Berhasil!"
-                            : "Test Lokasi Gagal!"}
-                        </p>
-                        <p
-                          className={`text-sm ${
-                            locationTestResult.isWithinRange
-                              ? "text-green-700"
-                              : "text-red-700"
-                          }`}
-                        >
-                          Jarak dari kantor: {locationTestResult.distance}m
-                          (Radius: {settings.location.radius}m)
-                        </p>
+                <Fragment>
+                  {locationTestResult && (
+                    <div
+                      className={`mt-4 p-4 rounded-lg ${
+                        locationTestResult.isWithinRange
+                          ? "bg-green-50 border border-green-200"
+                          : "bg-red-50 border border-red-200"
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        {locationTestResult.isWithinRange ? (
+                          <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                        ) : (
+                          <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+                        )}
+                        <div>
+                          <p
+                            className={`font-medium ${
+                              locationTestResult.isWithinRange
+                                ? "text-green-800"
+                                : "text-red-800"
+                            }`}
+                          >
+                            {locationTestResult.isWithinRange
+                              ? "Test Lokasi Berhasil!"
+                              : "Test Lokasi Gagal!"}
+                          </p>
+                          <p
+                            className={`text-sm ${
+                              locationTestResult.isWithinRange
+                                ? "text-green-700"
+                                : "text-red-700"
+                            }`}
+                          >
+                            Jarak dari kantor: {locationTestResult.distance}m
+                            (Radius: {settings.location.radius}m)
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </Fragment>
               </div>
             </div>
           </Flex>
@@ -1057,23 +1190,32 @@ export default function PengaturanPage() {
       </Box>
 
       {/* Save Settings */}
-      <div className="flex justify-end gap-4">
-        <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
-          Batal
-        </Button>
-        <Button
-          onClick={saveSettings}
-          disabled={isSaving || !hasUnsavedChanges()}
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Menyimpan...
-            </>
-          ) : (
-            "Simpan Pengaturan"
+      <div className="flex justify-between items-center">
+        <div className="text-sm text-gray-500">
+          {hasUnsavedChanges() && (
+            <span className="text-orange-600">
+              ⚠️ Ada perubahan yang belum disimpan
+            </span>
           )}
-        </Button>
+        </div>
+        <div className="flex gap-4">
+          <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+            Batal
+          </Button>
+          <Button
+            onClick={saveSettings}
+            disabled={isSaving || !hasUnsavedChanges()}
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Menyimpan...
+              </>
+            ) : (
+              "Simpan Pengaturan"
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Unsaved Changes Dialog */}
@@ -1102,5 +1244,72 @@ export default function PengaturanPage() {
         </AlertDialog.Content>
       </AlertDialog.Root>
     </div>
+  );
+};
+
+// Error Boundary Component
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error(
+      "PengaturanPage Error Boundary caught an error:",
+      error,
+      errorInfo
+    );
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center max-w-md mx-auto p-6">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              Terjadi Kesalahan
+            </h2>
+            <p className="text-gray-600 mb-4">
+              {this.state.error?.message ||
+                "Terjadi kesalahan yang tidak terduga di halaman pengaturan."}
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Muat Ulang Halaman
+              </button>
+              <button
+                onClick={() => this.setState({ hasError: false, error: null })}
+                className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Coba Lagi
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Main component with error boundary
+export default function PengaturanPage() {
+  return (
+    <ErrorBoundary>
+      <PengaturanPageContent />
+    </ErrorBoundary>
   );
 }

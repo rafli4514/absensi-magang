@@ -20,9 +20,9 @@ const DEFAULT_SETTINGS = [
   { key: 'schedule.workDays', value: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], category: 'schedule' },
   
   // Location Settings
-  { key: 'location.officeAddress', value: 'Jakarta, Indonesia', category: 'location' },
-  { key: 'location.latitude', value: -6.2088, category: 'location' },
-  { key: 'location.longitude', value: 106.8456, category: 'location' },
+  { key: 'location.officeAddress', value: 'PT PLN Icon Plus Kantor Perwakilan Aceh, Jl. Teuku Umar, Banda Aceh', category: 'location' },
+  { key: 'location.latitude', value: 5.5454249, category: 'location' },
+  { key: 'location.longitude', value: 95.3175582, category: 'location' },
   { key: 'location.radius', value: 100, category: 'location' },
   
   // Security Settings

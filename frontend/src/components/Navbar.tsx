@@ -1,9 +1,11 @@
-import { Menu, Bell, User } from "lucide-react";
+import { Menu, Bell, User, PanelLeftOpen, PanelLeftClose } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
 interface HeaderProps {
   onMenuClick: () => void;
+  onToggleMinimize?: () => void;
+  sidebarMinimized?: boolean;
 }
 
 const Navigation = [
@@ -11,7 +13,7 @@ const Navigation = [
   { name: "Profil Pengguna", href: "/profil-pengguna" },
   { name: "Keluar", href: "/login" }
 ];
-export default function Header({ onMenuClick }: HeaderProps) {
+export default function Header({ onMenuClick, onToggleMinimize, sidebarMinimized }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -19,12 +21,29 @@ export default function Header({ onMenuClick }: HeaderProps) {
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="flex items-center justify-between px-4 py-3 lg:px-6">
         <div className="flex items-center">
+          {/* Mobile menu button */}
           <button
             onClick={onMenuClick}
             className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 lg:hidden"
           >
             <Menu className="h-6 w-6" />
           </button>
+          
+          {/* Desktop minimize button */}
+          {onToggleMinimize && (
+            <button
+              onClick={onToggleMinimize}
+              className="hidden lg:flex p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 mr-3 transition-colors duration-200"
+              title={`${sidebarMinimized ? "Expand" : "Minimize"} sidebar (Ctrl+B)`}
+            >
+              {sidebarMinimized ? (
+                <PanelLeftOpen className="h-5 w-5" />
+              ) : (
+                <PanelLeftClose className="h-5 w-5" />
+              )}
+            </button>
+          )}
+          
           <h2 className="ml-2 text-lg font-semibold text-gray-900 lg:ml-0">
             Absensi Magang
           </h2>

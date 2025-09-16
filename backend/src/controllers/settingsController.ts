@@ -57,9 +57,9 @@ const DEFAULT_SETTINGS: AppSettings = {
     workDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
   },
   location: {
-    officeAddress: '',
-    latitude: -6.2088,
-    longitude: 106.8456,
+    officeAddress: 'PT PLN Icon Plus Kantor Perwakilan Aceh, Jl. Teuku Umar, Banda Aceh',
+    latitude: 5.5454249,
+    longitude: 95.3175582,
     radius: 100
   },
   security: {
@@ -182,6 +182,8 @@ export const updateSettings = async (req: Request, res: Response) => {
 
 export const generateQRCode = async (req: Request, res: Response) => {
   try {
+    const { type = 'masuk' } = req.query; // Get attendance type from query
+    
     // Get QR settings
     const qrSettings = await prisma.settings.findFirst({
       where: { key: 'qr.validityPeriod' }
@@ -189,14 +191,14 @@ export const generateQRCode = async (req: Request, res: Response) => {
 
     const validityPeriod = qrSettings?.value as number || 5; // default 5 minutes
     
-    // Generate unique QR data
-    const timestamp = Date.now();
-    const randomData = crypto.randomBytes(16).toString('hex');
+    // Generate attendance QR data with consistent format
+    const now = new Date();
     const qrData = JSON.stringify({
-      timestamp,
-      validUntil: timestamp + (validityPeriod * 60 * 1000),
-      data: randomData,
-      type: 'attendance'
+      type: type as string,
+      timestamp: now.toISOString(),
+      location: "ICONNET_OFFICE",
+      validUntil: new Date(now.getTime() + validityPeriod * 60 * 1000).toISOString(),
+      sessionId: `ABSEN_${(type as string).toUpperCase()}_${Date.now()}`
     });
 
     // Generate QR code as base64
@@ -213,7 +215,7 @@ export const generateQRCode = async (req: Request, res: Response) => {
     const base64QR = qrCodeDataURL.split(',')[1];
     
     // Calculate expiration time
-    const expiresAt = new Date(timestamp + (validityPeriod * 60 * 1000));
+    const expiresAt = new Date(now.getTime() + (validityPeriod * 60 * 1000));
 
     // Store QR code data in database (optional - for validation later)
     await prisma.settings.upsert({
@@ -258,21 +260,34 @@ export const validateQRCode = async (req: Request, res: Response) => {
 
     try {
       const parsedData = JSON.parse(qrData);
-      const now = Date.now();
+      const now = new Date();
 
       // Check if QR code is still valid
-      if (now > parsedData.validUntil) {
+      const validUntil = new Date(parsedData.validUntil);
+      if (now > validUntil) {
         return sendError(res, 'QR code has expired', 400);
       }
 
-      // Check if QR code type is correct
-      if (parsedData.type !== 'attendance') {
+      // Check if QR code has required fields
+      if (!parsedData.type || !parsedData.sessionId || !parsedData.location) {
+        return sendError(res, 'Invalid QR code format', 400);
+      }
+
+      // Check if QR code type is valid
+      if (!['masuk', 'keluar'].includes(parsedData.type)) {
         return sendError(res, 'Invalid QR code type', 400);
+      }
+
+      // Check if location matches
+      if (parsedData.location !== 'ICONNET_OFFICE') {
+        return sendError(res, 'Invalid QR code location', 400);
       }
 
       sendSuccess(res, 'QR code is valid', {
         isValid: true,
-        data: parsedData
+        data: parsedData,
+        type: parsedData.type,
+        sessionId: parsedData.sessionId
       });
     } catch (parseError) {
       return sendError(res, 'Invalid QR code format', 400);
