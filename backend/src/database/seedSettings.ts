@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS = [
   { key: 'location.latitude', value: 5.5454249, category: 'location' },
   { key: 'location.longitude', value: 95.3175582, category: 'location' },
   { key: 'location.radius', value: 100, category: 'location' },
+  { key: 'location.useRadius', value: true, category: 'location' },
   
   // Security Settings
   { key: 'security.faceVerification', value: true, category: 'security' },

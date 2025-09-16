@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -16,6 +16,8 @@ interface InteractiveMapProps {
   longitude: number;
   onLocationChange: (lat: number, lng: number) => void;
   height?: string;
+  useRadius?: boolean;
+  radius?: number; 
 }
 
 // Component for handling map clicks
@@ -58,7 +60,9 @@ export default function InteractiveMap({
   latitude, 
   longitude, 
   onLocationChange, 
-  height = "300px" 
+  height = "300px",
+  useRadius = false,
+  radius = 100,
 }: InteractiveMapProps) {
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -92,6 +96,14 @@ export default function InteractiveMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {/* Radius visualization */}
+        {useRadius && (
+          <Circle
+            center={[latitude, longitude]}
+            radius={radius}
+            pathOptions={{ color: '#2563eb', fillColor: '#60a5fa', fillOpacity: 0.2 }}
+          />
+        )}
         <LocationMarker 
           position={[latitude, longitude]} 
           onLocationChange={onLocationChange}
@@ -103,6 +115,9 @@ export default function InteractiveMap({
         <div className="text-xs text-gray-700">
           <p className="font-medium">🖱️ Klik pada peta untuk set lokasi</p>
           <p>📍 Drag marker untuk pindah posisi</p>
+          {useRadius && (
+            <p className="mt-1">🎯 Radius aktif: <span className="font-medium">{radius}m</span></p>
+          )}
         </div>
       </div>
       

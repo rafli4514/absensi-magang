@@ -28,6 +28,7 @@ interface AppSettings {
     latitude: number;
     longitude: number;
     radius: number;
+    useRadius: boolean;
   };
   security: {
     faceVerification: boolean;
@@ -60,7 +61,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     officeAddress: 'PT PLN Icon Plus Kantor Perwakilan Aceh, Jl. Teuku Umar, Banda Aceh',
     latitude: 5.5454249,
     longitude: 95.3175582,
-    radius: 100
+    radius: 100,
+    useRadius: true
   },
   security: {
     faceVerification: true,

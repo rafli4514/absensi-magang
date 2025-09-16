@@ -20,6 +20,7 @@ export interface LocationSettings {
   latitude: number;
   longitude: number;
   radius: number;
+  useRadius: boolean;
 }
 
 export interface SecuritySettings {
@@ -281,7 +282,8 @@ class PengaturanService {
         officeAddress: 'PT PLN Icon Plus Kantor Perwakilan Aceh, Jl. Teuku Umar, Banda Aceh',
         latitude: 5.5454249,
         longitude: 95.3175582,
-        radius: 100
+        radius: 100,
+        useRadius: true
       },
       security: {
         faceVerification: true,
@@ -356,8 +358,9 @@ class PengaturanService {
       if (settings.location.longitude && (settings.location.longitude < -180 || settings.location.longitude > 180)) {
         errors.push('Longitude must be between -180 and 180');
       }
-      if (settings.location.radius && (settings.location.radius < 10 || settings.location.radius > 1000)) {
-        errors.push('Location radius must be between 10 and 1000 meters');
+      // Only validate radius if useRadius is enabled
+      if (settings.location.useRadius && settings.location.radius && (settings.location.radius < 10 || settings.location.radius > 2000)) {
+        errors.push('Location radius must be between 10 and 2000 meters when radius is enabled');
       }
     }
 
