@@ -83,6 +83,41 @@ class AbsensiService {
     });
   }
 
+  // Helper untuk get current user ID
+  private getCurrentUserId(): string | null {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        return user.id || null;
+      }
+    } catch (error) {
+      console.error('Error getting current user ID:', error);
+    }
+    return null;
+  }
+
+  // Submit absensi dengan auto user ID
+  async submitAbsensi(options: {
+    tipe: 'MASUK' | 'KELUAR';
+    lokasi?: { latitude: number; longitude: number; alamat: string };
+    selfieUrl?: string;
+    qrCodeData?: string;
+  }): Promise<ApiResponse<Absensi>> {
+    const userId = this.getCurrentUserId();
+    if (!userId) {
+      throw new Error('User tidak terautentikasi. Silakan login ulang.');
+    }
+
+    return this.createAbsensi({
+      pesertaMagangId: userId,
+      tipe: options.tipe,
+      timestamp: new Date().toISOString(),
+      status: 'VALID',
+      ...options,
+    });
+  }
+
   // Helper method untuk absensi keluar
   async absensiKeluar(pesertaMagangId: string, options?: {
     lokasi?: { latitude: number; longitude: number; alamat: string };

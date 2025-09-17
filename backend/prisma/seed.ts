@@ -10,6 +10,7 @@ async function main() {
   const hashedPassword = await bcrypt.hash("admin123", 12);
 
   const admin = await prisma.user.upsert({
+    where: { username: "admin" },
     update: {},
     create: {
       username: "admin",
@@ -29,7 +30,7 @@ async function main() {
       nama: "Ahmad Rizki Pratama",
       username: "ahmad",
       divisi: "IT",
-      instansi: "instansi Indonesia",
+      instansi: "Instansi Indonesia",
       nomorHp: "08123456789",
       tanggalMulai: "2025-01-01",
       tanggalSelesai: "2025-06-30",
@@ -44,7 +45,7 @@ async function main() {
       nama: "Siti Nurhaliza",
       username: "siti",
       divisi: "Marketing",
-      instansi: "instansi Gadjah Mada",
+      instansi: "Instansi Gadjah Mada",
       nomorHp: "08123456790",
       tanggalMulai: "2025-01-01",
       tanggalSelesai: "2025-06-30",
@@ -54,7 +55,7 @@ async function main() {
 
   console.log("✅ Peserta magang created:", pesertaMagang1, pesertaMagang2);
 
-  // Create sample absensi
+  // Create sample absensi (attendance)
   await prisma.absensi.createMany({
     data: [
       {
@@ -76,7 +77,7 @@ async function main() {
 
   console.log("✅ Sample absensi created");
 
-  // Create sample pengajuan izin
+  // Create sample pengajuan izin (leave requests)
   await prisma.pengajuanIzin.createMany({
     data: [
       {

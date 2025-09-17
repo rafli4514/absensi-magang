@@ -1,11 +1,6 @@
 import { prisma } from '../lib/prisma';
 
 const DEFAULT_SETTINGS = [
-  // QR Settings
-  { key: 'qr.autoGenerate', value: true, category: 'qr' },
-  { key: 'qr.validityPeriod', value: 5, category: 'qr' },
-  { key: 'qr.size', value: 'medium', category: 'qr' },
-  
   // Attendance Settings
   { key: 'attendance.allowLateCheckIn', value: true, category: 'attendance' },
   { key: 'attendance.lateThreshold', value: 15, category: 'attendance' },
@@ -30,6 +25,7 @@ const DEFAULT_SETTINGS = [
   { key: 'security.faceVerification', value: true, category: 'security' },
   { key: 'security.ipWhitelist', value: false, category: 'security' },
   { key: 'security.sessionTimeout', value: 60, category: 'security' },
+  { key: 'security.allowedIps', value: [], category: 'security' },
 ];
 
 export const seedSettings = async () => {

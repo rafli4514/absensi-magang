@@ -27,6 +27,7 @@ export interface SecuritySettings {
   faceVerification: boolean;
   ipWhitelist: boolean;
   sessionTimeout: number;
+  allowedIps: string[];
 }
 
 export interface AppSettings {
@@ -159,18 +160,22 @@ class PengaturanService {
    */
   validateCoordinates(latitude: number, longitude: number): { isValid: boolean; message: string } {
     if (latitude < -90 || latitude > 90) {
-      return { isValid: false, message: 'Latitude must be between -90 and 90' };
+      return { isValid: false, message: 'Latitude harus diantara -90 dan 90' };
     }
     if (longitude < -180 || longitude > 180) {
-      return { isValid: false, message: 'Longitude must be between -180 and 180' };
+      return { isValid: false, message: 'Longitude harus diantara -180 dan 180' };
     }
-    return { isValid: true, message: 'Coordinates are valid' };
+    return { isValid: true, message: 'Koordinat valid' };
   }
 
   /**
    * Test location settings by checking distance from office
    */
-  async testLocation(officeLatitude: number, officeLongitude: number, radius: number): Promise<ApiResponse<{ distance: number; isWithinRange: boolean }>> {
+  async testLocation(
+    officeLatitude: number,
+    officeLongitude: number,
+    radius: number
+  ): Promise<ApiResponse<{ distance: number; isWithinRange: boolean }>> {
     try {
       const currentLocation = await this.getCurrentLocation();
       const distance = this.calculateDistance(
@@ -182,7 +187,7 @@ class PengaturanService {
 
       return {
         success: true,
-        message: distance <= radius ? 'Location test successful' : 'Location test failed - outside radius',
+        message: distance <= radius ? 'Test lokasi berhasil' : 'Test lokasi gagal - di luar radius',
         data: {
           distance: Math.round(distance),
           isWithinRange: distance <= radius
@@ -198,15 +203,15 @@ class PengaturanService {
    */
   private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371e3; // Earth's radius in meters
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
 
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
               Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c;
   }
@@ -229,28 +234,27 @@ class PengaturanService {
           }
         }
       );
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (!Array.isArray(data)) {
         throw new Error('Invalid response format');
       }
-      
+
       return data
-        .filter((item: any) => item.lat && item.lon && item.display_name)
-        .map((item: any) => ({
+        .filter(item => item.lat && item.lon && item.display_name)
+        .map(item => ({
           address: item.display_name,
           latitude: parseFloat(item.lat),
           longitude: parseFloat(item.lon)
         }))
         .filter(item => !isNaN(item.latitude) && !isNaN(item.longitude));
-        
     } catch (error: any) {
       if (error.name === 'AbortError') {
         throw new Error('Pencarian lokasi timeout. Coba lagi.');
@@ -288,7 +292,8 @@ class PengaturanService {
       security: {
         faceVerification: true,
         ipWhitelist: false,
-        sessionTimeout: 60
+        sessionTimeout: 60,
+        allowedIps: []
       }
     };
   }
@@ -318,7 +323,6 @@ class PengaturanService {
       console.error('Error saving local settings:', error);
     }
   }
-
 
   /**
    * Validate settings data
@@ -368,6 +372,16 @@ class PengaturanService {
     if (settings.security) {
       if (settings.security.sessionTimeout && (settings.security.sessionTimeout < 5 || settings.security.sessionTimeout > 480)) {
         errors.push('Session timeout must be between 5 and 480 minutes');
+      }
+      
+      // Validate IP addresses
+      if (settings.security.allowedIps) {
+        const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        for (const ip of settings.security.allowedIps) {
+          if (!ipRegex.test(ip)) {
+            errors.push(`Invalid IP address format: ${ip}`);
+          }
+        }
       }
     }
 

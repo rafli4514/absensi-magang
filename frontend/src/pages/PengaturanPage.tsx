@@ -57,11 +57,12 @@ const PengaturanPageContent = () => {
           radius: 100,
           useRadius: true,
         },
-        security: {
-          faceVerification: false,
-          ipWhitelist: false,
-          sessionTimeout: 60,
-        },
+         security: {
+           faceVerification: false,
+           ipWhitelist: false,
+           sessionTimeout: 60,
+           allowedIps: [],
+         },
       };
     }
   });
@@ -89,6 +90,10 @@ const PengaturanPageContent = () => {
 
   // Quick location presets
   const [showPresetLocations, setShowPresetLocations] = useState(false);
+  
+  // IP Whitelist management
+  const [newIpAddress, setNewIpAddress] = useState('');
+  const [ipError, setIpError] = useState('');
 
   // Preset locations for easy selection (with stable IDs)
   const presetLocations = [
@@ -445,6 +450,45 @@ const PengaturanPageContent = () => {
     }
   };
 
+  // ===== Client-side distance feedback =====
+  const toRadians = (deg: number) => (deg * Math.PI) / 180;
+  const computeDistanceMeters = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number => {
+    const R = 6371000; // meters
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return Math.round(R * c);
+  };
+
+  const [clientDistance, setClientDistance] = useState<number | null>(null);
+
+  useEffect(() => {
+    try {
+      // compute distance from selected point to office center
+      // if office center is different, use it
+      const officeLat = settings.location.latitude;
+      const officeLng = settings.location.longitude;
+      const distToOffice = computeDistanceMeters(
+        settings.location.latitude,
+        settings.location.longitude,
+        officeLat,
+        officeLng
+      );
+      setClientDistance(distToOffice);
+    } catch (e) {
+      // ignore
+    }
+  }, [settings.location.latitude, settings.location.longitude]);
+
   // Validate coordinates
   const validateCoordinates = () => {
     const validation = pengaturanService.validateCoordinates(
@@ -492,6 +536,56 @@ const PengaturanPageContent = () => {
     setSuccessMessage("");
     setErrorMessage("");
     setValidationErrors([]);
+  };
+
+  // IP Whitelist functions
+  const validateIPAddress = (ip: string): boolean => {
+    const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    return ipRegex.test(ip);
+  };
+
+  const addIPAddress = () => {
+    const trimmedIP = newIpAddress.trim();
+    if (!trimmedIP) {
+      setIpError('Masukkan alamat IP');
+      return;
+    }
+    
+    if (!validateIPAddress(trimmedIP)) {
+      setIpError('Format IP tidak valid (contoh: 192.168.1.100)');
+      return;
+    }
+    
+    if (settings.security.allowedIps.includes(trimmedIP)) {
+      setIpError('IP sudah ada dalam daftar');
+      return;
+    }
+    
+    setSettings(prev => ({
+      ...prev,
+      security: {
+        ...prev.security,
+        allowedIps: [...prev.security.allowedIps, trimmedIP]
+      }
+    }));
+    
+    setNewIpAddress('');
+    setIpError('');
+    setSuccessMessage(`IP ${trimmedIP} berhasil ditambahkan`);
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
+  const removeIPAddress = (ip: string) => {
+    setSettings(prev => ({
+      ...prev,
+      security: {
+        ...prev.security,
+        allowedIps: prev.security.allowedIps.filter(item => item !== ip)
+      }
+    }));
+    
+    setSuccessMessage(`IP ${ip} berhasil dihapus`);
+    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
   // Show loading spinner
@@ -818,6 +912,17 @@ const PengaturanPageContent = () => {
                   useRadius={settings.location.useRadius}
                   radius={settings.location.radius}
                 />
+                <div className="text-xs text-gray-600 mt-2">
+                  {settings.location.useRadius ? (
+                    <>
+                      <span>
+                        Jarak ke pusat kantor: {clientDistance ?? 0}m (Radius: {settings.location.radius}m)
+                      </span>
+                    </>
+                  ) : (
+                    <span>Radius tidak digunakan</span>
+                  )}
+                </div>
               </div>
 
               {/* Quick Location Selection */}
@@ -1223,24 +1328,85 @@ const PengaturanPageContent = () => {
                   }
                 />
               </div>
-              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900">
-                    IP Whitelist
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    Batasi akses hanya dari IP tertentu
-                  </p>
+              <div className="space-y-4 p-4 border border-gray-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900">
+                      IP Whitelist
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      Batasi akses hanya dari IP tertentu
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.security.ipWhitelist}
+                    onCheckedChange={(checked) =>
+                      setSettings({
+                        ...settings,
+                        security: { ...settings.security, ipWhitelist: checked },
+                      })
+                    }
+                  />
                 </div>
-                <Switch
-                  checked={settings.security.ipWhitelist}
-                  onCheckedChange={(checked) =>
-                    setSettings({
-                      ...settings,
-                      security: { ...settings.security, ipWhitelist: checked },
-                    })
-                  }
-                />
+
+                {/* IP Whitelist Management */}
+                {settings.security.ipWhitelist && (
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <TextField.Root
+                        placeholder="192.168.1.100"
+                        value={newIpAddress}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          setNewIpAddress(e.target.value);
+                          setIpError('');
+                        }}
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={addIPAddress}
+                        disabled={!newIpAddress.trim()}
+                      >
+                        Tambah IP
+                      </Button>
+                    </div>
+                    
+                    {ipError && (
+                      <p className="text-red-600 text-xs">{ipError}</p>
+                    )}
+                    
+                    {/* IP List */}
+                    {settings.security.allowedIps.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-700">
+                          Daftar IP yang Diizinkan ({settings.security.allowedIps.length})
+                        </p>
+                        <div className="max-h-32 overflow-y-auto space-y-1">
+                          {settings.security.allowedIps.map((ip, index) => (
+                            <div
+                              key={`ip-${ip}-${index}`}
+                              className="flex items-center justify-between p-2 bg-gray-50 rounded border"
+                            >
+                              <span className="font-mono text-sm">{ip}</span>
+                              <Button
+                                variant="ghost"
+                                size="1"
+                                onClick={() => removeIPAddress(ip)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500">
+                        Belum ada IP yang ditambahkan. Tambahkan IP untuk mengaktifkan whitelist.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
