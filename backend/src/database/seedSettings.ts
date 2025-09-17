@@ -1,11 +1,6 @@
 import { prisma } from '../lib/prisma';
 
 const DEFAULT_SETTINGS = [
-  // QR Settings
-  { key: 'qr.autoGenerate', value: true, category: 'qr' },
-  { key: 'qr.validityPeriod', value: 5, category: 'qr' },
-  { key: 'qr.size', value: 'medium', category: 'qr' },
-  
   // Attendance Settings
   { key: 'attendance.allowLateCheckIn', value: true, category: 'attendance' },
   { key: 'attendance.lateThreshold', value: 15, category: 'attendance' },
@@ -20,15 +15,17 @@ const DEFAULT_SETTINGS = [
   { key: 'schedule.workDays', value: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], category: 'schedule' },
   
   // Location Settings
-  { key: 'location.officeAddress', value: 'Jakarta, Indonesia', category: 'location' },
-  { key: 'location.latitude', value: -6.2088, category: 'location' },
-  { key: 'location.longitude', value: 106.8456, category: 'location' },
+  { key: 'location.officeAddress', value: 'PT PLN Icon Plus Kantor Perwakilan Aceh, Jl. Teuku Umar, Banda Aceh', category: 'location' },
+  { key: 'location.latitude', value: 5.5454249, category: 'location' },
+  { key: 'location.longitude', value: 95.3175582, category: 'location' },
   { key: 'location.radius', value: 100, category: 'location' },
+  { key: 'location.useRadius', value: true, category: 'location' },
   
   // Security Settings
   { key: 'security.faceVerification', value: true, category: 'security' },
   { key: 'security.ipWhitelist', value: false, category: 'security' },
   { key: 'security.sessionTimeout', value: 60, category: 'security' },
+  { key: 'security.allowedIps', value: [], category: 'security' },
 ];
 
 export const seedSettings = async () => {

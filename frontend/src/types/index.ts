@@ -4,8 +4,8 @@ export interface User {
   role: "ADMIN" | "USER";
   isActive: boolean;
   avatar?: string | null;
-  createdAt: string; 
-  updatedAt: string; 
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PesertaMagang {
@@ -13,10 +13,10 @@ export interface PesertaMagang {
   nama: string;
   username: string;
   divisi: string;
-  universitas: string;
+  Instansi: string;
   nomorHp: string;
   tanggalMulai: string;
-  tanggalSelesai: string; 
+  tanggalSelesai: string;
   status: "AKTIF" | "NONAKTIF" | "SELESAI";
   avatar?: string;
   createdAt: string;
@@ -40,9 +40,9 @@ export interface Absensi {
   status: "VALID" | "INVALID" | "TERLAMBAT";
   catatan?: string;
   createdAt: string;
-  updatedAt?: string; 
-  ipAddress?: string; 
-  device?: string; 
+  updatedAt?: string;
+  ipAddress?: string;
+  device?: string;
 }
 
 export interface LaporanAbsensi {
@@ -52,9 +52,9 @@ export interface LaporanAbsensi {
   hadir: number;
   tidakHadir: number;
   terlambat: number;
-  tingkatKehadiran: number; 
+  tingkatKehadiran: number;
   periode: {
-    mulai: string; 
+    mulai: string;
   };
 }
 
@@ -81,6 +81,6 @@ export interface DashboardStats {
   pesertaMagangAktif: number;
   absensiMasukHariIni: number;
   absensiKeluarHariIni: number;
-  tingkatKehadiran: number; 
-  aktivitasBaruBaruIni: Absensi[]; 
+  tingkatKehadiran: number;
+  aktivitasBaruBaruIni: Absensi[];
 }

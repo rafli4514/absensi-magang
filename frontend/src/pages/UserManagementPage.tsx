@@ -31,7 +31,10 @@ const StatusBadge = ({ status }: { status: PesertaMagang["status"] }) => {
     SELESAI: { color: "bg-primary-100 text-primary-800", label: "Selesai" },
   };
 
-  const config = statusConfig[status] || { color: "bg-gray-100 text-gray-800", label: status };
+  const config = statusConfig[status] || {
+    color: "bg-gray-100 text-gray-800",
+    label: status,
+  };
 
   return (
     <span
@@ -56,14 +59,16 @@ export default function PesertaMagang() {
     nama: "",
     username: "",
     divisi: "",
-    universitas: "",
+    Instansi: "",
     nomorHp: "",
     tanggalMulai: "",
     tanggalSelesai: "",
     status: "AKTIF" as PesertaMagang["status"],
   });
 
-  const [updateFormData, setUpdateFormData] = useState<Partial<PesertaMagang>>({});
+  const [updateFormData, setUpdateFormData] = useState<Partial<PesertaMagang>>(
+    {}
+  );
 
   // Fetch data on component mount
   useEffect(() => {
@@ -77,11 +82,11 @@ export default function PesertaMagang() {
       if (response.success && response.data) {
         setPesertaMagang(response.data);
       } else {
-        setError(response.message || 'Failed to fetch peserta magang');
+        setError(response.message || "Failed to fetch peserta magang");
       }
     } catch (error: unknown) {
-      console.error('Fetch peserta magang error:', error);
-      setError('Failed to fetch peserta magang');
+      console.error("Fetch peserta magang error:", error);
+      setError("Failed to fetch peserta magang");
     } finally {
       setLoading(false);
     }
@@ -97,18 +102,18 @@ export default function PesertaMagang() {
           nama: "",
           username: "",
           divisi: "",
-          universitas: "",
+          Instansi: "",
           nomorHp: "",
           tanggalMulai: "",
           tanggalSelesai: "",
           status: "AKTIF",
         });
       } else {
-        setError(response.message || 'Failed to create peserta magang');
+        setError(response.message || "Failed to create peserta magang");
       }
     } catch (error: unknown) {
-      console.error('Create peserta magang error:', error);
-      setError('Failed to create peserta magang');
+      console.error("Create peserta magang error:", error);
+      setError("Failed to create peserta magang");
     } finally {
       setIsCreating(false);
     }
@@ -117,16 +122,19 @@ export default function PesertaMagang() {
   const handleUpdate = async (id: string) => {
     try {
       setIsUpdating(id);
-      const response = await pesertaMagangService.updatePesertaMagang(id, updateFormData);
+      const response = await pesertaMagangService.updatePesertaMagang(
+        id,
+        updateFormData
+      );
       if (response.success) {
         await fetchPesertaMagang();
         setUpdateFormData({});
       } else {
-        setError(response.message || 'Failed to update peserta magang');
+        setError(response.message || "Failed to update peserta magang");
       }
     } catch (error: unknown) {
-      console.error('Update peserta magang error:', error);
-      setError('Failed to update peserta magang');
+      console.error("Update peserta magang error:", error);
+      setError("Failed to update peserta magang");
     } finally {
       setIsUpdating(null);
     }
@@ -138,11 +146,11 @@ export default function PesertaMagang() {
       if (response.success) {
         await fetchPesertaMagang();
       } else {
-        setError(response.message || 'Failed to delete peserta magang');
+        setError(response.message || "Failed to delete peserta magang");
       }
     } catch (error: unknown) {
-      console.error('Delete peserta magang error:', error);
-      setError('Failed to delete peserta magang');
+      console.error("Delete peserta magang error:", error);
+      setError("Failed to delete peserta magang");
     }
   };
 
@@ -151,7 +159,7 @@ export default function PesertaMagang() {
       nama: item.nama,
       username: item.username,
       divisi: item.divisi,
-      universitas: item.universitas,
+      Instansi: item.Instansi,
       nomorHp: item.nomorHp,
       tanggalMulai: item.tanggalMulai,
       tanggalSelesai: item.tanggalSelesai,
@@ -162,39 +170,47 @@ export default function PesertaMagang() {
 
   const handleAvatarUpload = async (id: string, file: File) => {
     try {
-      console.log('Uploading avatar for ID:', id);
-      console.log('File:', file);
-      
-      const formData = new FormData();
-      formData.append('avatar', file);
-      
-      const response = await fetch(`http://localhost:3000/api/peserta-magang/${id}/upload-avatar`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: formData,
-      });
+      console.log("Uploading avatar for ID:", id);
+      console.log("File:", file);
 
-      console.log('Response status:', response.status);
-      
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      const response = await fetch(
+        `http://localhost:3000/api/peserta-magang/${id}/upload-avatar`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: formData,
+        }
+      );
+
+      console.log("Response status:", response.status);
+
       if (response.ok) {
         const result = await response.json();
-        console.log('Upload result:', result);
+        console.log("Upload result:", result);
         if (result.success) {
           await fetchPesertaMagang();
-          setUpdateFormData({ ...updateFormData, avatar: result.data.avatarUrl });
+          setUpdateFormData({
+            ...updateFormData,
+            avatar: result.data.avatarUrl,
+          });
         } else {
-          setError(result.message || 'Failed to upload avatar');
+          setError(result.message || "Failed to upload avatar");
         }
       } else {
         const errorText = await response.text();
-        console.error('Upload error response:', errorText);
-        setError(`Failed to upload avatar: ${response.status} ${response.statusText}`);
+        console.error("Upload error response:", errorText);
+        setError(
+          `Failed to upload avatar: ${response.status} ${response.statusText}`
+        );
       }
     } catch (error) {
-      console.error('Avatar upload error:', error);
-      setError('Failed to upload avatar: ' + (error as Error).message);
+      console.error("Avatar upload error:", error);
+      setError("Failed to upload avatar: " + (error as Error).message);
     }
   };
 
@@ -320,7 +336,7 @@ export default function PesertaMagang() {
                 </div>
               </div>
 
-              {/* Second Row: Divisi and Universitas */}
+              {/* Second Row: Divisi and Instansi */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="w-full sm:w-1/2">
                   <label className="block mb-2 font-semibold text-gray-700">
@@ -337,13 +353,13 @@ export default function PesertaMagang() {
                 </div>
                 <div className="w-full sm:w-1/2">
                   <label className="block mb-2 font-semibold text-gray-700">
-                    Universitas
+                    Instansi
                   </label>
                   <TextField.Root
-                    placeholder="Masukkan Universitas"
-                    value={formData.universitas}
+                    placeholder="Masukkan Instansi"
+                    value={formData.Instansi}
                     onChange={(e) =>
-                      setFormData({ ...formData, universitas: e.target.value })
+                      setFormData({ ...formData, Instansi: e.target.value })
                     }
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
@@ -479,7 +495,7 @@ export default function PesertaMagang() {
               <Table.Row>
                 <Table.ColumnHeaderCell>Nama</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Divisi</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>Universitas</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Instansi</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Nomor HP</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Periode</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
@@ -515,9 +531,7 @@ export default function PesertaMagang() {
                     <div className="text-sm text-gray-500">{item.divisi}</div>
                   </Table.Cell>
                   <Table.Cell>
-                    <div className="text-sm text-gray-900">
-                      {item.universitas}
-                    </div>
+                    <div className="text-sm text-gray-900">{item.Instansi}</div>
                   </Table.Cell>
                   <Table.Cell>
                     <div className="text-sm text-gray-900">{item.nomorHp}</div>
@@ -653,7 +667,7 @@ export default function PesertaMagang() {
                               </div>
                             </div>
 
-                            {/* row 4: Divisi and Universitas */}
+                            {/* row 4: Divisi and Instansi */}
                             <div className="flex flex-col sm:flex-row gap-4">
                               <div className="w-full sm:w-1/2">
                                 <label className="block mb-2 font-semibold text-gray-700">
@@ -673,15 +687,15 @@ export default function PesertaMagang() {
                               </div>
                               <div className="w-full sm:w-1/2">
                                 <label className="block mb-2 font-semibold text-gray-700">
-                                  Universitas
+                                  Instansi
                                 </label>
                                 <TextField.Root
-                                  placeholder="Masukkan Universitas"
-                                  value={updateFormData.universitas || ""}
+                                  placeholder="Masukkan Instansi"
+                                  value={updateFormData.Instansi || ""}
                                   onChange={(e) =>
                                     setUpdateFormData({
                                       ...updateFormData,
-                                      universitas: e.target.value,
+                                      Instansi: e.target.value,
                                     })
                                   }
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"

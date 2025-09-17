@@ -1,2 +1,25 @@
 @import "tailwindcss";
 @import "@radix-ui/themes/styles.css";
+
+/* Leaflet Map Styles */
+.leaflet-container {
+  font-family: inherit;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}
+
+.leaflet-control-zoom {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.leaflet-control-zoom a {
+  border-radius: 4px;
+}
+
+/* Custom marker cursor */
+.leaflet-marker-icon {
+  cursor: pointer;
+}

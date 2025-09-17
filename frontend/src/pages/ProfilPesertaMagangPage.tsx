@@ -173,7 +173,7 @@ export default function ProfilPesertaMagangPage() {
                       {peserta.divisi}
                     </Badge>
                     <Badge color="purple" variant="soft" size="2">
-                      {peserta.universitas}
+                      {peserta.Instansi}
                     </Badge>
                   </Flex>
                 </Flex>
@@ -213,7 +213,7 @@ export default function ProfilPesertaMagangPage() {
                   >
                     <GraduationCap className="h-5 w-5 text-green-600" />
                     <Text size="2" weight="medium">
-                      {peserta.universitas}
+                      {peserta.Instansi}
                     </Text>
                   </Flex>
                 </Flex>

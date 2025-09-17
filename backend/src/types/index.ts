@@ -3,7 +3,7 @@
 export interface User {
   id: string;
   username: string;
-  role: 'admin' | 'user';
+  role: "admin" | "user";
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -14,11 +14,11 @@ export interface PesertaMagang {
   nama: string;
   username: string;
   divisi: string;
-  universitas: string;
+  instansi: string;
   nomorHp: string;
   tanggalMulai: string;
   tanggalSelesai: string;
-  status: 'Aktif' | 'Nonaktif' | 'Selesai';
+  status: "Aktif" | "Nonaktif" | "Selesai";
   avatar?: string;
   createdAt: string;
   updatedAt: string;
@@ -27,7 +27,7 @@ export interface PesertaMagang {
 export interface Absensi {
   id: string;
   pesertaMagangId: string;
-  tipe: 'Masuk' | 'Keluar' | 'Izin' | 'Sakit' | 'Cuti';
+  tipe: "Masuk" | "Keluar" | "Izin" | "Sakit" | "Cuti";
   timestamp: string;
   lokasi?: {
     latitude: number;
@@ -36,7 +36,7 @@ export interface Absensi {
   };
   selfieUrl?: string;
   qrCodeData?: string;
-  status: 'valid' | 'Terlambat' | 'invalid';
+  status: "valid" | "Terlambat" | "invalid";
   createdAt: string;
   updatedAt?: string;
 }
@@ -44,11 +44,11 @@ export interface Absensi {
 export interface PengajuanIzin {
   id: string;
   pesertaMagangId: string;
-  tipe: 'sakit' | 'izin' | 'cuti';
+  tipe: "sakit" | "izin" | "cuti";
   tanggalMulai: string;
   tanggalSelesai: string;
   alasan: string;
-  status: 'pending' | 'disetujui' | 'ditolak';
+  status: "pending" | "disetujui" | "ditolak";
   dokumenPendukung?: string;
   disetujuiOleh?: string;
   disetujuiPada?: string;
