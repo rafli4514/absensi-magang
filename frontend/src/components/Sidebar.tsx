@@ -87,7 +87,7 @@ export default function Sidebar({ isOpen, isMinimized, onClose }: SidebarProps) 
           </div>
 
           {/* Navigation */}
-          <nav className="flex-grow mt-5 px-2 overflow-hidden">
+          <nav className="flex-grow mt-2 px-2 overflow-hidden">
             <ul className="space-y-2 overflow-hidden">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href;

@@ -38,7 +38,7 @@ async function main() {
       nama: "John Doe",
       username: "johndoe",
       divisi: "IT Development",
-      instansi: "Politeknik Negeri Lhokseumawe",
+      instansi: "PLN Icon Plus",
       nomorHp: "081234567890",
       tanggalMulai: "2024-01-01",
       tanggalSelesai: "2024-06-30",
