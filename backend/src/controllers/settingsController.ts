@@ -5,11 +5,6 @@ import QRCode from 'qrcode';
 import crypto from 'crypto';
 
 interface AppSettings {
-  qr: {
-    autoGenerate: boolean;
-    validityPeriod: number;
-    size: 'small' | 'medium' | 'large';
-  };
   attendance: {
     allowLateCheckIn: boolean;
     lateThreshold: number;
@@ -28,21 +23,18 @@ interface AppSettings {
     latitude: number;
     longitude: number;
     radius: number;
+    useRadius: boolean;
   };
   security: {
     faceVerification: boolean;
     ipWhitelist: boolean;
     sessionTimeout: number;
+    allowedIps: string[];
   };
 }
 
 // Default settings
 const DEFAULT_SETTINGS: AppSettings = {
-  qr: {
-    autoGenerate: true,
-    validityPeriod: 5,
-    size: 'medium'
-  },
   attendance: {
     allowLateCheckIn: true,
     lateThreshold: 15,
@@ -57,15 +49,17 @@ const DEFAULT_SETTINGS: AppSettings = {
     workDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
   },
   location: {
-    officeAddress: '',
-    latitude: -6.2088,
-    longitude: 106.8456,
-    radius: 100
+    officeAddress: 'PT PLN Icon Plus Kantor Perwakilan Aceh, Jl. Teuku Umar, Banda Aceh',
+    latitude: 5.5454249,
+    longitude: 95.3175582,
+    radius: 100,
+    useRadius: true
   },
   security: {
     faceVerification: true,
     ipWhitelist: false,
-    sessionTimeout: 60
+    sessionTimeout: 60,
+    allowedIps: []
   }
 };
 
@@ -110,6 +104,67 @@ export const updateSettings = async (req: Request, res: Response) => {
     // Validate settings data
     if (!settingsData || typeof settingsData !== 'object') {
       return sendError(res, 'Invalid settings data', 400);
+    }
+
+    // Server-side validation
+    const validationErrors: string[] = [];
+
+    // Validate attendance settings
+    if (settingsData.attendance) {
+      if (settingsData.attendance.lateThreshold && (settingsData.attendance.lateThreshold < 0 || settingsData.attendance.lateThreshold > 120)) {
+        validationErrors.push('Late threshold must be between 0 and 120 minutes');
+      }
+    }
+
+    // Validate schedule settings
+    if (settingsData.schedule) {
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (settingsData.schedule.workStartTime && !timeRegex.test(settingsData.schedule.workStartTime)) {
+        validationErrors.push('Work start time must be in HH:MM format');
+      }
+      if (settingsData.schedule.workEndTime && !timeRegex.test(settingsData.schedule.workEndTime)) {
+        validationErrors.push('Work end time must be in HH:MM format');
+      }
+      if (settingsData.schedule.breakStartTime && !timeRegex.test(settingsData.schedule.breakStartTime)) {
+        validationErrors.push('Break start time must be in HH:MM format');
+      }
+      if (settingsData.schedule.breakEndTime && !timeRegex.test(settingsData.schedule.breakEndTime)) {
+        validationErrors.push('Break end time must be in HH:MM format');
+      }
+    }
+
+    // Validate location settings
+    if (settingsData.location) {
+      if (settingsData.location.latitude && (settingsData.location.latitude < -90 || settingsData.location.latitude > 90)) {
+        validationErrors.push('Latitude must be between -90 and 90');
+      }
+      if (settingsData.location.longitude && (settingsData.location.longitude < -180 || settingsData.location.longitude > 180)) {
+        validationErrors.push('Longitude must be between -180 and 180');
+      }
+      if (settingsData.location.useRadius && settingsData.location.radius && (settingsData.location.radius < 10 || settingsData.location.radius > 2000)) {
+        validationErrors.push('Location radius must be between 10 and 2000 meters when radius is enabled');
+      }
+    }
+
+    // Validate security settings
+    if (settingsData.security) {
+      if (settingsData.security.sessionTimeout && (settingsData.security.sessionTimeout < 5 || settingsData.security.sessionTimeout > 480)) {
+        validationErrors.push('Session timeout must be between 5 and 480 minutes');
+      }
+      
+      // Validate IP addresses
+      if (settingsData.security.allowedIps) {
+        const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        for (const ip of settingsData.security.allowedIps) {
+          if (!ipRegex.test(ip)) {
+            validationErrors.push(`Invalid IP address format: ${ip}`);
+          }
+        }
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      return sendError(res, `Validation errors: ${validationErrors.join(', ')}`, 400);
     }
 
     // Flatten settings object to key-value pairs
@@ -182,6 +237,8 @@ export const updateSettings = async (req: Request, res: Response) => {
 
 export const generateQRCode = async (req: Request, res: Response) => {
   try {
+    const { type = 'masuk' } = req.query; // Get attendance type from query
+    
     // Get QR settings
     const qrSettings = await prisma.settings.findFirst({
       where: { key: 'qr.validityPeriod' }
@@ -189,14 +246,14 @@ export const generateQRCode = async (req: Request, res: Response) => {
 
     const validityPeriod = qrSettings?.value as number || 5; // default 5 minutes
     
-    // Generate unique QR data
-    const timestamp = Date.now();
-    const randomData = crypto.randomBytes(16).toString('hex');
+    // Generate attendance QR data with consistent format
+    const now = new Date();
     const qrData = JSON.stringify({
-      timestamp,
-      validUntil: timestamp + (validityPeriod * 60 * 1000),
-      data: randomData,
-      type: 'attendance'
+      type: type as string,
+      timestamp: now.toISOString(),
+      location: "ICONNET_OFFICE",
+      validUntil: new Date(now.getTime() + validityPeriod * 60 * 1000).toISOString(),
+      sessionId: `ABSEN_${(type as string).toUpperCase()}_${Date.now()}`
     });
 
     // Generate QR code as base64
@@ -213,7 +270,7 @@ export const generateQRCode = async (req: Request, res: Response) => {
     const base64QR = qrCodeDataURL.split(',')[1];
     
     // Calculate expiration time
-    const expiresAt = new Date(timestamp + (validityPeriod * 60 * 1000));
+    const expiresAt = new Date(now.getTime() + (validityPeriod * 60 * 1000));
 
     // Store QR code data in database (optional - for validation later)
     await prisma.settings.upsert({
@@ -258,21 +315,34 @@ export const validateQRCode = async (req: Request, res: Response) => {
 
     try {
       const parsedData = JSON.parse(qrData);
-      const now = Date.now();
+      const now = new Date();
 
       // Check if QR code is still valid
-      if (now > parsedData.validUntil) {
+      const validUntil = new Date(parsedData.validUntil);
+      if (now > validUntil) {
         return sendError(res, 'QR code has expired', 400);
       }
 
-      // Check if QR code type is correct
-      if (parsedData.type !== 'attendance') {
+      // Check if QR code has required fields
+      if (!parsedData.type || !parsedData.sessionId || !parsedData.location) {
+        return sendError(res, 'Invalid QR code format', 400);
+      }
+
+      // Check if QR code type is valid
+      if (!['masuk', 'keluar'].includes(parsedData.type)) {
         return sendError(res, 'Invalid QR code type', 400);
+      }
+
+      // Check if location matches
+      if (parsedData.location !== 'ICONNET_OFFICE') {
+        return sendError(res, 'Invalid QR code location', 400);
       }
 
       sendSuccess(res, 'QR code is valid', {
         isValid: true,
-        data: parsedData
+        data: parsedData,
+        type: parsedData.type,
+        sessionId: parsedData.sessionId
       });
     } catch (parseError) {
       return sendError(res, 'Invalid QR code format', 400);

@@ -25,7 +25,6 @@ model PesertaMagang {
   nama           String
   username       String          @unique
   divisi         String
-  universitas    String
   nomorHp        String
   tanggalMulai   String
   tanggalSelesai String
