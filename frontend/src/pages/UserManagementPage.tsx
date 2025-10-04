@@ -59,11 +59,12 @@ export default function PesertaMagang() {
     nama: "",
     username: "",
     divisi: "",
-    Instansi: "",
+    instansi: "",
     nomorHp: "",
     tanggalMulai: "",
     tanggalSelesai: "",
     status: "AKTIF" as PesertaMagang["status"],
+    password: "",
   });
 
   const [updateFormData, setUpdateFormData] = useState<Partial<PesertaMagang>>(
@@ -102,11 +103,12 @@ export default function PesertaMagang() {
           nama: "",
           username: "",
           divisi: "",
-          Instansi: "",
+          instansi: "",
           nomorHp: "",
           tanggalMulai: "",
           tanggalSelesai: "",
           status: "AKTIF",
+          password: "",
         });
       } else {
         setError(response.message || "Failed to create peserta magang");
@@ -159,7 +161,7 @@ export default function PesertaMagang() {
       nama: item.nama,
       username: item.username,
       divisi: item.divisi,
-      Instansi: item.Instansi,
+        instansi: item.instansi,
       nomorHp: item.nomorHp,
       tanggalMulai: item.tanggalMulai,
       tanggalSelesai: item.tanggalSelesai,
@@ -336,7 +338,28 @@ export default function PesertaMagang() {
                 </div>
               </div>
 
-              {/* Second Row: Divisi and Instansi */}
+              {/* Second Row: Password */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="w-full">
+                  <label className="block mb-2 font-semibold text-gray-700">
+                    Password Awal
+                  </label>
+                  <TextField.Root
+                    type="password"
+                    placeholder="Masukkan Password Awal"
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Password ini akan digunakan peserta magang untuk login pertama kali
+                  </p>
+                </div>
+              </div>
+
+              {/* Third Row: Divisi and Instansi */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="w-full sm:w-1/2">
                   <label className="block mb-2 font-semibold text-gray-700">
@@ -357,9 +380,9 @@ export default function PesertaMagang() {
                   </label>
                   <TextField.Root
                     placeholder="Masukkan Instansi"
-                    value={formData.Instansi}
+                    value={formData.instansi}
                     onChange={(e) =>
-                      setFormData({ ...formData, Instansi: e.target.value })
+                      setFormData({ ...formData, instansi: e.target.value })
                     }
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
@@ -531,7 +554,7 @@ export default function PesertaMagang() {
                     <div className="text-sm text-gray-500">{item.divisi}</div>
                   </Table.Cell>
                   <Table.Cell>
-                    <div className="text-sm text-gray-900">{item.Instansi}</div>
+                    <div className="text-sm text-gray-900">{item.instansi}</div>
                   </Table.Cell>
                   <Table.Cell>
                     <div className="text-sm text-gray-900">{item.nomorHp}</div>
@@ -691,11 +714,11 @@ export default function PesertaMagang() {
                                 </label>
                                 <TextField.Root
                                   placeholder="Masukkan Instansi"
-                                  value={updateFormData.Instansi || ""}
+                                  value={updateFormData.instansi || ""}
                                   onChange={(e) =>
                                     setUpdateFormData({
                                       ...updateFormData,
-                                      Instansi: e.target.value,
+                                      instansi: e.target.value,
                                     })
                                   }
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"

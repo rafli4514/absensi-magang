@@ -13,7 +13,7 @@ export interface PesertaMagang {
   nama: string;
   username: string;
   divisi: string;
-  Instansi: string;
+  instansi: string;
   nomorHp: string;
   tanggalMulai: string;
   tanggalSelesai: string;
