@@ -1,131 +1,143 @@
 import 'package:flutter/foundation.dart';
-import '../models/user_model.dart';
-import '../services/auth_service.dart';
+import '../models/user.dart';
+import '../services/storage_service.dart';
+import '../utils/constants.dart';
 
 class AuthProvider with ChangeNotifier {
-  UserModel? _currentUser;
+  User? _user;
   bool _isLoading = false;
-  String? _errorMessage;
+  String? _error;
 
-  UserModel? get currentUser => _currentUser;
+  User? get user => _user;
   bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
-  bool get isLoggedIn => _currentUser != null;
+  String? get error => _error;
 
-  // Initialize - check if user is already logged in
-  Future<void> initialize() async {
-    _isLoading = true;
-    notifyListeners();
+  AuthProvider() {
+    _loadUserData();
+  }
 
-    try {
-      final user = await AuthService.getCurrentUser();
-      _currentUser = user;
-      _errorMessage = null;
-    } catch (e) {
-      _errorMessage = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+  Future<void> _loadUserData() async {
+    final userData = StorageService.getString(AppConstants.userDataKey);
+    if (userData != null) {
+      // Parse user data from storage
+      // _user = User.fromJson(jsonDecode(userData));
     }
   }
 
-  // Login
+  Future<bool> checkAuthentication() async {
+    final token = StorageService.getString(AppConstants.tokenKey);
+    return token != null;
+  }
+
   Future<bool> login(String email, String password) async {
     _isLoading = true;
-    _errorMessage = null;
+    _error = null;
     notifyListeners();
 
     try {
-      final response = await AuthService.login(email, password);
+      // For now, simulate successful login
+      await Future.delayed(const Duration(seconds: 2));
       
-      if (response.success && response.data != null) {
-        _currentUser = response.data;
-        _errorMessage = null;
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        _errorMessage = response.message ?? 'Login gagal';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-    } catch (e) {
-      _errorMessage = e.toString();
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // Register
-  Future<bool> register(
-    String nama,
-    String email,
-    String password,
-    String confirmPassword,
-  ) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      final response = await AuthService.register(
-        nama,
-        email,
-        password,
-        confirmPassword,
+      // Create mock user for demo
+      _user = User(
+        id: '1',
+        name: 'John Doe',
+        email: email,
+        department: 'IT',
+        position: 'Developer',
+        token: 'mock_token',
       );
       
+      await StorageService.setString(AppConstants.tokenKey, 'mock_token');
+      _isLoading = false;
+      notifyListeners();
+      return true;
+      
+      // Uncomment when you have real API
+      /*
+      final response = await AuthService.login(email, password);
+      
       if (response.success) {
-        if (response.data != null) {
-          _currentUser = response.data;
-        }
-        _errorMessage = null;
+        _user = response.data;
+        await StorageService.setString(AppConstants.tokenKey, response.data!.token!);
+        await StorageService.setString(AppConstants.userDataKey, response.data!.toJson().toString());
         _isLoading = false;
         notifyListeners();
         return true;
       } else {
-        _errorMessage = response.message ?? 'Registrasi gagal';
+        _error = response.message;
         _isLoading = false;
         notifyListeners();
         return false;
       }
+      */
     } catch (e) {
-      _errorMessage = e.toString();
+      _error = e.toString();
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
-  // Logout
-  Future<void> logout() async {
+  Future<bool> register(String name, String email, String password, String department) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
-      await AuthService.logout();
-      _currentUser = null;
-      _errorMessage = null;
-    } catch (e) {
-      _errorMessage = e.toString();
-    } finally {
+      // For now, simulate successful registration
+      await Future.delayed(const Duration(seconds: 2));
+      
+      // Create mock user for demo
+      _user = User(
+        id: '1',
+        name: name,
+        email: email,
+        department: department,
+        position: 'Employee',
+        token: 'mock_token',
+      );
+      
+      await StorageService.setString(AppConstants.tokenKey, 'mock_token');
       _isLoading = false;
       notifyListeners();
+      return true;
+      
+      // Uncomment when you have real API
+      /*
+      final response = await AuthService.register(name, email, password, department);
+      
+      if (response.success) {
+        _user = response.data;
+        await StorageService.setString(AppConstants.tokenKey, response.data!.token!);
+        await StorageService.setString(AppConstants.userDataKey, response.data!.toJson().toString());
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _error = response.message;
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+      */
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
     }
   }
 
-  // Update current user
-  void updateUser(UserModel user) {
-    _currentUser = user;
+  Future<void> logout() async {
+    _user = null;
+    await StorageService.remove(AppConstants.tokenKey);
+    await StorageService.remove(AppConstants.userDataKey);
     notifyListeners();
   }
 
-  // Clear error message
   void clearError() {
-    _errorMessage = null;
+    _error = null;
     notifyListeners();
   }
 }
-

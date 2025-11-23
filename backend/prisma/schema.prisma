@@ -29,6 +29,7 @@ model PesertaMagang {
   username       String          @unique
   divisi         String
   instansi       String
+  id_instansi    String?
   nomorHp        String
   tanggalMulai   String
   tanggalSelesai String
@@ -41,9 +42,10 @@ model PesertaMagang {
   userId         String?         @unique
   user           User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  // Relasi dengan Absensi dan PengajuanIzin
+  // Relasi dengan Absensi, PengajuanIzin, dan Logbook
   absensi        Absensi[]
   pengajuanIzin  PengajuanIzin[]
+  logbook        Logbook[]
 
   @@map("peserta_magang")
 }
@@ -86,6 +88,20 @@ model PengajuanIzin {
   @@map("pengajuan_izin")
 }
 
+model Logbook {
+  id              String        @id @default(cuid())
+  pesertaMagangId String
+  tanggal         String
+  kegiatan        String
+  deskripsi       String
+  durasi          String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  pesertaMagang   PesertaMagang @relation(fields: [pesertaMagangId], references: [id], onDelete: Cascade)
+
+  @@map("logbook")
+}
+
 model Settings {
   id        String   @id @default(cuid())
   key       String   @unique
@@ -100,6 +116,7 @@ model Settings {
 enum Role {
   ADMIN
   USER
+  PEMBIMBING_MAGANG
 }
 
 enum StatusPeserta {

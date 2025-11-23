@@ -7,16 +7,16 @@ import {
   deleteUser,
   toggleUserStatus,
 } from '../controllers/userController';
-import { authenticateToken, requireAdmin } from '../middleware/auth';
+import { authenticateToken, requireAdmin, requireAdminOrPembimbing } from '../middleware/auth';
 
 const router = Router();
 
 // Protected routes - require authentication
 router.use(authenticateToken);
 
-// Admin only routes
-router.get('/', requireAdmin, getAllUsers);
-router.get('/:id', requireAdmin, getUserById);
+// Routes accessible to admin and pembimbing magang (read-only for pembimbing)
+router.get('/', requireAdminOrPembimbing, getAllUsers);
+router.get('/:id', requireAdminOrPembimbing, getUserById);
 router.post('/', requireAdmin, createUser);
 router.put('/:id', requireAdmin, updateUser);
 router.delete('/:id', requireAdmin, deleteUser);

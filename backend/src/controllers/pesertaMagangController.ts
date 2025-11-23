@@ -97,6 +97,7 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
       username,
       divisi,
       instansi = "Universitas/Instansi Tidak Diketahui", // Default value untuk instansi
+      id_instansi,
       nomorHp,
       tanggalMulai,
       tanggalSelesai,
@@ -148,6 +149,7 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
         username,
         divisi,
         instansi,
+        id_instansi,
         nomorHp,
         tanggalMulai,
         tanggalSelesai,
@@ -182,6 +184,7 @@ export const updatePesertaMagang = async (req: Request, res: Response) => {
       username,
       divisi,
       instansi,
+      id_instansi,
       nomorHp,
       tanggalMulai,
       tanggalSelesai,
@@ -214,6 +217,7 @@ export const updatePesertaMagang = async (req: Request, res: Response) => {
     if (username) updateData.username = username;
     if (divisi) updateData.divisi = divisi;
     if (instansi) updateData.instansi = instansi;
+    if (id_instansi) updateData.id_instansi = id_instansi;
     if (nomorHp) updateData.nomorHp = nomorHp;
     if (tanggalMulai) updateData.tanggalMulai = tanggalMulai;
     if (tanggalSelesai) updateData.tanggalSelesai = tanggalSelesai;

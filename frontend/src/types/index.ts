@@ -1,7 +1,7 @@
 export interface User {
   id: string;
   username: string;
-  role: "ADMIN" | "USER";
+  role: "ADMIN" | "USER" | "PEMBIMBING_MAGANG";
   isActive: boolean;
   avatar?: string | null;
   createdAt: string;
@@ -14,6 +14,7 @@ export interface PesertaMagang {
   username: string;
   divisi: string;
   instansi: string;
+  id_instansi?: string;
   nomorHp: string;
   tanggalMulai: string;
   tanggalSelesai: string;

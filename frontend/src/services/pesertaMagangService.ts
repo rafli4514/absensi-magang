@@ -22,6 +22,7 @@ export interface CreatePesertaMagangRequest {
   username: string;
   divisi: string;
   instansi: string;
+  id_instansi?: string;
   nomorHp: string;
   tanggalMulai: string;
   tanggalSelesai: string;

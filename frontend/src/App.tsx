@@ -33,7 +33,6 @@ function App() {
             <Route path="/absensi" element={<AbsensiPage />} />
             <Route path="/izin" element={<PengajuanIzinPage />} />
             <Route path="/laporan" element={<LaporanPage />} />
-
             <Route
               path="/pengaturan"
               element={

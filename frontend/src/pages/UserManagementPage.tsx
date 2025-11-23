@@ -53,6 +53,7 @@ export default function PesertaMagang() {
   const [statusFilter, setStatusFilter] = useState<string>("Semua");
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
+  const [currentEditingId, setCurrentEditingId] = useState<string | null>(null);
 
   // Form states for create/edit
   const [formData, setFormData] = useState({
@@ -60,6 +61,7 @@ export default function PesertaMagang() {
     username: "",
     divisi: "",
     instansi: "",
+    id_instansi: "",
     nomorHp: "",
     tanggalMulai: "",
     tanggalSelesai: "",
@@ -93,6 +95,20 @@ export default function PesertaMagang() {
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !isCreating) {
+      e.preventDefault();
+      handleCreate();
+    }
+  };
+
+  const handleUpdateKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !isUpdating && currentEditingId) {
+      e.preventDefault();
+      handleUpdate(currentEditingId);
+    }
+  };
+
   const handleCreate = async () => {
     try {
       setIsCreating(true);
@@ -104,6 +120,7 @@ export default function PesertaMagang() {
           username: "",
           divisi: "",
           instansi: "",
+          id_instansi: "",
           nomorHp: "",
           tanggalMulai: "",
           tanggalSelesai: "",
@@ -157,11 +174,13 @@ export default function PesertaMagang() {
   };
 
   const initializeUpdateForm = (item: PesertaMagang) => {
+    setCurrentEditingId(item.id);
     setUpdateFormData({
       nama: item.nama,
       username: item.username,
       divisi: item.divisi,
-        instansi: item.instansi,
+      instansi: item.instansi,
+      id_instansi: item.id_instansi,
       nomorHp: item.nomorHp,
       tanggalMulai: item.tanggalMulai,
       tanggalSelesai: item.tanggalSelesai,
@@ -261,10 +280,10 @@ export default function PesertaMagang() {
             <Button>Tambah Peserta Magang</Button>
           </Dialog.Trigger>
 
-          <Dialog.Content maxWidth="850px">
+          <Dialog.Content maxWidth="850px" onKeyDown={handleKeyDown}>
             <Dialog.Title>Tambah Peserta Magang</Dialog.Title>
             <Dialog.Description size="2" mb="4">
-              Isi data peserta magang baru dengan lengkap.
+              Isi data peserta magang baru dengan lengkap. Tekan <kbd className="px-2 py-1 bg-gray-100 rounded text-sm">Enter</kbd> untuk menyimpan.
             </Dialog.Description>
 
             <Flex direction="column" gap="6">
@@ -387,6 +406,24 @@ export default function PesertaMagang() {
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
+              </div>
+
+              {/* ID Instansi */}
+              <div className="w-full">
+                <label className="block mb-2 font-semibold text-gray-700">
+                  ID Peserta/Student ID
+                </label>
+                <TextField.Root
+                  placeholder="Masukkan ID Peserta"
+                  value={formData.id_instansi}
+                  onChange={(e) =>
+                    setFormData({ ...formData, id_instansi: e.target.value })
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  ID unik peserta magang (NIM/NIS/ID lainnya)
+                </p>
               </div>
 
               {/* Fourth Row: Tanggal Selesai and Status */}
@@ -517,7 +554,7 @@ export default function PesertaMagang() {
             <Table.Header>
               <Table.Row>
                 <Table.ColumnHeaderCell>Nama</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>Divisi</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>ID Peserta</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Instansi</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Nomor HP</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Periode</Table.ColumnHeaderCell>
@@ -551,7 +588,7 @@ export default function PesertaMagang() {
                     </div>
                   </Table.Cell>
                   <Table.Cell>
-                    <div className="text-sm text-gray-500">{item.divisi}</div>
+                    <div className="text-sm text-gray-500">{item.id_instansi || '-'}</div>
                   </Table.Cell>
                   <Table.Cell>
                     <div className="text-sm text-gray-900">{item.instansi}</div>
@@ -595,10 +632,10 @@ export default function PesertaMagang() {
                           </IconButton>
                         </Dialog.Trigger>
                         {/* Dialog Content */}
-                        <Dialog.Content maxWidth="850px">
+                        <Dialog.Content maxWidth="850px" onKeyDown={handleUpdateKeyDown}>
                           <Dialog.Title>Edit Peserta Magang</Dialog.Title>
                           <Dialog.Description size="2" mb="4">
-                            Edit data peserta magang dengan lengkap.
+                            Edit data peserta magang dengan lengkap. Tekan <kbd className="px-2 py-1 bg-gray-100 rounded text-sm">Enter</kbd> untuk menyimpan.
                           </Dialog.Description>
                           {/* Form Fields*/}
                           <Flex direction="column" gap="6">
@@ -724,6 +761,24 @@ export default function PesertaMagang() {
                                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                               </div>
+                            </div>
+
+                            {/* ID Instansi */}
+                            <div className="w-full">
+                              <label className="block mb-2 font-semibold text-gray-700">
+                                ID Peserta/Student ID
+                              </label>
+                              <TextField.Root
+                                placeholder="Masukkan ID Peserta"
+                                value={updateFormData.id_instansi || ""}
+                                onChange={(e) =>
+                                  setUpdateFormData({
+                                    ...updateFormData,
+                                    id_instansi: e.target.value,
+                                  })
+                                }
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              />
                             </div>
 
                             {/* row 5: Tanggal Mulai dan Tanggal Selesai */}

@@ -4,6 +4,7 @@ import absensiRoutes = require('./absensiRoutes');
 import userRoutes = require('./userRoutes');
 import authRoutes = require('./authRoutes');
 import pengajuanIzinRoutes = require('./pengajuanIzinRoutes');
+import logbookRoutes = require('./logbookRoutes');
 import dashboardRoutes = require('./dashboardRoutes');
 import settingsRoutes = require('./settingsRoutes');
 
@@ -27,6 +28,7 @@ router.use('/users', userRoutes);
 router.use('/peserta-magang', pesertaMagangRoutes);
 router.use('/absensi', absensiRoutes);
 router.use('/pengajuan-izin', pengajuanIzinRoutes);
+router.use('/logbook', logbookRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/settings', settingsRoutes);
 

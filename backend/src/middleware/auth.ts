@@ -72,3 +72,33 @@ export const requireAdmin = (
   }
   next();
 };
+
+// Middleware untuk memastikan user adalah admin atau pembimbing magang
+export const requireAdminOrPembimbing = (
+  req: AuthRequest,
+  res: Response<ApiResponse>,
+  next: NextFunction
+) => {
+  if (req.user?.role !== 'ADMIN' && req.user?.role !== 'PEMBIMBING_MAGANG') {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin or Pembimbing Magang access required',
+    });
+  }
+  next();
+};
+
+// Middleware untuk memastikan user bukan pembimbing magang (untuk create/update/delete operations)
+export const requireNotPembimbing = (
+  req: AuthRequest,
+  res: Response<ApiResponse>,
+  next: NextFunction
+) => {
+  if (req.user?.role === 'PEMBIMBING_MAGANG') {
+    return res.status(403).json({
+      success: false,
+      message: 'Pembimbing Magang tidak memiliki akses untuk operasi ini',
+    });
+  }
+  next();
+};
