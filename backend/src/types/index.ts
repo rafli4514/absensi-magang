@@ -57,6 +57,25 @@ export interface PengajuanIzin {
   updatedAt?: string;
 }
 
+export interface Logbook {
+  id: string;
+  pesertaMagangId: string;
+  tanggal: string;
+  kegiatan: string;
+  deskripsi: string;
+  durasi?: string;
+  createdAt: string;
+  updatedAt?: string;
+  pesertaMagang?: {
+    id: string;
+    nama: string;
+    username: string;
+    divisi: string;
+    instansi?: string;
+    avatar?: string;
+  };
+}
+
 export interface ApiResponse<T = any> {
   success: boolean;
   message: string;

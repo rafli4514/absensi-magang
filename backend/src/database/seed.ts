@@ -41,7 +41,7 @@ async function main() {
       instansi: "PLN Icon Plus",
       nomorHp: "081234567890",
       tanggalMulai: "2024-01-01",
-      tanggalSelesai: "2024-06-30",
+      tanggalSelesai: "2024-06-30", 
       status: StatusPeserta.AKTIF,
       avatar: "https://via.placeholder.com/150",
     },

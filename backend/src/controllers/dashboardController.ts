@@ -8,7 +8,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-    // Get counts in parallel for better performance
+    
     const [
       totalPesertaMagang,
       pesertaMagangAktif,
@@ -16,15 +16,15 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       absensiKeluarHariIni,
       aktivitasBaruBaruIni,
     ] = await Promise.all([
-      // Get total peserta magang
+      
       prisma.pesertaMagang.count(),
 
-      // Get active peserta magang
+      
       prisma.pesertaMagang.count({
         where: { status: 'AKTIF' },
       }),
 
-      // Get today's attendance - masuk
+      
       prisma.absensi.count({
         where: {
           tipe: 'MASUK',
@@ -35,7 +35,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         },
       }),
 
-      // Get today's attendance - keluar
+      
       prisma.absensi.count({
         where: {
           tipe: 'KELUAR',
@@ -46,7 +46,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         },
       }),
 
-      // Get recent activities (last 10 attendance records)
+      
       prisma.absensi.findMany({
         include: {
           pesertaMagang: {
@@ -63,7 +63,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       }),
     ]);
 
-    // Get unique attendees to avoid counting duplicates
+    
     const uniqueAttendees = await prisma.absensi.groupBy({
       by: ['pesertaMagangId'],
       where: {
@@ -75,7 +75,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       },
     });
 
-    // Calculate attendance rate with proper logic (capped at 100%)
+    
     const actualAttendees = uniqueAttendees.length;
     const tingkatKehadiran = pesertaMagangAktif > 0 
       ? Math.min(100, Math.round((actualAttendees / pesertaMagangAktif) * 100))
@@ -111,7 +111,7 @@ export const getAttendanceReport = async (req: Request, res: Response) => {
 
     const where: any = {};
     
-    // Date range filter
+    
     if (startDate && endDate) {
       where.createdAt = {
         gte: new Date(startDate as string),
@@ -119,7 +119,7 @@ export const getAttendanceReport = async (req: Request, res: Response) => {
       };
     }
 
-    // Peserta magang filter
+    
     if (pesertaMagangId) {
       where.pesertaMagangId = pesertaMagangId;
     }
@@ -139,7 +139,7 @@ export const getAttendanceReport = async (req: Request, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Process data for report
+    
     const reportData = attendanceData.reduce((acc: any, item: any) => {
       const pesertaId = item.pesertaMagangId;
       const pesertaNama = item.pesertaMagang?.nama || 'Unknown';
@@ -169,9 +169,9 @@ export const getAttendanceReport = async (req: Request, res: Response) => {
       return acc;
     }, {});
 
-    // Calculate attendance rate for each peserta
+    
     Object.values(reportData).forEach((item: any) => {
-      const totalWorkDays = 30; // Simplified - should calculate actual work days
+      const totalWorkDays = 30; 
       item.totalHari = totalWorkDays;
       item.tidakHadir = totalWorkDays - item.hadir;
       item.tingkatKehadiran = totalWorkDays > 0 
@@ -195,7 +195,7 @@ export const getMonthlyStats = async (req: Request, res: Response) => {
     const startDate = new Date(currentYear, currentMonth - 1, 1);
     const endDate = new Date(currentYear, currentMonth, 0);
 
-    // Get monthly attendance stats
+    
     const monthlyAttendance = await prisma.absensi.findMany({
       where: {
         createdAt: {
@@ -214,7 +214,7 @@ export const getMonthlyStats = async (req: Request, res: Response) => {
       },
     });
 
-    // Process monthly stats
+    
     const stats = {
       totalAbsensi: monthlyAttendance.length,
       masuk: monthlyAttendance.filter(a => a.tipe === 'MASUK').length,
@@ -241,12 +241,12 @@ export const getDailyStats = async (req: Request, res: Response) => {
   try {
     const { date } = req.query;
     
-    // Parse the date or use today
+    
     const targetDate = date ? new Date(date as string) : new Date();
     const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
     const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1);
 
-    // Get counts in parallel for better performance
+    
     const [
       totalPesertaMagang,
       pesertaMagangAktif,
@@ -255,15 +255,15 @@ export const getDailyStats = async (req: Request, res: Response) => {
       aktivitasBaruBaruIni,
       uniqueAttendees,
     ] = await Promise.all([
-      // Get total peserta magang
+      
       prisma.pesertaMagang.count(),
 
-      // Get active peserta magang
+      
       prisma.pesertaMagang.count({
         where: { status: 'AKTIF' },
       }),
 
-      // Get selected day's attendance - masuk
+      
       prisma.absensi.count({
         where: {
           tipe: 'MASUK',
@@ -274,7 +274,7 @@ export const getDailyStats = async (req: Request, res: Response) => {
         },
       }),
 
-      // Get selected day's attendance - keluar
+      
       prisma.absensi.count({
         where: {
           tipe: 'KELUAR',
@@ -285,7 +285,7 @@ export const getDailyStats = async (req: Request, res: Response) => {
         },
       }),
 
-      // Get activities for the selected day
+      
       prisma.absensi.findMany({
         where: {
           createdAt: {
@@ -304,10 +304,10 @@ export const getDailyStats = async (req: Request, res: Response) => {
           },
         },
         orderBy: { createdAt: 'desc' },
-        take: 20, // Show more activities for daily view
+        take: 20, 
       }),
 
-      // Get unique attendees to avoid counting duplicates
+      
       prisma.absensi.groupBy({
         by: ['pesertaMagangId'],
         where: {
@@ -320,7 +320,7 @@ export const getDailyStats = async (req: Request, res: Response) => {
       }),
     ]);
 
-    // Calculate attendance rate with proper logic (capped at 100%)
+    
     const actualAttendees = uniqueAttendees.length;
     const tingkatKehadiran = pesertaMagangAktif > 0 
       ? Math.min(100, Math.round((actualAttendees / pesertaMagangAktif) * 100))

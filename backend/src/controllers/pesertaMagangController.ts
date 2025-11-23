@@ -26,6 +26,16 @@ export const getAllPesertaMagang = async (req: Request, res: Response) => {
         skip,
         take: limit,
         orderBy: { createdAt: "desc" },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              role: true,
+              isActive: true,
+            },
+          },
+        },
       }),
       prisma.pesertaMagang.count({ where }),
     ]);
@@ -50,6 +60,14 @@ export const getPesertaMagangById = async (req: Request, res: Response) => {
     const pesertaMagang = await prisma.pesertaMagang.findUnique({
       where: { id },
       include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            role: true,
+            isActive: true,
+          },
+        },
         absensi: {
           orderBy: { createdAt: "desc" },
           take: 10, // Get last 10 attendance records
@@ -78,15 +96,22 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
       nama,
       username,
       divisi,
-      instansi,
+      instansi = "Universitas/Instansi Tidak Diketahui", // Default value untuk instansi
+      id_instansi,
       nomorHp,
       tanggalMulai,
       tanggalSelesai,
       status = "AKTIF",
       avatar,
+      password = "password123", // Default password jika tidak diberikan
     } = req.body;
 
-    // Check if username already exists
+    // Validate required fields
+    if (!nama || !username || !divisi || !nomorHp || !tanggalMulai || !tanggalSelesai) {
+      return sendError(res, "Required fields: nama, username, divisi, nomorHp, tanggalMulai, tanggalSelesai", 400);
+    }
+
+    // Check if username already exists in peserta magang
     const existingPeserta = await prisma.pesertaMagang.findUnique({
       where: { username },
     });
@@ -95,17 +120,52 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
       return sendError(res, "Username already exists", 400);
     }
 
+    // Check if username already exists in users
+    const existingUser = await prisma.user.findUnique({
+      where: { username },
+    });
+
+    if (existingUser) {
+      return sendError(res, "Username already exists in users", 400);
+    }
+
+    // Create user first
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const user = await prisma.user.create({
+      data: {
+        username,
+        password: hashedPassword,
+        role: 'USER',
+        isActive: true,
+      },
+    });
+
+    // Create peserta magang with user relation
     const pesertaMagang = await prisma.pesertaMagang.create({
       data: {
         nama,
         username,
         divisi,
         instansi,
+        id_instansi,
         nomorHp,
         tanggalMulai,
         tanggalSelesai,
         status: status.toUpperCase(),
         avatar,
+        userId: user.id,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            role: true,
+            isActive: true,
+          },
+        },
       },
     });
 
@@ -124,6 +184,7 @@ export const updatePesertaMagang = async (req: Request, res: Response) => {
       username,
       divisi,
       instansi,
+      id_instansi,
       nomorHp,
       tanggalMulai,
       tanggalSelesai,
@@ -156,6 +217,7 @@ export const updatePesertaMagang = async (req: Request, res: Response) => {
     if (username) updateData.username = username;
     if (divisi) updateData.divisi = divisi;
     if (instansi) updateData.instansi = instansi;
+    if (id_instansi) updateData.id_instansi = id_instansi;
     if (nomorHp) updateData.nomorHp = nomorHp;
     if (tanggalMulai) updateData.tanggalMulai = tanggalMulai;
     if (tanggalSelesai) updateData.tanggalSelesai = tanggalSelesai;
@@ -188,6 +250,7 @@ export const deletePesertaMagang = async (req: Request, res: Response) => {
       select: {
         id: true,
         avatar: true,
+        userId: true,
       },
     });
 
@@ -218,6 +281,19 @@ export const deletePesertaMagang = async (req: Request, res: Response) => {
     await prisma.pesertaMagang.delete({
       where: { id },
     });
+
+    // Delete associated user if exists
+    if (pesertaMagang.userId) {
+      try {
+        await prisma.user.delete({
+          where: { id: pesertaMagang.userId },
+        });
+        console.log(`Associated user deleted: ${pesertaMagang.userId}`);
+      } catch (userError) {
+        console.error("Error deleting associated user:", userError);
+        // Continue even if user deletion fails
+      }
+    }
 
     sendSuccess(res, "Peserta magang deleted successfully");
   } catch (error) {
@@ -291,6 +367,94 @@ export const uploadAvatar = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Upload avatar error:", error);
     sendError(res, "Failed to upload avatar", 400);
+  }
+};
+
+export const getPesertaMagangByUserId = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const pesertaMagang = await prisma.pesertaMagang.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            role: true,
+            isActive: true,
+          },
+        },
+        absensi: {
+          orderBy: { createdAt: "desc" },
+          take: 10, // Get last 10 attendance records
+        },
+        pengajuanIzin: {
+          orderBy: { createdAt: "desc" },
+          take: 5, // Get last 5 leave requests
+        },
+      },
+    });
+
+    if (!pesertaMagang) {
+      return sendError(res, "Peserta magang not found for this user", 404);
+    }
+
+    sendSuccess(res, "Peserta magang retrieved successfully", pesertaMagang);
+  } catch (error) {
+    console.error("Get peserta magang by user ID error:", error);
+    sendError(res, "Failed to retrieve peserta magang");
+  }
+};
+
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return sendError(res, "User not authenticated", 401);
+    }
+
+    if (!currentPassword || !newPassword) {
+      return sendError(res, "Current password and new password are required", 400);
+    }
+
+    if (newPassword.length < 6) {
+      return sendError(res, "New password must be at least 6 characters", 400);
+    }
+
+    // Get user with associated peserta magang
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        pesertaMagang: true,
+      },
+    });
+
+    if (!user || !user.pesertaMagang) {
+      return sendError(res, "Peserta magang not found", 404);
+    }
+
+    // Verify current password
+    const bcrypt = require('bcryptjs');
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      return sendError(res, "Current password is incorrect", 400);
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+
+    // Update password
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedNewPassword },
+    });
+
+    sendSuccess(res, "Password changed successfully");
+  } catch (error) {
+    console.error("Change password error:", error);
+    sendError(res, "Failed to change password", 500);
   }
 };
 

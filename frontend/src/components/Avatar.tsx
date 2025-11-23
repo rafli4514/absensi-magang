@@ -83,7 +83,13 @@ export default function Avatar({
   );
 
   // Validasi src
-  const isValidSrc = src && src.trim() !== '' && src !== 'null' && src !== 'undefined';
+  const isValidSrc = src && 
+    src.trim() !== '' && 
+    src !== 'null' && 
+    src !== 'undefined' &&
+    !src.includes('via.placeholder.com') &&
+    !src.includes('placeholder') &&
+    (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('/'));
 
   // Jika ada src yang valid dan tidak ada error, tampilkan gambar
   if (isValidSrc && !imageError) {

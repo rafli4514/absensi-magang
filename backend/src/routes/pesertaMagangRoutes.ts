@@ -2,13 +2,15 @@ const { Router } = require('express');
 import {
   getAllPesertaMagang,
   getPesertaMagangById,
+  getPesertaMagangByUserId,
   createPesertaMagang,
   updatePesertaMagang,
   deletePesertaMagang,
   uploadAvatar,
   removeAvatar,
+  changePassword,
 } from '../controllers/pesertaMagangController';
-import { authenticateToken, requireAdmin } from '../middleware/auth';
+import { authenticateToken, requireAdmin, requireAdminOrPembimbing } from '../middleware/auth';
 import { upload } from '../middleware/upload';
 
 const router = Router();
@@ -16,9 +18,13 @@ const router = Router();
 // Protected routes
 router.use(authenticateToken); // All routes below require authentication
 
-// Routes accessible to authenticated users
+// Routes accessible to authenticated users (including pembimbing magang)
 router.get('/', getAllPesertaMagang);
+router.get('/user/:userId', getPesertaMagangByUserId);
 router.get('/:id', getPesertaMagangById);
+
+// Peserta magang specific routes (for mobile app)
+router.post('/change-password', changePassword);
 
 // Admin only routes
 router.post('/', requireAdmin, createPesertaMagang);

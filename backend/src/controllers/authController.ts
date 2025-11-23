@@ -70,45 +70,52 @@ export const loginPesertaMagang = async (req: Request, res: Response) => {
       return sendError(res, "Username and password are required", 400);
     }
 
-    // Check if peserta magang exists
-    const pesertaMagang = await prisma.pesertaMagang.findUnique({
+    // Check if user exists and has associated peserta magang
+    const user = await prisma.user.findUnique({
       where: { username },
+      include: {
+        pesertaMagang: true,
+      },
     });
 
-    if (!pesertaMagang) {
+    if (!user || !user.pesertaMagang) {
       return sendError(res, "Invalid credentials", 401);
     }
 
+    // Check if user is active
+    if (!user.isActive) {
+      return sendError(res, "Account is deactivated", 401);
+    }
+
     // Check if peserta magang is active
-    if (pesertaMagang.status !== "AKTIF") {
+    if (user.pesertaMagang.status !== "AKTIF") {
       return sendError(res, "Account is not active", 401);
     }
 
-    // For now, we'll use a simple password check (you might want to hash passwords for peserta magang too)
-    // This is a simplified version - in production, you should hash peserta magang passwords too
-    if (password !== "defaultPassword") {
-      // You should implement proper password hashing
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
       return sendError(res, "Invalid credentials", 401);
     }
 
     // Generate JWT token for peserta magang
     const token = generateToken({
-      id: pesertaMagang.id,
-      username: pesertaMagang.username,
-      nama: pesertaMagang.nama,
+      id: user.id,
+      username: user.username,
+      nama: user.pesertaMagang.nama,
       role: "student",
-      divisi: pesertaMagang.divisi,
+      divisi: user.pesertaMagang.divisi,
     });
 
     sendSuccess(res, "Login successful", {
       user: {
-        id: pesertaMagang.id,
-        nama: pesertaMagang.nama,
-        username: pesertaMagang.username,
+        id: user.id,
+        nama: user.pesertaMagang.nama,
+        username: user.username,
         role: "student",
-        divisi: pesertaMagang.divisi,
-        instansi: pesertaMagang.instansi,
-        avatar: pesertaMagang.avatar,
+        divisi: user.pesertaMagang.divisi,
+        instansi: user.pesertaMagang.instansi,
+        avatar: user.pesertaMagang.avatar,
       },
       token,
       expiresIn: "24h",
@@ -192,14 +199,19 @@ export const getProfile = async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        username: true,
-        role: true,
-        isActive: true,
-        avatar: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
+        pesertaMagang: {
+          include: {
+            absensi: {
+              orderBy: { createdAt: "desc" },
+              take: 5,
+            },
+            pengajuanIzin: {
+              orderBy: { createdAt: "desc" },
+              take: 3,
+            },
+          },
+        },
       },
     });
 
@@ -207,7 +219,10 @@ export const getProfile = async (req: Request, res: Response) => {
       return sendError(res, "User not found", 404);
     }
 
-    sendSuccess(res, "Profile retrieved successfully", user);
+    // Remove password from response
+    const { password, ...userResponse } = user;
+
+    sendSuccess(res, "Profile retrieved successfully", userResponse);
   } catch (error) {
     console.error("Get profile error:", error);
     sendError(res, "Failed to get profile", 500);

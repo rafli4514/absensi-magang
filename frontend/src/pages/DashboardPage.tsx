@@ -2,7 +2,7 @@
 // React
 import { useState, useEffect } from "react";
 
-// UI Components
+// Komponen UI
 import {
   Card,
   Flex,
@@ -11,7 +11,7 @@ import {
   Progress,
 } from "@radix-ui/themes";
 
-// Icons
+// Ikon
 import {
   Users,
   Clock,
@@ -24,16 +24,16 @@ import {
   Calendar,
 } from "lucide-react";
 
-// Types
+// Tipe Data
 import type { DashboardStats, Absensi } from "../types";
 
-// Services
+// Layanan
 import dashboardService from "../services/dashboardService";
 
-// Data dummy sudah dihapus - menggunakan API real
+// Menggunakan API real - data dummy sudah dihapus
 
 // =====================================
-// Helper Components
+// Komponen Pembantu
 // =====================================
 
 const StatusBadge = ({ status }: { status: Absensi["status"] }) => {
@@ -75,12 +75,12 @@ const TypeBadge = ({ tipe }: { tipe: Absensi["tipe"] }) => {
 };
 
 // =====================================
-// Custom Hooks
+// Hook Kustom
 // =====================================
 
 const useDashboardData = () => {
   const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD format
+    new Date().toISOString().split('T')[0] // Tanggal hari ini dalam format YYYY-MM-DD
   );
   const [stats, setStats] = useState<DashboardStats>({
     totalPesertaMagang: 0,
@@ -102,32 +102,32 @@ const useDashboardData = () => {
         setLoading(true);
       }
       
-      setError(null); // Clear previous errors
+      setError(null); // Hapus error sebelumnya
       
       const targetDate = date || selectedDate;
       
-      // Call API with specific date parameter
+      // Panggil API dengan parameter tanggal spesifik
       const response = await dashboardService.getDailyStats(targetDate);
       
       if (response.success && response.data) {
         setStats(response.data);
-        console.log('Dashboard daily stats loaded for', targetDate, ':', response.data);
+        console.log('Statistik harian dashboard dimuat untuk', targetDate, ':', response.data);
       } else {
-        const errorMessage = response.message || 'Failed to fetch dashboard stats';
+        const errorMessage = response.message || 'Gagal memuat statistik dashboard';
         setError(errorMessage);
-        console.error('Dashboard API error:', errorMessage);
+        console.error('Error API Dashboard:', errorMessage);
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch dashboard stats';
-      console.error('Dashboard stats error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Gagal memuat statistik dashboard';
+      console.error('Error statistik dashboard:', error);
       setError(errorMessage);
       
-      // Keep existing data on error instead of resetting to zeros
+      // Pertahankan data yang ada saat error daripada reset ke nol
       if (stats.totalPesertaMagang === 0) {
-        // Only set fallback data if we have no data at all
+        // Hanya set data fallback jika tidak ada data sama sekali
         setStats(prev => ({
           ...prev,
-          // Keep any existing non-zero values
+          // Pertahankan nilai non-zero yang ada
         }));
       }
     } finally {
@@ -138,10 +138,10 @@ const useDashboardData = () => {
 
   useEffect(() => {
     fetchStats();
-  }, [selectedDate]); // Refetch when date changes
+  }, [selectedDate]); // Muat ulang saat tanggal berubah
 
   useEffect(() => {
-    // Auto refresh every 30 seconds only if showing today's data
+    // Auto refresh setiap 30 detik hanya jika menampilkan data hari ini
     const isToday = selectedDate === new Date().toISOString().split('T')[0];
     
     if (isToday) {
@@ -149,7 +149,7 @@ const useDashboardData = () => {
         fetchStats(true);
       }, 30000);
       
-      // Refresh when window comes back into focus
+      // Refresh saat window kembali fokus
       const handleFocus = () => {
         fetchStats(true);
       };
@@ -181,7 +181,7 @@ const useDashboardData = () => {
     const currentDate = new Date(selectedDate);
     const today = new Date().toISOString().split('T')[0];
     
-    // Don't allow going to future dates
+    // Jangan izinkan ke tanggal masa depan
     if (selectedDate < today) {
       currentDate.setDate(currentDate.getDate() + 1);
       setSelectedDate(currentDate.toISOString().split('T')[0]);
@@ -207,7 +207,7 @@ const useDashboardData = () => {
 };
 
 // =====================================
-// Main Component
+// Komponen Utama
 // =====================================
 
 export default function DashboardPage() {
@@ -225,11 +225,11 @@ export default function DashboardPage() {
     goToToday 
   } = useDashboardData();
 
-  // Enhanced loading state
+  // State loading yang ditingkatkan
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* Page Header Skeleton */}
+        {/* Skeleton Header Halaman */}
         <div className="flex justify-between items-center">
           <div>
             <div className="h-8 w-48 bg-gray-200 rounded animate-pulse"></div>
@@ -238,7 +238,7 @@ export default function DashboardPage() {
           <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
         </div>
 
-        {/* Statistics Cards Skeleton */}
+        {/* Skeleton Kartu Statistik */}
         <Grid columns={{ initial: "1", md: "2", lg: "4" }} gap="4">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i} className="p-6">
@@ -253,7 +253,7 @@ export default function DashboardPage() {
           ))}
         </Grid>
 
-        {/* Content Skeleton */}
+        {/* Skeleton Konten */}
         <div className="space-y-4">
           <Card className="p-6">
             <div className="h-32 bg-gray-200 rounded animate-pulse"></div>
@@ -269,7 +269,7 @@ export default function DashboardPage() {
   // ============ Render ============
   return (
     <div className="space-y-6">
-      {/* Error Alert */}
+      {/* Peringatan Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
@@ -293,13 +293,13 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Page Header */}
+      {/* Header Halaman */}
       <div className="flex flex-col gap-4">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Dasbor</h1>
             <p className="text-gray-600">
-              Sistem absensi Iconnet - Data harian
+              Sistem Absensi Iconnet - Data Harian
             </p>
           </div>
           <button
@@ -308,11 +308,11 @@ export default function DashboardPage() {
             className="text-blue-600 hover:text-blue-800 text-sm font-medium disabled:opacity-50 flex items-center gap-2 px-3 py-2 border border-blue-200 rounded-lg hover:bg-blue-50"
           >
             <Clock className="h-4 w-4" />
-            {refreshing ? 'Memuat...' : 'Refresh Data'}
+            {refreshing ? 'Memuat...' : 'Muat Ulang Data'}
           </button>
         </div>
 
-        {/* Date Navigation */}
+        {/* Navigasi Tanggal */}
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -373,7 +373,7 @@ export default function DashboardPage() {
               {selectedDate === new Date().toISOString().split('T')[0] && (
                 <div className="flex items-center gap-1 px-3 py-2 bg-green-100 text-green-800 text-sm font-medium rounded-lg">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  Live Data
+                  Data Langsung
                 </div>
               )}
             </div>
@@ -381,7 +381,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Kartu Statistik */}
       <Grid columns={{ initial: "1", md: "2", lg: "4" }} gap="4">
         <Card className={`p-6 transition-opacity duration-200 ${refreshing ? 'opacity-60' : ''}`}>
           <Flex direction="column" gap="3">
@@ -483,7 +483,7 @@ export default function DashboardPage() {
         </Card>
       </Grid>
 
-      {/* Attendance Rate Chart */}
+      {/* Grafik Tingkat Kehadiran */}
       <Card className={`p-6 transition-opacity duration-200 ${refreshing ? 'opacity-60' : ''}`}>
         <Flex direction="column" gap="4">
           <Flex align="center" gap="3" justify="between">
@@ -517,10 +517,10 @@ export default function DashboardPage() {
             </Flex>
             <Progress value={stats.tingkatKehadiran} className="h-3" />
             <Text size="1" color="gray" className="mt-2">
-              {stats.tingkatKehadiran >= 90 ? 'Excellent! Tingkat kehadiran sangat baik' :
-               stats.tingkatKehadiran >= 80 ? 'Good! Tingkat kehadiran baik' :
-               stats.tingkatKehadiran >= 60 ? 'Average. Perlu peningkatan kehadiran' :
-               'Poor. Tingkat kehadiran perlu ditingkatkan'}
+              {stats.tingkatKehadiran >= 90 ? 'Luar Biasa! Tingkat kehadiran sangat baik' :
+               stats.tingkatKehadiran >= 80 ? 'Bagus! Tingkat kehadiran baik' :
+               stats.tingkatKehadiran >= 60 ? 'Cukup. Perlu peningkatan kehadiran' :
+               'Kurang. Tingkat kehadiran perlu ditingkatkan'}
             </Text>
           </div>
 
@@ -540,16 +540,16 @@ export default function DashboardPage() {
             <Flex align="center" gap="2">
               <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
               <Text size="2" color="gray">
-                Total absen masuk: {stats.absensiMasukHariIni} records
+                Total absen masuk: {stats.absensiMasukHariIni} catatan
               </Text>
             </Flex>
           </Flex>
         </Flex>
       </Card>
 
-      {/* Dashboard Sections */}
+      {/* Bagian Dasbor */}
       <Grid columns={{ initial: "1" }} gap="4">
-        {/* Recent Activities */}
+        {/* Aktivitas Terbaru */}
         <Card className={`p-6 transition-opacity duration-200 ${refreshing ? 'opacity-60' : ''}`}>
           <Flex direction="column" gap="4">
             <Flex align="center" gap="3" justify="between">

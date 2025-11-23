@@ -16,7 +16,7 @@ const router = Router();
 // Protected routes - require authentication
 router.use(authenticateToken);
 
-// Routes accessible to authenticated users
+// Routes accessible to authenticated users (including pembimbing magang for read)
 router.get('/', getSettings);
 router.get('/category/:category', getSettingsByCategory);
 router.post('/qr/validate', validateQRCode);

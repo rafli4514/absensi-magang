@@ -4,10 +4,11 @@ import authService from '../services/authService';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'ADMIN' | 'USER';
+  requiredRole?: 'ADMIN' | 'USER' | 'PEMBIMBING_MAGANG';
+  allowedRoles?: ('ADMIN' | 'USER' | 'PEMBIMBING_MAGANG')[];
 }
 
-export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, requiredRole, allowedRoles }: ProtectedRouteProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
@@ -33,6 +34,8 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
           // Check role permission
           if (requiredRole) {
             setHasPermission(user.role === requiredRole);
+          } else if (allowedRoles) {
+            setHasPermission(allowedRoles.includes(user.role as any));
           } else {
             setHasPermission(true);
           }

@@ -31,6 +31,7 @@ import {
   X,
   AlertTriangle,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function BarcodePage() {
   // ============ State Management ============
@@ -154,7 +155,7 @@ export default function BarcodePage() {
             className="flex-1 max-w-xs"
           >
             <Clock className="h-4 w-4" />
-            Absen Masuk
+           <Link to="/pengaturan/laporan">Laporan</Link>
           </Button>
           <Button
             onClick={() => setQrType("keluar")}
@@ -410,7 +411,6 @@ export default function BarcodePage() {
               variant="outline"
               size="2"
             >
-              Clear History
             </Button>
           </Flex>
         </Card>

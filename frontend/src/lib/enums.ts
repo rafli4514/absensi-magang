@@ -83,13 +83,15 @@ export const displayToStatusPengajuan = {
 export const roleMapping = {
   // Database -> Display
   'ADMIN': 'Admin',
-  'USER': 'User'
+  'USER': 'User',
+  'PEMBIMBING_MAGANG': 'Pembimbing Magang'
 } as const;
 
 export const displayToRole = {
   // Display -> Database
   'Admin': 'ADMIN',
-  'User': 'USER'
+  'User': 'USER',
+  'Pembimbing Magang': 'PEMBIMBING_MAGANG'
 } as const;
 
 // Helper functions

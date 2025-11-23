@@ -21,12 +21,14 @@ export interface CreatePesertaMagangRequest {
   nama: string;
   username: string;
   divisi: string;
-  Instansi: string;
+  instansi: string;
+  id_instansi?: string;
   nomorHp: string;
   tanggalMulai: string;
   tanggalSelesai: string;
   status?: string;
   avatar?: string;
+  password?: string;
 }
 
 class PesertaMagangService {
