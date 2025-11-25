@@ -17,7 +17,7 @@ class AppConstants {
   static const String profileEndpoint = '/auth/profile';
 
   // Splash Screen
-  static const int splashDelay = 3; // TAMBAHKAN INI (dalam detik)
+  static const int splashDelay = 3000;
 
   // Other constants
   static const String appName = 'MyInternPlus';

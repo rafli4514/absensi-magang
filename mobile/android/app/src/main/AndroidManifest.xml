@@ -16,7 +16,7 @@
     <application
         android:label="myinternplus"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">  <!-- PERUBAHAN DI SINI -->
+        android:icon="@mipmap/launcher_icon">  <!-- PERUBAHAN DI SINI -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
