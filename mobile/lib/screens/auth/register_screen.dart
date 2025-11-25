@@ -8,6 +8,7 @@ import '../../utils/validators.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/loading_indicator.dart';
 
+// TAMBAHKAN CLASS INI - YANG HILANG
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -17,22 +18,19 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _departmentController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
   Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      // PERBAIKAN: Hanya kirim email dan password
       final success = await authProvider.register(
-        _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text.trim(),
-        _departmentController.text.trim(),
       );
 
       if (success && mounted) {
@@ -41,11 +39,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  // HAPUS FUNCTION _validateConfirmPassword YANG DUPLIKAT
+  // PASTIKAN HANYA ADA SATU FUNCTION INI:
+
   String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please confirm your password';
+    }
     if (value != _passwordController.text) {
       return 'Passwords do not match';
     }
     return null;
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -69,7 +81,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 fit: BoxFit.contain,
               ),
 
-              // Logo
+              // Title
               Text(
                 'Create Account',
                 style: theme.textTheme.headlineMedium?.copyWith(
@@ -90,21 +102,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: InputDecoration(
-                        labelText: 'Full Name',
-                        prefixIcon: Icon(
-                          Icons.person_rounded,
-                          color: AppThemes.primaryColor,
-                        ),
-                        filled: true,
-                        fillColor: theme.cardTheme.color,
-                      ),
-                      validator: Validators.validateName,
-                      style: TextStyle(color: theme.colorScheme.onSurface),
-                    ),
-                    const SizedBox(height: 16),
+                    // HANYA EMAIL DAN PASSWORD
                     TextFormField(
                       controller: _emailController,
                       decoration: InputDecoration(
@@ -118,21 +116,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       keyboardType: TextInputType.emailAddress,
                       validator: Validators.validateEmail,
-                      style: TextStyle(color: theme.colorScheme.onSurface),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _departmentController,
-                      decoration: InputDecoration(
-                        labelText: 'Department',
-                        prefixIcon: Icon(
-                          Icons.business_center_rounded,
-                          color: AppThemes.primaryColor,
-                        ),
-                        filled: true,
-                        fillColor: theme.cardTheme.color,
-                      ),
-                      validator: Validators.validateDepartment,
                       style: TextStyle(color: theme.colorScheme.onSurface),
                     ),
                     const SizedBox(height: 16),
@@ -191,7 +174,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         fillColor: theme.cardTheme.color,
                       ),
                       obscureText: _obscureConfirmPassword,
-                      validator: _validateConfirmPassword,
+                      validator:
+                          _validateConfirmPassword, // GUNAKAN FUNCTION YANG SUDAH DIPERBAIKI
                       style: TextStyle(color: theme.colorScheme.onSurface),
                     ),
                     const SizedBox(height: 24),

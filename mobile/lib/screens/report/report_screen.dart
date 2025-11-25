@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/attendance.dart';
+import '../../models/enum/attendance_record.dart';
+import '../../models/enum/attendance_status.dart';
 import '../../navigation/route_names.dart';
 import '../../providers/theme_provider.dart';
 import '../../themes/app_themes.dart';
@@ -21,31 +22,55 @@ class _ReportScreenState extends State<ReportScreen> {
   final List<AttendanceRecord> _attendanceRecords = [
     AttendanceRecord(
       id: '1',
+      userId: '1',
+      pesertaMagangId: '1',
+      tipe: 'CHECK_IN',
       date: DateTime(2024, 1, 15),
+      timestamp: DateTime(2024, 1, 15, 8, 30),
       checkIn: DateTime(2024, 1, 15, 8, 30),
       checkOut: DateTime(2024, 1, 15, 17, 15),
-      status: AttendanceStatus.present,
+      status: AttendanceStatus.valid,
+      createdAt: DateTime(2024, 1, 15),
+      updatedAt: DateTime(2024, 1, 15),
     ),
     AttendanceRecord(
       id: '2',
+      userId: '1',
+      pesertaMagangId: '1',
+      tipe: 'CHECK_IN',
       date: DateTime(2024, 1, 14),
+      timestamp: DateTime(2024, 1, 14, 9, 15),
       checkIn: DateTime(2024, 1, 14, 9, 15),
       checkOut: DateTime(2024, 1, 14, 17, 0),
-      status: AttendanceStatus.late,
+      status: AttendanceStatus.terlambat,
+      createdAt: DateTime(2024, 1, 14),
+      updatedAt: DateTime(2024, 1, 14),
     ),
     AttendanceRecord(
       id: '3',
+      userId: '1',
+      pesertaMagangId: '1',
+      tipe: 'CHECK_IN',
       date: DateTime(2024, 1, 13),
+      timestamp: DateTime(2024, 1, 13, 8, 45),
       checkIn: DateTime(2024, 1, 13, 8, 45),
       checkOut: DateTime(2024, 1, 13, 16, 45),
-      status: AttendanceStatus.present,
+      status: AttendanceStatus.valid,
+      createdAt: DateTime(2024, 1, 13),
+      updatedAt: DateTime(2024, 1, 13),
     ),
     AttendanceRecord(
       id: '4',
+      userId: '1',
+      pesertaMagangId: '1',
+      tipe: 'CHECK_IN',
       date: DateTime(2024, 1, 12),
+      timestamp: DateTime(2024, 1, 12),
       checkIn: null,
       checkOut: null,
-      status: AttendanceStatus.absent,
+      status: AttendanceStatus.invalid,
+      createdAt: DateTime(2024, 1, 12),
+      updatedAt: DateTime(2024, 1, 12),
     ),
   ];
 
@@ -55,14 +80,14 @@ class _ReportScreenState extends State<ReportScreen> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
 
-    final presentCount = _attendanceRecords
-        .where((r) => r.status == AttendanceStatus.present)
+    final validCount = _attendanceRecords
+        .where((r) => r.status == AttendanceStatus.valid)
         .length;
-    final lateCount = _attendanceRecords
-        .where((r) => r.status == AttendanceStatus.late)
+    final terlambatCount = _attendanceRecords
+        .where((r) => r.status == AttendanceStatus.terlambat)
         .length;
-    final absentCount = _attendanceRecords
-        .where((r) => r.status == AttendanceStatus.absent)
+    final invalidCount = _attendanceRecords
+        .where((r) => r.status == AttendanceStatus.invalid)
         .length;
 
     return Scaffold(
@@ -101,8 +126,8 @@ class _ReportScreenState extends State<ReportScreen> {
                   children: [
                     Expanded(
                       child: _buildSimpleSummaryCard(
-                        'Present',
-                        presentCount.toString(),
+                        'Valid',
+                        validCount.toString(),
                         AppThemes.successColor,
                         Icons.check_circle_rounded,
                         isDarkMode,
@@ -111,8 +136,8 @@ class _ReportScreenState extends State<ReportScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildSimpleSummaryCard(
-                        'Late',
-                        lateCount.toString(),
+                        'Terlambat',
+                        terlambatCount.toString(),
                         AppThemes.warningColor,
                         Icons.schedule_rounded,
                         isDarkMode,
@@ -121,8 +146,8 @@ class _ReportScreenState extends State<ReportScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildSimpleSummaryCard(
-                        'Absent',
-                        absentCount.toString(),
+                        'Invalid',
+                        invalidCount.toString(),
                         AppThemes.errorColor,
                         Icons.cancel_rounded,
                         isDarkMode,
@@ -416,7 +441,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   _buildTimeRow(
                     Icons.login_rounded,
                     'Clock In: ${_formatTime(record.checkIn!)}',
-                    record.status == AttendanceStatus.late
+                    record.status == AttendanceStatus.terlambat
                         ? AppThemes.warningColor
                         : AppThemes.successColor,
                     isDarkMode,
@@ -473,23 +498,23 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Widget _buildModernStatusChip(AttendanceStatus status, bool isDarkMode) {
     final Map<AttendanceStatus, Map<String, dynamic>> statusData = {
-      AttendanceStatus.present: {
-        'label': 'Present',
+      AttendanceStatus.valid: {
+        'label': 'Valid',
         'color': AppThemes.successColor,
         'lightColor': AppThemes.successLight,
       },
-      AttendanceStatus.late: {
-        'label': 'Late',
+      AttendanceStatus.terlambat: {
+        'label': 'Terlambat',
         'color': AppThemes.warningColor,
         'lightColor': AppThemes.warningLight,
       },
-      AttendanceStatus.absent: {
-        'label': 'Absent',
+      AttendanceStatus.invalid: {
+        'label': 'Invalid',
         'color': AppThemes.errorColor,
         'lightColor': AppThemes.errorLight,
       },
-      AttendanceStatus.halfDay: {
-        'label': 'Half Day',
+      AttendanceStatus.pending: {
+        'label': 'Pending',
         'color': AppThemes.infoColor,
         'lightColor': AppThemes.infoLight,
       },

@@ -64,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 fit: BoxFit.contain,
               ),
 
-              // Logo
+              // Title
               Text(
                 'Welcome Back',
                 style: theme.textTheme.headlineMedium?.copyWith(
