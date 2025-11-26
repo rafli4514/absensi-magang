@@ -11,6 +11,8 @@
 
     <!-- Untuk Android 11 dan atas -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.INTERNET"/>
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
     <application
         android:label="myinternplus"
@@ -18,6 +20,7 @@
         android:icon="@mipmap/launcher_icon">
         <activity
             android:name=".MainActivity"
+            android:usesCleartextTraffic="true"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""

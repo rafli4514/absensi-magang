@@ -17,13 +17,13 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -32,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final success = await authProvider.login(
-        _emailController.text.trim(),
+        _usernameController.text.trim(),
         _passwordController.text.trim(),
       );
 
@@ -86,18 +86,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   children: [
                     TextFormField(
-                      controller: _emailController,
+                      controller: _usernameController,
                       decoration: InputDecoration(
-                        labelText: 'Email',
+                        labelText: 'Username',
                         prefixIcon: Icon(
-                          Icons.email_rounded,
+                          Icons.person_rounded,
                           color: AppThemes.primaryColor,
                         ),
                         filled: true,
                         fillColor: theme.cardTheme.color,
                       ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: Validators.validateEmail,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Username is required';
+                        }
+                        return null;
+                      },
                       style: TextStyle(color: theme.colorScheme.onSurface),
                     ),
                     const SizedBox(height: 16),

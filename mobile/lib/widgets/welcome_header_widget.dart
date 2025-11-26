@@ -88,7 +88,7 @@ class WelcomeHeaderWidget extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            user?.name ?? "User",
+                            user?.name ?? user?.displayName ?? "User",
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w800,

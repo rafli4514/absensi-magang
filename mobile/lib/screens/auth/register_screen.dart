@@ -17,22 +17,26 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _departmentController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final success = await authProvider.register(
-        _nameController.text.trim(),
-        _emailController.text.trim(),
+        _usernameController.text.trim(),
         _passwordController.text.trim(),
-        _departmentController.text.trim(),
       );
 
       if (success && mounted) {
@@ -91,9 +95,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Column(
                   children: [
                     TextFormField(
-                      controller: _nameController,
+                      controller: _usernameController,
                       decoration: InputDecoration(
-                        labelText: 'Full Name',
+                        labelText: 'Username',
                         prefixIcon: Icon(
                           Icons.person_rounded,
                           color: AppThemes.primaryColor,
@@ -101,38 +105,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         filled: true,
                         fillColor: theme.cardTheme.color,
                       ),
-                      validator: Validators.validateName,
-                      style: TextStyle(color: theme.colorScheme.onSurface),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(
-                          Icons.email_rounded,
-                          color: AppThemes.primaryColor,
-                        ),
-                        filled: true,
-                        fillColor: theme.cardTheme.color,
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: Validators.validateEmail,
-                      style: TextStyle(color: theme.colorScheme.onSurface),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _departmentController,
-                      decoration: InputDecoration(
-                        labelText: 'Department',
-                        prefixIcon: Icon(
-                          Icons.business_center_rounded,
-                          color: AppThemes.primaryColor,
-                        ),
-                        filled: true,
-                        fillColor: theme.cardTheme.color,
-                      ),
-                      validator: Validators.validateDepartment,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Username is required';
+                        }
+                        if (value.length < 3) {
+                          return 'Username must be at least 3 characters';
+                        }
+                        return null;
+                      },
                       style: TextStyle(color: theme.colorScheme.onSurface),
                     ),
                     const SizedBox(height: 16),

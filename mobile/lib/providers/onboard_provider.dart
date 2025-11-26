@@ -12,7 +12,7 @@ class OnboardProvider with ChangeNotifier {
   }
 
   Future<void> _loadOnboardStatus() async {
-    _onboardCompleted = StorageService.getBool(AppConstants.onboardSeenKey) ?? false;
+    _onboardCompleted = (await StorageService.getBool(AppConstants.onboardSeenKey)) ?? false;
     notifyListeners();
   }
 
