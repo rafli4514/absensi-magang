@@ -5,20 +5,22 @@ import {
   PersonIcon,
 } from "@radix-ui/react-icons";
 
-import { LogOut, Users, CalendarDays, Clock, Settings, QrCode} from "lucide-react";
+import { LogOut, Users, CalendarDays, Clock, Settings, QrCode, UserCog} from "lucide-react";
 import Logo from "../assets/64eb562e223ee070362018.png";
 import Logo2 from "../assets/pln-logo-png_seeklogo-355620.png"
 import { cn } from "../lib/utils";
+import authService from "../services/authService";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: DashboardIcon },
-  { name: "Manajemen Peserta Magang", href: "/peserta-magang", icon: Users },
-  { name: "Manajemen Absensi", href: "/absensi", icon: Clock },
-  { name: "Manajemen Izin", href: "/izin", icon: CalendarDays },
-  { name: "QR Code & Barcode", href: "/barcode", icon: QrCode },
-  { name: "Laporan Absensi", href: "/laporan", icon: FileTextIcon },
-  { name: "Pengaturan", href: "/pengaturan", icon: Settings },
-  { name: "Profil Pengguna", href: "/profil-pengguna", icon: PersonIcon },
+  { name: "Dashboard", href: "/", icon: DashboardIcon, requiredRole: null as string | null },
+  { name: "Manajemen Peserta Magang", href: "/peserta-magang", icon: Users, requiredRole: null },
+  { name: "Manajemen User", href: "/manage-users", icon: UserCog, requiredRole: "ADMIN" },
+  { name: "Manajemen Absensi", href: "/absensi", icon: Clock, requiredRole: null },
+  { name: "Manajemen Izin", href: "/izin", icon: CalendarDays, requiredRole: null },
+  { name: "QR Code & Barcode", href: "/barcode", icon: QrCode, requiredRole: "ADMIN" },
+  { name: "Laporan Absensi", href: "/laporan", icon: FileTextIcon, requiredRole: null },
+  { name: "Pengaturan", href: "/pengaturan", icon: Settings, requiredRole: "ADMIN" },
+  { name: "Profil Pengguna", href: "/profil-pengguna", icon: PersonIcon, requiredRole: null },
 ];
 
 interface SidebarProps {
@@ -31,6 +33,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, isMinimized, onClose }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const currentUser = authService.getCurrentUser();
 
   const handleLogout = () => {
     // Show confirmation dialog
@@ -89,7 +92,14 @@ export default function Sidebar({ isOpen, isMinimized, onClose }: SidebarProps) 
           {/* Navigation */}
           <nav className="flex-grow mt-2 px-2 overflow-hidden">
             <ul className="space-y-2 overflow-hidden">
-              {navigation.map((item) => {
+              {navigation
+                .filter((item) => {
+                  // Filter berdasarkan role - hanya tampilkan jika user memiliki akses
+                  if (item.requiredRole === null) return true;
+                  if (item.requiredRole === "ADMIN" && currentUser?.role === "ADMIN") return true;
+                  return false;
+                })
+                .map((item) => {
                 const isActive = location.pathname === item.href;
                 return (
                   <li key={item.name}>

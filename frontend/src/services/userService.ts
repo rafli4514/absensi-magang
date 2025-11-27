@@ -2,16 +2,15 @@ import api from '../lib/api';
 
 export interface CreateUserRequest {
   username: string;
-  email: string;
   password: string;
-  role: 'ADMIN' | 'USER';
+  role: 'ADMIN' | 'USER' | 'PEMBIMBING_MAGANG';
+  isActive?: boolean;
 }
 
 export interface UpdateUserRequest {
   username?: string;
-  email?: string;
   password?: string;
-  role?: 'ADMIN' | 'USER';
+  role?: 'ADMIN' | 'USER' | 'PEMBIMBING_MAGANG';
   isActive?: boolean;
 }
 

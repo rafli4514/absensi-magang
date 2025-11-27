@@ -1,12 +1,8 @@
 class AppConstants {
   static const String appName = 'Employee App';
-  
-  // Pilih salah satu sesuai yang Anda gunakan SEKARANG:
-  
-  // UNCOMMENT salah satu di bawah ini:
-  static const String baseUrl = 'http://10.0.2.2:3000/api'; // Android Emulator
-  // static const String baseUrl = 'http://10.80.14.71:3000/api'; // Physical Device (IP Wi-Fi Anda)
+    // static const String baseUrl = 'http://10.0.2.2:3000/api'; // Android Emulator
   // static const String baseUrl = 'http://localhost:3000/api'; // iOS Simulator
+  static const String baseUrl = 'http://20.25.3.211:3000/api'; // Physical Device
 
   // Storage keys
   static const String tokenKey = 'auth_token';
