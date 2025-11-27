@@ -1,14 +1,12 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
-import '../../utils/constants.dart';
-import '../../services/storage_service.dart';
+
 import '../../models/api_response.dart';
+import '../../services/storage_service.dart';
+import '../../utils/constants.dart';
 
 class ApiService {
-  static final ApiService _instance = ApiService._internal();
-  factory ApiService() => _instance;
-  ApiService._internal();
-
   static const String baseUrl = AppConstants.baseUrl;
 
   Future<Map<String, String>> _getHeaders() async {
@@ -25,10 +23,16 @@ class ApiService {
     T Function(dynamic)? fromJson
   ) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: await _getHeaders(),
-      );
+      if (responseBody.isEmpty) {
+        throw FormatException('Empty response from server');
+      }
+
+      final trimmed = responseBody.trim();
+
+      // Validate JSON structure
+      if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+        throw FormatException('Invalid JSON format');
+      }
 
       final data = jsonDecode(response.body);
       
@@ -51,7 +55,7 @@ class ApiService {
     } catch (e) {
       return ApiResponse<T>(
         success: false,
-        message: e.toString(),
+        message: 'Network error: $e',
         statusCode: 500,
       );
     }
@@ -63,11 +67,13 @@ class ApiService {
     T Function(dynamic)? fromJson
   ) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: await _getHeaders(),
-        body: jsonEncode(body),
-      );
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl$endpoint'),
+            headers: await _getHeaders(),
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 30));
 
       final data = jsonDecode(response.body);
       
@@ -167,7 +173,7 @@ class ApiService {
     } catch (e) {
       return ApiResponse<T>(
         success: false,
-        message: e.toString(),
+        message: 'Network error: $e',
         statusCode: 500,
       );
     }

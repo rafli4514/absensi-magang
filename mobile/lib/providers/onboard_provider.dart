@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
+
 import '../services/storage_service.dart';
-import '../utils/constants.dart';
+import '../utils/constants.dart'; // MAKE SURE THIS IMPORT EXISTS
 
 class OnboardProvider with ChangeNotifier {
   bool _onboardCompleted = false;

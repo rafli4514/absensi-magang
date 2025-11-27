@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/activity.dart';
+import '../../models/enum/activity_status.dart';
+import '../../models/enum/activity_type.dart';
 import '../../navigation/route_names.dart';
+import '../../providers/theme_provider.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/navigation_helper.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -19,42 +23,55 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
   final List<Activity> _activities = [
     Activity(
       id: '1',
-      title: 'Team Meeting',
-      description: 'Weekly team sync meeting',
-      date: DateTime(2024, 1, 15, 10, 0),
+      pesertaMagangId: '1',
+      tanggal: '2024-01-15',
+      kegiatan: 'Team Meeting',
+      deskripsi: 'Weekly team sync meeting',
       type: ActivityType.meeting,
       status: ActivityStatus.completed,
+      createdAt: DateTime(2024, 1, 15),
+      updatedAt: DateTime(2024, 1, 15),
     ),
     Activity(
       id: '2',
-      title: 'Project Deadline',
-      description: 'Submit Q1 project report',
-      date: DateTime(2024, 1, 20, 17, 0),
+      pesertaMagangId: '1',
+      tanggal: '2024-01-20',
+      kegiatan: 'Project Deadline',
+      deskripsi: 'Submit Q1 project report',
       type: ActivityType.deadline,
       status: ActivityStatus.pending,
+      createdAt: DateTime(2024, 1, 20),
+      updatedAt: DateTime(2024, 1, 20),
     ),
     Activity(
       id: '3',
-      title: 'Training Session',
-      description: 'New software tools training',
-      date: DateTime(2024, 1, 18, 14, 0),
+      pesertaMagangId: '1',
+      tanggal: '2024-01-18',
+      kegiatan: 'Training Session',
+      deskripsi: 'New software tools training',
       type: ActivityType.training,
-      status: ActivityStatus.upcoming,
+      status: ActivityStatus.inProgress,
+      createdAt: DateTime(2024, 1, 18),
+      updatedAt: DateTime(2024, 1, 18),
     ),
     Activity(
       id: '4',
-      title: 'Client Presentation',
-      description: 'Present project progress to client',
-      date: DateTime(2024, 1, 22, 11, 0),
+      pesertaMagangId: '1',
+      tanggal: '2024-01-22',
+      kegiatan: 'Client Presentation',
+      deskripsi: 'Present project progress to client',
       type: ActivityType.presentation,
-      status: ActivityStatus.upcoming,
+      status: ActivityStatus.pending,
+      createdAt: DateTime(2024, 1, 22),
+      updatedAt: DateTime(2024, 1, 22),
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -83,7 +100,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                   itemCount: _activities.length,
                   itemBuilder: (context, index) {
                     final activity = _activities[index];
-                    return _buildActivityCard(context, activity);
+                    return _buildActivityCard(context, activity, isDarkMode);
                   },
                 ),
           Positioned(
@@ -105,9 +122,12 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     );
   }
 
-  Widget _buildActivityCard(BuildContext context, Activity activity) {
+  Widget _buildActivityCard(
+    BuildContext context,
+    Activity activity,
+    bool isDarkMode,
+  ) {
     final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
 
     return Card(
       elevation: 2,
@@ -122,8 +142,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildActivityTypeChip(activity.type),
-                _buildStatusChip(activity.status),
+                _buildActivityTypeChip(activity.type, isDarkMode),
+                _buildStatusChip(activity.status, isDarkMode),
               ],
             ),
             const SizedBox(height: 12),
@@ -164,33 +184,36 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     );
   }
 
-  Widget _buildActivityTypeChip(ActivityType type) {
+  Widget _buildActivityTypeChip(ActivityType type, bool isDarkMode) {
     final Map<ActivityType, Map<String, dynamic>> typeData = {
       ActivityType.meeting: {
         'label': 'Meeting',
         'color': AppThemes.infoColor,
         'lightColor': AppThemes.infoLight,
       },
-      ActivityType.deadline: {
-        'label': 'Deadline',
+      ActivityType.training: {
+        'label': 'Training',
         'color': AppThemes.warningColor,
         'lightColor': AppThemes.warningLight,
       },
-      ActivityType.training: {
-        'label': 'Training',
+      ActivityType.presentation: {
+        'label': 'Presentation',
         'color': AppThemes.successColor,
         'lightColor': AppThemes.successLight,
       },
-      ActivityType.presentation: {
-        'label': 'Presentation',
-        'color': AppThemes.primaryColor,
-        'lightColor': AppThemes.primaryColor.withOpacity(0.1),
+      ActivityType.deadline: {
+        'label': 'Deadline',
+        'color': AppThemes.errorColor,
+        'lightColor': AppThemes.errorLight,
+      },
+      ActivityType.other: {
+        'label': 'Other',
+        'color': AppThemes.hintColor,
+        'lightColor': AppThemes.hintColor.withOpacity(0.1),
       },
     };
 
     final data = typeData[type]!;
-    final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -210,7 +233,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     );
   }
 
-  Widget _buildStatusChip(ActivityStatus status) {
+  Widget _buildStatusChip(ActivityStatus status, bool isDarkMode) {
     final Map<ActivityStatus, Map<String, dynamic>> statusData = {
       ActivityStatus.completed: {
         'label': 'Completed',
@@ -222,8 +245,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
         'color': AppThemes.warningColor,
         'lightColor': AppThemes.warningLight,
       },
-      ActivityStatus.upcoming: {
-        'label': 'Upcoming',
+      ActivityStatus.inProgress: {
+        'label': 'In Progress',
         'color': AppThemes.infoColor,
         'lightColor': AppThemes.infoLight,
       },
@@ -235,8 +258,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     };
 
     final data = statusData[status]!;
-    final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
