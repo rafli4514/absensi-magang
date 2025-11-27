@@ -40,10 +40,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = authProvider.user;
 
     if (user != null) {
-      _nameController.text = user.name;
-      _emailController.text = user.email;
-      _departmentController.text = user.department;
-      _positionController.text = user.position;
+      _nameController.text = user.displayName;
+      _emailController.text = user.email ?? '';
+      _departmentController.text = user.department ?? '';
+      _positionController.text = user.position ?? user.role;
     }
   }
 

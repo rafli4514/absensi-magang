@@ -1,7 +1,12 @@
 class AppConstants {
-  // Base URL
-  static const String baseUrl =
-      'http://10.0.2.2:3000/api'; // untuk Android emulator
+  static const String appName = 'Employee App';
+  
+  // Pilih salah satu sesuai yang Anda gunakan SEKARANG:
+  
+  // UNCOMMENT salah satu di bawah ini:
+  static const String baseUrl = 'http://10.0.2.2:3000/api'; // Android Emulator
+  // static const String baseUrl = 'http://10.80.14.71:3000/api'; // Physical Device (IP Wi-Fi Anda)
+  // static const String baseUrl = 'http://localhost:3000/api'; // iOS Simulator
 
   // Storage Keys
   static const String tokenKey = 'auth_token';
@@ -12,9 +17,12 @@ class AppConstants {
 
   // API Endpoints
   static const String loginEndpoint = '/auth/login';
-  static const String registerEndpoint = '/auth/register';
   static const String loginPesertaEndpoint = '/auth/login-peserta';
+  static const String registerEndpoint = '/auth/register';
   static const String profileEndpoint = '/auth/profile';
+  static const String refreshTokenEndpoint = '/auth/refresh-token';
+  static const String attendanceEndpoint = '/absensi';
+  static const String activitiesEndpoint = '/logbook';
 
   // Splash Screen
   static const int splashDelay = 3000;

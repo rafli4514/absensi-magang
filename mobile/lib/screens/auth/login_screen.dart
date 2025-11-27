@@ -17,17 +17,22 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _isButtonHovered = false;
-  bool _isFormValid = false;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final success = await authProvider.login(
-        _emailController.text.trim(),
+        _usernameController.text.trim(),
         _passwordController.text.trim(),
       );
 
@@ -111,12 +116,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     // Email Field - Outline Style
                     TextFormField(
-                      controller: _emailController,
+                      controller: _usernameController,
                       decoration: InputDecoration(
-                        labelText: 'Email',
-                        hintText: 'your@email.com',
+                        labelText: 'Username',
                         prefixIcon: Icon(
-                          Icons.mail_outline_rounded,
+                          Icons.person_rounded,
                           color: AppThemes.primaryColor,
                           size: 20,
                         ),
@@ -152,16 +156,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         isDense: true,
                         floatingLabelBehavior: FloatingLabelBehavior.auto,
                       ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: Validators.validateEmail,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark
-                            ? AppThemes.darkTextPrimary
-                            : AppThemes.onSurfaceColor,
-                      ),
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Username is required';
+                        }
+                        return null;
+                      },
+                      style: TextStyle(color: theme.colorScheme.onSurface),
                     ),
                     const SizedBox(height: 20),
 

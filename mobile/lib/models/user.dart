@@ -1,28 +1,30 @@
 class User {
   final String id;
   final String username;
-  final String? nama;
+  final String? nama; // untuk peserta magang
+  final String? email;
   final String role;
-  final bool isActive;
-  final String? avatar;
   final String? divisi;
   final String? instansi;
-  final String token;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final String? avatar;
+  final bool? isActive;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final String? token;
 
   User({
     required this.id,
     required this.username,
     this.nama,
+    this.email,
     required this.role,
-    required this.isActive,
-    this.avatar,
     this.divisi,
     this.instansi,
-    required this.token,
-    required this.createdAt,
-    required this.updatedAt,
+    this.avatar,
+    this.isActive,
+    this.createdAt,
+    this.updatedAt,
+    this.token,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -30,20 +32,21 @@ class User {
 
     return User(
       id: json['id']?.toString() ?? '',
-      username: json['username']?.toString() ?? '',
-      nama: json['nama']?.toString(),
-      role: json['role']?.toString() ?? '',
-      isActive: json['isActive'] ?? false,
-      avatar: json['avatar']?.toString(),
-      divisi: json['divisi']?.toString(),
-      instansi: json['instansi']?.toString(),
-      token: json['token']?.toString() ?? '',
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'].toString())
-          : DateTime.now(),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'].toString())
-          : DateTime.now(),
+      username: json['username'] ?? '',
+      nama: json['nama'] ?? json['name'],
+      email: json['email'],
+      role: json['role']?.toLowerCase() ?? '',
+      divisi: json['divisi'],
+      instansi: json['instansi'],
+      avatar: json['avatar'],
+      isActive: json['isActive'],
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt']) 
+          : null,
+      updatedAt: json['updatedAt'] != null 
+          ? DateTime.parse(json['updatedAt']) 
+          : null,
+      token: json['token'],
     );
   }
 
@@ -51,22 +54,23 @@ class User {
     return {
       'id': id,
       'username': username,
-      'nama': nama,
+      if (nama != null) 'nama': nama,
+      if (email != null) 'email': email,
       'role': role,
-      'isActive': isActive,
-      'avatar': avatar,
-      'divisi': divisi,
-      'instansi': instansi,
-      'token': token,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      if (divisi != null) 'divisi': divisi,
+      if (instansi != null) 'instansi': instansi,
+      if (avatar != null) 'avatar': avatar,
+      if (isActive != null) 'isActive': isActive,
+      if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
     };
   }
 
-  // Helper getters
-  String get name => nama ?? username;
-  String get email => username;
-  String get department => divisi ?? '';
-  String get position => role;
-  String? get profileImage => avatar;
+  // Helper getter untuk mendapatkan nama yang benar
+  String get displayName => nama ?? username;
+  
+  // Helper getters untuk backward compatibility
+  String? get name => nama;
+  String? get department => divisi ?? instansi;
+  String? get position => role; // atau bisa diubah sesuai kebutuhan
 }
