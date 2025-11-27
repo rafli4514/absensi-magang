@@ -20,6 +20,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isButtonHovered = false;
+  bool _isFormValid = false;
 
   @override
   void dispose() {
@@ -51,15 +53,79 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _emailController.addListener(_validateForm);
+    _usernameController.addListener(_validateForm);
     _passwordController.addListener(_validateForm);
   }
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
+  // Form field yang compact seperti di register
+  Widget _buildFormField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    required String? Function(String?) validator,
+    bool isPassword = false,
+    bool? obscureText,
+    VoidCallback? onToggleObscure,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        hintText: hint,
+        hintStyle: const TextStyle(fontSize: 13),
+        prefixIcon: Icon(icon, color: AppThemes.primaryColor, size: 18),
+        suffixIcon: isPassword && onToggleObscure != null
+            ? IconButton(
+                icon: Icon(
+                  obscureText!
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: AppThemes.primaryColor,
+                  size: 18,
+                ),
+                onPressed: onToggleObscure,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(maxWidth: 36),
+              )
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(
+            color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
+            width: 1.5,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(
+            color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: AppThemes.primaryColor, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
+        isDense: true,
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+      ),
+      obscureText: obscureText ?? false,
+      validator: validator,
+      style: TextStyle(
+        fontSize: 13,
+        color: isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
+      ),
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+    );
   }
 
   @override
@@ -72,171 +138,77 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Column(
             children: [
-              // Logo Section - Minimal
-              const SizedBox(height: 40),
+              // Logo Section - Compact
+              const SizedBox(height: 10),
               Hero(
                 tag: 'app_logo',
                 child: Center(
                   child: Image.asset(
                     'assets/images/InternLogoExpand.png',
-                    width: 200,
-                    height: 200,
+                    width: 120,
+                    height: 120,
                     fit: BoxFit.contain,
                   ),
                 ),
               ),
 
-              // Header Section - Minimal
+              // Header Section - Compact
               Text(
                 'Welcome Back',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: theme.colorScheme.onSurface,
-                  fontSize: 24,
+                  fontSize: 20,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Text(
                 'Sign in to continue your journey',
                 style: theme.textTheme.bodyMedium?.copyWith(
+                  fontSize: 12,
                   color: isDark
                       ? AppThemes.darkTextSecondary
                       : AppThemes.hintColor,
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
 
-              // Form - No Card, Direct on Background
+              // Form - Compact Style
               Form(
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Email Field - Outline Style
-                    TextFormField(
+                    // Username Field
+                    _buildFormField(
                       controller: _usernameController,
-                      decoration: InputDecoration(
-                        labelText: 'Username',
-                        prefixIcon: Icon(
-                          Icons.person_rounded,
-                          color: AppThemes.primaryColor,
-                          size: 20,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? AppThemes.darkOutline
-                                : Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? AppThemes.darkOutline
-                                : Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: AppThemes.primaryColor,
-                            width: 2,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
-                        ),
-                        isDense: true,
-                        floatingLabelBehavior: FloatingLabelBehavior.auto,
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Username is required';
-                        }
-                        return null;
-                      },
-                      style: TextStyle(color: theme.colorScheme.onSurface),
+                      label: 'Username',
+                      hint: 'Enter your username',
+                      icon: Icons.person_rounded,
+                      validator: Validators.validateUsername,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 12),
 
-                    // Password Field - Outline Style
-                    TextFormField(
+                    // Password Field
+                    _buildFormField(
                       controller: _passwordController,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        hintText: 'Enter your password',
-                        prefixIcon: Icon(
-                          Icons.lock_outline_rounded,
-                          color: AppThemes.primaryColor,
-                          size: 20,
-                        ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            color: AppThemes.primaryColor,
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? AppThemes.darkOutline
-                                : Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? AppThemes.darkOutline
-                                : Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: AppThemes.primaryColor,
-                            width: 2,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
-                        ),
-                        isDense: true,
-                        floatingLabelBehavior: FloatingLabelBehavior.auto,
-                      ),
-                      obscureText: _obscurePassword,
+                      label: 'Password',
+                      hint: 'Enter your password',
+                      icon: Icons.lock_outline_rounded,
                       validator: Validators.validatePassword,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark
-                            ? AppThemes.darkTextPrimary
-                            : AppThemes.onSurfaceColor,
-                      ),
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      textInputAction: TextInputAction.done,
+                      isPassword: true,
+                      obscureText: _obscurePassword,
+                      onToggleObscure: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
                     ),
 
-                    // Forgot Password - Minimal
-                    const SizedBox(height: 16),
+                    // Forgot Password - Compact
+                    const SizedBox(height: 12),
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
@@ -247,12 +219,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                 'Forgot password feature coming soon!',
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: Colors.white,
+                                  fontSize: 12,
                                 ),
                               ),
                               backgroundColor: AppThemes.infoColor,
                               behavior: SnackBarBehavior.floating,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(6),
                               ),
                             ),
                           );
@@ -260,14 +233,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextButton.styleFrom(
                           foregroundColor: AppThemes.primaryColor,
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                            horizontal: 6,
+                            vertical: 2,
                           ),
                           minimumSize: Size.zero,
                         ),
                         child: Text(
                           'Forgot Password?',
                           style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: AppThemes.primaryColor,
                           ),
@@ -277,24 +251,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // Error Widget
                     if (authProvider.error != null) ...[
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       CustomErrorWidget(
                         message: authProvider.error!,
                         onDismiss: () => authProvider.clearError(),
                       ),
                     ],
 
-                    // Login Button - Modern Outline Style
-                    const SizedBox(height: 24),
+                    // Login Button - Compact Style
+                    const SizedBox(height: 20),
                     MouseRegion(
                       onEnter: (_) => setState(() => _isButtonHovered = true),
                       onExit: (_) => setState(() => _isButtonHovered = false),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         width: double.infinity,
-                        height: 50,
+                        height: 44,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                           color: _isFormValid
                               ? AppThemes.primaryColor
                               : Colors.transparent,
@@ -302,7 +276,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: _isFormValid
                                 ? AppThemes.primaryColor
                                 : AppThemes.neutralColor,
-                            width: 2,
+                            width: 1.5,
                           ),
                           boxShadow: _isButtonHovered && _isFormValid
                               ? [
@@ -310,8 +284,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     color: AppThemes.primaryColor.withOpacity(
                                       0.3,
                                     ),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
                                   ),
                                 ]
                               : [],
@@ -321,12 +295,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             : Material(
                                 color: Colors.transparent,
                                 child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(10),
                                   onTap: _isFormValid ? _login : null,
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 12,
+                                      horizontal: 16,
+                                      vertical: 10,
                                     ),
                                     child: Row(
                                       mainAxisAlignment:
@@ -350,14 +324,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                             color: _isFormValid
                                                 ? Colors.white
                                                 : AppThemes.neutralColor,
-                                            size: 20,
+                                            size: 18,
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
+                                        const SizedBox(width: 6),
                                         Text(
                                           'Sign In',
                                           style: theme.textTheme.titleSmall
                                               ?.copyWith(
+                                                fontSize: 14,
                                                 fontWeight: FontWeight.w600,
                                                 color: _isFormValid
                                                     ? Colors.white
@@ -375,8 +350,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              // Divider - Minimal
-              const SizedBox(height: 32),
+              // Divider - Compact
+              const SizedBox(height: 24),
               Row(
                 children: [
                   Expanded(
@@ -388,10 +363,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     child: Text(
                       'or',
                       style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 11,
                         color: isDark
                             ? AppThemes.darkTextTertiary
                             : AppThemes.hintColor,
@@ -409,20 +385,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
 
-              // Sign Up Prompt - Minimal
-              const SizedBox(height: 24),
+              // Sign Up Prompt - Compact
+              const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     "Don't have an account?",
                     style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 12,
                       color: isDark
                           ? AppThemes.darkTextSecondary
                           : AppThemes.hintColor,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   TextButton(
                     onPressed: () {
                       Navigator.pushNamed(context, RouteNames.register);
@@ -430,14 +407,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextButton.styleFrom(
                       foregroundColor: AppThemes.primaryColor,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                        horizontal: 6,
+                        vertical: 2,
                       ),
                       minimumSize: Size.zero,
                     ),
                     child: Text(
                       'Sign Up',
                       style: theme.textTheme.bodyMedium?.copyWith(
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: AppThemes.primaryColor,
                       ),
@@ -445,6 +423,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
             ],
           ),
         ),

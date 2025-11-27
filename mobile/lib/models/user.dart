@@ -1,16 +1,24 @@
+// user.dart
 class User {
   final String id;
   final String username;
-  final String? nama; // untuk peserta magang
+  final String? nama;
   final String? email;
   final String role;
   final String? divisi;
   final String? instansi;
+  final String? nomorHp;
+  final String? tanggalMulai;
+  final String? tanggalSelesai;
   final String? avatar;
   final bool? isActive;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final String? token;
+
+  // Include peserta magang data for student role
+  final List<dynamic>? absensi;
+  final List<dynamic>? pengajuanIzin;
 
   User({
     required this.id,
@@ -20,33 +28,51 @@ class User {
     required this.role,
     this.divisi,
     this.instansi,
+    this.nomorHp,
+    this.tanggalMulai,
+    this.tanggalSelesai,
     this.avatar,
     this.isActive,
     this.createdAt,
     this.updatedAt,
     this.token,
+    this.absensi,
+    this.pengajuanIzin,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
     print('🔍 User.fromJson received: $json');
 
+    // Handle nested pesertaMagang data from backend
+    final pesertaMagang = json['pesertaMagang'];
+    final absensi = pesertaMagang != null ? pesertaMagang['absensi'] : null;
+    final pengajuanIzin = pesertaMagang != null
+        ? pesertaMagang['pengajuanIzin']
+        : null;
+
     return User(
       id: json['id']?.toString() ?? '',
       username: json['username'] ?? '',
-      nama: json['nama'] ?? json['name'],
+      nama: json['nama'] ?? json['name'] ?? pesertaMagang?['nama'],
       email: json['email'],
-      role: json['role']?.toLowerCase() ?? '',
-      divisi: json['divisi'],
-      instansi: json['instansi'],
-      avatar: json['avatar'],
-      isActive: json['isActive'],
-      createdAt: json['createdAt'] != null 
-          ? DateTime.parse(json['createdAt']) 
+      role: (json['role']?.toLowerCase() ?? ''),
+      divisi: json['divisi'] ?? pesertaMagang?['divisi'],
+      instansi: json['instansi'] ?? pesertaMagang?['instansi'],
+      nomorHp: json['nomorHp'] ?? json['phoneNumber'],
+      tanggalMulai: json['tanggalMulai'] ?? pesertaMagang?['tanggalMulai'],
+      tanggalSelesai:
+          json['tanggalSelesai'] ?? pesertaMagang?['tanggalSelesai'],
+      avatar: json['avatar'] ?? pesertaMagang?['avatar'],
+      isActive: json['isActive'] ?? true,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
           : null,
-      updatedAt: json['updatedAt'] != null 
-          ? DateTime.parse(json['updatedAt']) 
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'])
           : null,
       token: json['token'],
+      absensi: absensi is List ? absensi : null,
+      pengajuanIzin: pengajuanIzin is List ? pengajuanIzin : null,
     );
   }
 
@@ -59,6 +85,9 @@ class User {
       'role': role,
       if (divisi != null) 'divisi': divisi,
       if (instansi != null) 'instansi': instansi,
+      if (nomorHp != null) 'nomorHp': nomorHp,
+      if (tanggalMulai != null) 'tanggalMulai': tanggalMulai,
+      if (tanggalSelesai != null) 'tanggalSelesai': tanggalSelesai,
       if (avatar != null) 'avatar': avatar,
       if (isActive != null) 'isActive': isActive,
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
@@ -68,9 +97,15 @@ class User {
 
   // Helper getter untuk mendapatkan nama yang benar
   String get displayName => nama ?? username;
-  
+
   // Helper getters untuk backward compatibility
   String? get name => nama;
   String? get department => divisi ?? instansi;
-  String? get position => role; // atau bisa diubah sesuai kebutuhan
+  String? get position => role;
+
+  // Helper untuk mengecek role
+  bool get isAdmin => role.toLowerCase() == 'admin';
+  bool get isStudent => role.toLowerCase() == 'student';
+  bool get isPembimbing => role.toLowerCase() == 'pembimbing_magang';
+  bool get isActiveUser => isActive ?? true;
 }

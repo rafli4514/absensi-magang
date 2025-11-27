@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../navigation/route_names.dart';
@@ -17,22 +18,95 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _namaController = TextEditingController();
   final _usernameController = TextEditingController();
+  final _divisiController = TextEditingController();
+  final _instansiController = TextEditingController();
+  final _nomorHpController = TextEditingController();
+  final _tanggalMulaiController = TextEditingController();
+  final _tanggalSelesaiController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isButtonHovered = false;
   bool _isFormValid = false;
   PasswordStrength _passwordStrength = PasswordStrength.weak;
   bool _acceptedTerms = false;
+  bool _showUsernameHint = false;
+
+  // Duration variables
+  int _selectedDuration = 3;
+  final List<int> _durations = [1, 2, 3, 4, 5, 6, 12];
+  final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
 
   @override
   void dispose() {
+    _namaController.dispose();
     _usernameController.dispose();
+    _divisiController.dispose();
+    _instansiController.dispose();
+    _nomorHpController.dispose();
+    _tanggalMulaiController.dispose();
+    _tanggalSelesaiController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectStartDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppThemes.primaryColor,
+              onPrimary: Colors.white,
+              surface: Theme.of(context).cardColor,
+              onSurface:
+                  Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black,
+            ),
+            dialogBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      _tanggalMulaiController.text = _dateFormat.format(picked);
+      _calculateEndDate();
+      _validateForm();
+    }
+  }
+
+  void _calculateEndDate() {
+    if (_tanggalMulaiController.text.isNotEmpty) {
+      try {
+        final startDate = _dateFormat.parse(_tanggalMulaiController.text);
+        final endDate = DateTime(
+          startDate.year,
+          startDate.month + _selectedDuration,
+          startDate.day,
+        );
+        _tanggalSelesaiController.text = _dateFormat.format(endDate);
+      } catch (e) {
+        _tanggalSelesaiController.text = '';
+      }
+    }
+  }
+
+  void _updateDuration(int duration) {
+    setState(() {
+      _selectedDuration = duration;
+    });
+    _calculateEndDate();
+    _validateForm();
   }
 
   Future<void> _register() async {
@@ -41,6 +115,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final success = await authProvider.register(
         _usernameController.text.trim(),
         _passwordController.text.trim(),
+        nama: _namaController.text.trim(),
+        divisi: _divisiController.text.trim(),
+        instansi: _instansiController.text.trim(),
+        nomorHp: _nomorHpController.text.trim(),
+        tanggalMulai: _tanggalMulaiController.text.trim(),
+        tanggalSelesai: _tanggalSelesaiController.text.trim(),
       );
 
       if (success && mounted) {
@@ -50,8 +130,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   String? _validateConfirmPassword(String? value) {
-    if (value == null || value.isEmpty) return 'Please confirm your password';
-    if (value != _passwordController.text) return 'Passwords do not match';
+    if (value == null || value.isEmpty) return 'Harap konfirmasi password';
+    if (value != _passwordController.text) return 'Password tidak cocok';
     return null;
   }
 
@@ -83,20 +163,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _getPasswordStrengthText() {
     switch (_passwordStrength) {
       case PasswordStrength.weak:
-        return 'Weak';
+        return 'Lemah';
       case PasswordStrength.medium:
-        return 'Fair';
+        return 'Cukup';
       case PasswordStrength.strong:
-        return 'Good';
+        return 'Baik';
       case PasswordStrength.veryStrong:
-        return 'Strong';
+        return 'Kuat';
     }
   }
 
   @override
   void initState() {
     super.initState();
-    _emailController.addListener(_validateForm);
+    _namaController.addListener(_validateForm);
+    _usernameController.addListener(_validateForm);
+    _divisiController.addListener(_validateForm);
+    _instansiController.addListener(_validateForm);
+    _nomorHpController.addListener(_validateForm);
+    _tanggalMulaiController.addListener(_validateForm);
+    _tanggalSelesaiController.addListener(_validateForm);
     _passwordController.addListener(_validateForm);
     _confirmPasswordController.addListener(_validateForm);
     _passwordController.addListener(() {
@@ -104,12 +190,633 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
+  // Widget untuk section header - lebih compact
+  Widget _buildSectionHeader(String title, {String? subtitle}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 3,
+              height: 16,
+              decoration: BoxDecoration(
+                color: AppThemes.primaryColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+                color: isDark
+                    ? AppThemes.darkTextPrimary
+                    : AppThemes.onSurfaceColor,
+              ),
+            ),
+          ],
+        ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          Padding(
+            padding: const EdgeInsets.only(left: 11),
+            child: Text(
+              subtitle,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontSize: 12,
+                color: isDark
+                    ? AppThemes.darkTextTertiary
+                    : AppThemes.hintColor,
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  // Widget untuk field tanggal mulai - lebih compact
+  Widget _buildStartDateField() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Tanggal Mulai Magang',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            color: isDark
+                ? AppThemes.darkTextPrimary
+                : AppThemes.onSurfaceColor,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: TextFormField(
+            controller: _tanggalMulaiController,
+            readOnly: true,
+            decoration: InputDecoration(
+              hintText: 'Pilih tanggal mulai',
+              hintStyle: const TextStyle(fontSize: 13),
+              prefixIcon: Icon(
+                Icons.calendar_today_rounded,
+                color: AppThemes.primaryColor,
+                size: 18,
+              ),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  Icons.arrow_drop_down_rounded,
+                  color: AppThemes.primaryColor,
+                  size: 20,
+                ),
+                onPressed: _selectStartDate,
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
+              isDense: true,
+            ),
+            validator: Validators.validateDate,
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark
+                  ? AppThemes.darkTextPrimary
+                  : AppThemes.onSurfaceColor,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Widget untuk duration selection - lebih compact
+  Widget _buildDurationSelection() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Durasi Magang',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            color: isDark
+                ? AppThemes.darkTextPrimary
+                : AppThemes.onSurfaceColor,
+          ),
+        ),
+        const SizedBox(height: 6),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: _durations.map((duration) {
+              final isSelected = _selectedDuration == duration;
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: GestureDetector(
+                  onTap: () => _updateDuration(duration),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppThemes.primaryColor
+                          : AppThemes.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppThemes.primaryColor
+                            : AppThemes.primaryColor.withOpacity(0.3),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Text(
+                      '$duration ${duration == 1 ? 'Bulan' : 'Bulan'}',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected
+                            ? Colors.white
+                            : AppThemes.primaryColor,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Widget untuk display tanggal selesai - lebih compact
+  Widget _buildEndDateDisplay() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Tanggal Selesai Magang',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            color: isDark
+                ? AppThemes.darkTextPrimary
+                : AppThemes.onSurfaceColor,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(10),
+            color: isDark ? Colors.grey.shade800 : Colors.grey.shade50,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Icon(
+                Icons.calendar_today_rounded,
+                color: AppThemes.primaryColor.withOpacity(0.7),
+                size: 18,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _tanggalSelesaiController.text.isNotEmpty
+                      ? _tanggalSelesaiController.text
+                      : 'Pilih tanggal mulai terlebih dahulu',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: _tanggalSelesaiController.text.isNotEmpty
+                        ? (isDark
+                              ? AppThemes.darkTextPrimary
+                              : AppThemes.onSurfaceColor)
+                        : (isDark
+                              ? AppThemes.darkTextTertiary
+                              : AppThemes.hintColor),
+                  ),
+                ),
+              ),
+              if (_tanggalSelesaiController.text.isNotEmpty)
+                Icon(
+                  Icons.check_circle_rounded,
+                  color: AppThemes.successColor,
+                  size: 18,
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Form field yang lebih compact
+  Widget _buildFormField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    required String? Function(String?) validator,
+    TextInputType keyboardType = TextInputType.text,
+    bool isPassword = false,
+    bool? obscureText,
+    VoidCallback? onToggleObscure,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        hintText: hint,
+        hintStyle: const TextStyle(fontSize: 13),
+        prefixIcon: Icon(icon, color: AppThemes.primaryColor, size: 18),
+        suffixIcon: isPassword && onToggleObscure != null
+            ? IconButton(
+                icon: Icon(
+                  obscureText!
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: AppThemes.primaryColor,
+                  size: 18,
+                ),
+                onPressed: onToggleObscure,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(maxWidth: 36),
+              )
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(
+            color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
+            width: 1.5,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(
+            color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: AppThemes.primaryColor, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
+        isDense: true,
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+      ),
+      obscureText: obscureText ?? false,
+      validator: validator,
+      keyboardType: keyboardType,
+      style: TextStyle(
+        fontSize: 13,
+        color: isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
+      ),
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+    );
+  }
+
+  // Build personal information section - lebih compact
+  Widget _buildPersonalInfoSection() {
+    return Column(
+      children: [
+        _buildSectionHeader(
+          'Informasi Pribadi',
+          subtitle: 'Data diri lengkap untuk profil Anda',
+        ),
+        _buildFormField(
+          controller: _namaController,
+          label: 'Nama Lengkap',
+          hint: 'Masukkan nama lengkap',
+          icon: Icons.person_rounded,
+          validator: Validators.validateName,
+        ),
+        const SizedBox(height: 12),
+
+        // Username Field dengan Hint yang lebih compact
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextFormField(
+              controller: _usernameController,
+              decoration: InputDecoration(
+                labelText: 'Username',
+                labelStyle: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                hintText: 'Buat username unik',
+                hintStyle: const TextStyle(fontSize: 13),
+                prefixIcon: Icon(
+                  Icons.alternate_email_rounded,
+                  color: AppThemes.primaryColor,
+                  size: 18,
+                ),
+                suffixIcon: Container(
+                  width: 36, // Lebar tetap untuk icon info
+                  child: IconButton(
+                    icon: Icon(
+                      _showUsernameHint
+                          ? Icons.info_outlined
+                          : Icons.info_outline,
+                      color: AppThemes.primaryColor.withOpacity(0.7),
+                      size: 18,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _showUsernameHint = !_showUsernameHint;
+                      });
+                    },
+                    padding: EdgeInsets.zero,
+                  ),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppThemes.darkOutline
+                        : Colors.grey.shade300,
+                    width: 1.5,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppThemes.darkOutline
+                        : Colors.grey.shade300,
+                    width: 1.5,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(
+                    color: AppThemes.primaryColor,
+                    width: 2,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                isDense: true,
+                floatingLabelBehavior: FloatingLabelBehavior.auto,
+              ),
+              validator: Validators.validateUsername,
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+              onChanged: (value) {
+                _validateForm();
+              },
+            ),
+
+            // Username Hint yang lebih compact
+            if (_showUsernameHint)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppThemes.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: AppThemes.primaryColor.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Syarat Username:',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                          color: AppThemes.primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      ...Validators.getUsernameHint()
+                          .split('\n')
+                          .map(
+                            (line) => Padding(
+                              padding: const EdgeInsets.only(bottom: 1),
+                              child: Text(
+                                '• $line',
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      fontSize: 10,
+                                      color:
+                                          Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? AppThemes.darkTextTertiary
+                                          : AppThemes.hintColor,
+                                    ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        _buildFormField(
+          controller: _nomorHpController,
+          label: 'Nomor HP',
+          hint: 'Masukkan nomor handphone',
+          icon: Icons.phone_rounded,
+          validator: Validators.validatePhoneNumber,
+          keyboardType: TextInputType.phone,
+        ),
+      ],
+    );
+  }
+
+  // Build institutional information section - lebih compact
+  Widget _buildInstitutionalSection() {
+    return Column(
+      children: [
+        _buildSectionHeader(
+          'Informasi Institusi',
+          subtitle: 'Data magang dan institusi pendidikan',
+        ),
+        _buildFormField(
+          controller: _divisiController,
+          label: 'Divisi',
+          hint: 'Masukkan divisi magang',
+          icon: Icons.business_center_rounded,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Divisi harus diisi';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 12),
+
+        _buildFormField(
+          controller: _instansiController,
+          label: 'Instansi',
+          hint: 'Masukkan nama instansi/universitas',
+          icon: Icons.school_rounded,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Instansi harus diisi';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 12),
+
+        // Duration-based date selection
+        _buildStartDateField(),
+        const SizedBox(height: 12),
+
+        _buildDurationSelection(),
+        const SizedBox(height: 12),
+
+        _buildEndDateDisplay(),
+      ],
+    );
+  }
+
+  // Build account security section - lebih compact
+  Widget _buildAccountSecuritySection() {
+    return Column(
+      children: [
+        _buildSectionHeader(
+          'Keamanan Akun',
+          subtitle: 'Buat password yang kuat untuk akun Anda',
+        ),
+
+        // Password Field with Strength Indicator
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFormField(
+              controller: _passwordController,
+              label: 'Password',
+              hint: 'Buat password',
+              icon: Icons.lock_outline_rounded,
+              validator: Validators.validatePassword,
+              isPassword: true,
+              obscureText: _obscurePassword,
+              onToggleObscure: () {
+                setState(() {
+                  _obscurePassword = !_obscurePassword;
+                });
+              },
+            ),
+
+            // Password Strength Indicator yang lebih compact
+            if (_passwordController.text.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: LinearProgressIndicator(
+                            value: _passwordStrength.value / 4,
+                            backgroundColor:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? AppThemes.darkOutline
+                                : Colors.grey.shade300,
+                            color: _getPasswordStrengthColor(),
+                            borderRadius: BorderRadius.circular(2),
+                            minHeight: 4,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _getPasswordStrengthText(),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                fontSize: 10,
+                                color: _getPasswordStrengthColor(),
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      Validators.getPasswordHint(),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontSize: 10,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? AppThemes.darkTextTertiary
+                            : AppThemes.hintColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Confirm Password Field
+        _buildFormField(
+          controller: _confirmPasswordController,
+          label: 'Konfirmasi Password',
+          hint: 'Konfirmasi password',
+          icon: Icons.lock_reset_outlined,
+          validator: _validateConfirmPassword,
+          isPassword: true,
+          obscureText: _obscureConfirmPassword,
+          onToggleObscure: () {
+            setState(() {
+              _obscureConfirmPassword = !_obscureConfirmPassword;
+            });
+          },
+        ),
+      ],
+    );
   }
 
   @override
@@ -122,278 +829,77 @@ class _RegisterScreenState extends State<RegisterScreen> {
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Column(
             children: [
-              // Logo Section - Minimal
-              const SizedBox(height: 40),
+              // Logo Section - lebih compact
+              const SizedBox(height: 10),
               Hero(
                 tag: 'app_logo',
                 child: Center(
                   child: Image.asset(
                     'assets/images/InternLogoExpand.png',
-                    width: 200,
-                    height: 200,
+                    width: 120,
+                    height: 120,
                     fit: BoxFit.contain,
                   ),
                 ),
               ),
 
-              // Header Section - Minimal
+              // Header Section - lebih compact
               Text(
-                'Create Account',
+                'Buat Akun',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: theme.colorScheme.onSurface,
-                  fontSize: 24,
+                  fontSize: 20,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Text(
-                'Start your internship journey with us',
+                'Mulai perjalanan magang Anda bersama kami',
                 style: theme.textTheme.bodyMedium?.copyWith(
+                  fontSize: 12,
                   color: isDark
                       ? AppThemes.darkTextSecondary
                       : AppThemes.hintColor,
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
 
-              // Form - No Card, Direct on Background
+              // Form dengan grouped sections - lebih compact
               Form(
                 key: _formKey,
                 child: Column(
                   children: [
-                    TextFormField(
-                      controller: _usernameController,
-                      decoration: InputDecoration(
-                        labelText: 'Username',
-                        prefixIcon: Icon(
-                          Icons.person_rounded,
-                          color: AppThemes.primaryColor,
-                        ),
-                        filled: true,
-                        fillColor: theme.cardTheme.color,
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Username is required';
-                        }
-                        if (value.length < 3) {
-                          return 'Username must be at least 3 characters';
-                        }
-                        return null;
-                      },
-                      style: TextStyle(color: theme.colorScheme.onSurface),
-                    ),
+                    // Personal Information Section
+                    _buildPersonalInfoSection(),
                     const SizedBox(height: 20),
 
-                    // Password Field with Strength Indicator
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        TextFormField(
-                          controller: _passwordController,
-                          decoration: InputDecoration(
-                            labelText: 'Password',
-                            hintText: 'Create strong password',
-                            prefixIcon: Icon(
-                              Icons.lock_outline_rounded,
-                              color: AppThemes.primaryColor,
-                              size: 20,
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
-                                color: AppThemes.primaryColor,
-                                size: 20,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: isDark
-                                    ? AppThemes.darkOutline
-                                    : Colors.grey.shade300,
-                                width: 1.5,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: isDark
-                                    ? AppThemes.darkOutline
-                                    : Colors.grey.shade300,
-                                width: 1.5,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: AppThemes.primaryColor,
-                                width: 2,
-                              ),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 16,
-                            ),
-                            isDense: true,
-                            floatingLabelBehavior: FloatingLabelBehavior.auto,
-                          ),
-                          obscureText: _obscurePassword,
-                          validator: Validators.validatePassword,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isDark
-                                ? AppThemes.darkTextPrimary
-                                : AppThemes.onSurfaceColor,
-                          ),
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          textInputAction: TextInputAction.next,
-                          onChanged: (value) => _checkPasswordStrength(value),
-                        ),
-
-                        // Password Strength Indicator
-                        if (_passwordController.text.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: LinearProgressIndicator(
-                                        value: _passwordStrength.value / 4,
-                                        backgroundColor: isDark
-                                            ? AppThemes.darkOutline
-                                            : Colors.grey.shade300,
-                                        color: _getPasswordStrengthColor(),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _getPasswordStrengthText(),
-                                      style: theme.textTheme.labelSmall
-                                          ?.copyWith(
-                                            color: _getPasswordStrengthColor(),
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Use 8+ characters with letters, numbers & symbols',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: isDark
-                                        ? AppThemes.darkTextTertiary
-                                        : AppThemes.hintColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
+                    // Institutional Information Section
+                    _buildInstitutionalSection(),
                     const SizedBox(height: 20),
 
-                    // Confirm Password Field
-                    TextFormField(
-                      controller: _confirmPasswordController,
-                      decoration: InputDecoration(
-                        labelText: 'Confirm Password',
-                        hintText: 'Re-enter your password',
-                        prefixIcon: Icon(
-                          Icons.lock_reset_outlined,
-                          color: AppThemes.primaryColor,
-                          size: 20,
-                        ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureConfirmPassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            color: AppThemes.primaryColor,
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscureConfirmPassword =
-                                  !_obscureConfirmPassword;
-                            });
-                          },
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? AppThemes.darkOutline
-                                : Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? AppThemes.darkOutline
-                                : Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: AppThemes.primaryColor,
-                            width: 2,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
-                        ),
-                        isDense: true,
-                        floatingLabelBehavior: FloatingLabelBehavior.auto,
-                      ),
-                      obscureText: _obscureConfirmPassword,
-                      validator: _validateConfirmPassword,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark
-                            ? AppThemes.darkTextPrimary
-                            : AppThemes.onSurfaceColor,
-                      ),
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      textInputAction: TextInputAction.done,
-                    ),
+                    // Account Security Section
+                    _buildAccountSecuritySection(),
+                    const SizedBox(height: 16),
 
-                    // Terms & Conditions - Modern Checkbox
-                    const SizedBox(height: 20),
+                    // Terms & Conditions - lebih compact
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          width: 20,
-                          height: 20,
+                          width: 18,
+                          height: 18,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(3),
                             border: Border.all(
                               color: _acceptedTerms
                                   ? AppThemes.primaryColor
                                   : (isDark
                                         ? AppThemes.darkOutline
                                         : Colors.grey.shade400),
-                              width: 2,
+                              width: 1.5,
                             ),
                             color: _acceptedTerms
                                 ? AppThemes.primaryColor
@@ -412,13 +918,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               Colors.transparent,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(3),
                             ),
                             materialTapTargetSize:
                                 MaterialTapTargetSize.shrinkWrap,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: GestureDetector(
                             onTap: () {
@@ -430,31 +936,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               TextSpan(
                                 children: [
                                   TextSpan(
-                                    text: 'I agree to the ',
+                                    text: 'Saya setuju dengan ',
                                     style: theme.textTheme.bodySmall?.copyWith(
+                                      fontSize: 11,
                                       color: isDark
                                           ? AppThemes.darkTextSecondary
                                           : AppThemes.hintColor,
                                     ),
                                   ),
                                   TextSpan(
-                                    text: 'Terms & Conditions',
+                                    text: 'Syarat & Ketentuan',
                                     style: theme.textTheme.bodySmall?.copyWith(
+                                      fontSize: 11,
                                       color: AppThemes.primaryColor,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                   TextSpan(
-                                    text: ' and ',
+                                    text: ' dan ',
                                     style: theme.textTheme.bodySmall?.copyWith(
+                                      fontSize: 11,
                                       color: isDark
                                           ? AppThemes.darkTextSecondary
                                           : AppThemes.hintColor,
                                     ),
                                   ),
                                   TextSpan(
-                                    text: 'Privacy Policy',
+                                    text: 'Kebijakan Privasi',
                                     style: theme.textTheme.bodySmall?.copyWith(
+                                      fontSize: 11,
                                       color: AppThemes.primaryColor,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -469,24 +979,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     // Error Widget
                     if (authProvider.error != null) ...[
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       CustomErrorWidget(
                         message: authProvider.error!,
                         onDismiss: () => authProvider.clearError(),
                       ),
                     ],
 
-                    // Register Button - Modern Outline Style
-                    const SizedBox(height: 24),
+                    // Register Button - lebih compact
+                    const SizedBox(height: 20),
                     MouseRegion(
                       onEnter: (_) => setState(() => _isButtonHovered = true),
                       onExit: (_) => setState(() => _isButtonHovered = false),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         width: double.infinity,
-                        height: 50,
+                        height: 44,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                           color: (_isFormValid && _acceptedTerms)
                               ? AppThemes.primaryColor
                               : Colors.transparent,
@@ -494,7 +1004,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             color: (_isFormValid && _acceptedTerms)
                                 ? AppThemes.primaryColor
                                 : AppThemes.neutralColor,
-                            width: 2,
+                            width: 1.5,
                           ),
                           boxShadow:
                               _isButtonHovered && _isFormValid && _acceptedTerms
@@ -503,8 +1013,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     color: AppThemes.primaryColor.withOpacity(
                                       0.3,
                                     ),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
                                   ),
                                 ]
                               : [],
@@ -514,14 +1024,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             : Material(
                                 color: Colors.transparent,
                                 child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(10),
                                   onTap: (_isFormValid && _acceptedTerms)
                                       ? _register
                                       : null,
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 12,
+                                      horizontal: 16,
+                                      vertical: 10,
                                     ),
                                     child: Row(
                                       mainAxisAlignment:
@@ -548,14 +1058,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                                 (_isFormValid && _acceptedTerms)
                                                 ? Colors.white
                                                 : AppThemes.neutralColor,
-                                            size: 20,
+                                            size: 18,
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
+                                        const SizedBox(width: 6),
                                         Text(
-                                          'Create Account',
+                                          'Buat Akun',
                                           style: theme.textTheme.titleSmall
                                               ?.copyWith(
+                                                fontSize: 14,
                                                 fontWeight: FontWeight.w600,
                                                 color:
                                                     (_isFormValid &&
@@ -575,8 +1086,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
 
-              // Divider - Minimal
-              const SizedBox(height: 32),
+              // Divider - lebih compact
+              const SizedBox(height: 24),
               Row(
                 children: [
                   Expanded(
@@ -588,10 +1099,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     child: Text(
-                      'or',
+                      'atau',
                       style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 11,
                         color: isDark
                             ? AppThemes.darkTextTertiary
                             : AppThemes.hintColor,
@@ -609,20 +1121,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ],
               ),
 
-              // Login Prompt - Minimal
-              const SizedBox(height: 24),
+              // Login Prompt - lebih compact
+              const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "Already have an account?",
+                    "Sudah punya akun?",
                     style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 12,
                       color: isDark
                           ? AppThemes.darkTextSecondary
                           : AppThemes.hintColor,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   TextButton(
                     onPressed: () {
                       Navigator.pushReplacementNamed(context, RouteNames.login);
@@ -630,14 +1143,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: TextButton.styleFrom(
                       foregroundColor: AppThemes.primaryColor,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                        horizontal: 6,
+                        vertical: 2,
                       ),
                       minimumSize: Size.zero,
                     ),
                     child: Text(
-                      'Sign In',
+                      'Masuk',
                       style: theme.textTheme.bodyMedium?.copyWith(
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: AppThemes.primaryColor,
                       ),
@@ -645,6 +1159,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
             ],
           ),
         ),

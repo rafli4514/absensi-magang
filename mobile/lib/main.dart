@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:myinternplus/providers/auth_provider.dart';
+import 'package:myinternplus/utils/constants.dart';
 import 'package:provider/provider.dart';
 
 import '../navigation/app_router.dart';
@@ -9,6 +11,18 @@ import '../providers/onboard_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/storage_service.dart';
 import '../themes/app_themes.dart';
+
+void testApiConnection() async {
+  try {
+    final response = await http.get(
+      Uri.parse('${AppConstants.baseUrl}/auth/test'),
+    );
+    print('🔵 API Connection Test: ${response.statusCode}');
+    print('🔵 API Response: ${response.body}');
+  } catch (e) {
+    print('❌ API Connection Failed: $e');
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

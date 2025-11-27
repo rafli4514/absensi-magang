@@ -1,11 +1,12 @@
 class AppConstants {
-  static const String appName = 'Employee App';
-  
+  static const String appName = 'MyInternPlus';
+
   // Pilih salah satu sesuai yang Anda gunakan SEKARANG:
-  
+
   // UNCOMMENT salah satu di bawah ini:
-  static const String baseUrl = 'http://10.0.2.2:3000/api'; // Android Emulator
-  // static const String baseUrl = 'http://10.80.14.71:3000/api'; // Physical Device (IP Wi-Fi Anda)
+  static const String baseUrl =
+      'http://172.16.3.170:3000/api'; // Android Emulator
+  // static const String baseUrl ='http://192.168.1.214:3000/api'; // Physical Device (IP Wi-Fi Anda)
   // static const String baseUrl = 'http://localhost:3000/api'; // iOS Simulator
 
   // Storage Keys
@@ -13,7 +14,7 @@ class AppConstants {
   static const String userDataKey = 'user_data';
   static const String themeModeKey = 'theme_mode';
   static const String onboardSeenKey = 'onboard_seen';
-  static const String firstLaunchKey = 'first_launch'; // TAMBAHKAN INI
+  static const String firstLaunchKey = 'first_launch';
 
   // API Endpoints
   static const String loginEndpoint = '/auth/login';
@@ -26,7 +27,4 @@ class AppConstants {
 
   // Splash Screen
   static const int splashDelay = 3000;
-
-  // Other constants
-  static const String appName = 'MyInternPlus';
 }
