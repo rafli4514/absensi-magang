@@ -1,41 +1,35 @@
-import 'dart:ui';
-
-class OnboardModel {
+class OnboardPage {
+  final String id;
   final String title;
   final String description;
-  final String imagePath;
-  final Color backgroundColor;
+  final String imageUrl;
+  final int order;
 
-  OnboardModel({
+  OnboardPage({
+    required this.id,
     required this.title,
     required this.description,
-    required this.imagePath,
-    required this.backgroundColor,
+    required this.imageUrl,
+    required this.order,
   });
-}
 
-class OnboardData {
-  static final List<OnboardModel> pages = [
-    OnboardModel(
-      title: "Welcome to Employee App",
-      description:
-          "Manage your attendance and activities efficiently with our easy-to-use mobile application",
-      imagePath: "assets/images/onboard1.png",
-      backgroundColor: const Color(0xFFE3F2FD),
-    ),
-    OnboardModel(
-      title: "QR Code Attendance",
-      description:
-          "Scan QR codes to record your attendance quickly and accurately. No more manual time tracking!",
-      imagePath: "assets/images/onboard2.png",
-      backgroundColor: const Color(0xFFE8F5E8),
-    ),
-    OnboardModel(
-      title: "Track Your Performance",
-      description:
-          "Monitor your activities, attendance history, and performance metrics in real-time. Stay informed about your progress!",
-      imagePath: "assets/images/onboard3.png",
-      backgroundColor: const Color(0xFFFFF3E0),
-    ),
-  ];
+  factory OnboardPage.fromJson(Map<String, dynamic> json) {
+    return OnboardPage(
+      id: json['id'] ?? '',
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      imageUrl: json['imageUrl'] ?? '',
+      order: json['order'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'imageUrl': imageUrl,
+      'order': order,
+    };
+  }
 }
