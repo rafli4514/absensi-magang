@@ -28,6 +28,8 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    print('🔍 User.fromJson received: $json');
+
     return User(
       id: json['id']?.toString() ?? '',
       username: json['username'] ?? '',

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
@@ -9,6 +10,7 @@ class AuthProvider with ChangeNotifier {
   User? _user;
   bool _isLoading = false;
   String? _error;
+  String? _token;
 
   User? get user => _user;
   bool get isLoading => _isLoading;
@@ -61,6 +63,9 @@ class AuthProvider with ChangeNotifier {
     _isLoading = true;
     _error = null;
     notifyListeners();
+
+    print('🔵 [AUTH PROVIDER] Starting registration...');
+    print('📧 [AUTH PROVIDER] Email: $email');
 
     try {
       final response = await AuthService.login(username, password);
@@ -173,10 +178,28 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> logout() async {
-    _user = null;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await _clearStorage();
+
+      _user = null;
+      _token = null;
+      _error = null;
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = 'Logout failed: $e';
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _clearStorage() async {
     await StorageService.remove(AppConstants.tokenKey);
     await StorageService.remove(AppConstants.userDataKey);
-    notifyListeners();
   }
 
   Future<void> _saveUserData(User user) async {

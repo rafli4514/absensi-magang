@@ -1,7 +1,7 @@
 name: myinternplus
 description: "A new Flutter project."
 
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: 'none'
 
 version: 1.0.0+1
 
@@ -11,34 +11,37 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.0 
-  provider: ^6.1.1 
+  cupertino_icons: ^1.0.0
+  provider: ^6.1.1
   shared_preferences: ^2.2.2
   http: ^1.1.0
-  mobile_scanner: ^7.1.3 
-  #  permission_handler: ^11.0.1
-  #  geolocator: ^11.0.1
+  mobile_scanner: ^7.1.3
+  permission_handler: ^11.0.1
+  geolocator: ^11.0.1
   #  flutter_local_notifications: ^16.3.0
+  dio: ^5.0.0
   intl: ^0.18.1
   image_picker: ^1.2.1
+  package_info_plus: ^4.2.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  build_runner: ^2.4.12
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.4
 
 
 flutter:
-   uses-material-design: true
-   assets:
-     - "assets/images/InternLogo.png"
-     - "assets/images/InternLogoExpand.png"
-     - "assets/images/Mascot1.png"
-     - "assets/images/Mascot2.png"
-     - "assets/images/Mascot3.png"
-     - "assets/images/Mascot4.png"
+  uses-material-design: true
+  assets:
+    - "assets/images/InternLogo.png"
+    - "assets/images/InternLogoExpand.png"
+    - "assets/images/Mascot1.png"
+    - "assets/images/Mascot2.png"
+    - "assets/images/Mascot3.png"
+    - "assets/images/Mascot4.png"
 
 flutter_launcher_icons:
   android: "launcher_icon"
@@ -53,7 +56,7 @@ flutter_launcher_icons:
   windows:
     generate: true
     image_path: "assets/images/InternLogo.png"
-    icon_size: 48
+    icon_size: 48 # min:48, max:256, default: 48
   macos:
     generate: true
     image_path: "assets/images/InternLogo.png"
