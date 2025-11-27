@@ -10,15 +10,18 @@ class ApiService {
   static const String baseUrl = AppConstants.baseUrl;
 
   Future<Map<String, String>> _getHeaders() async {
-    final token = StorageService.getString(AppConstants.tokenKey);
+    final token = await StorageService.getString(AppConstants.tokenKey);
     return {
       'Content-Type': 'application/json',
-      'Authorization': token != null ? 'Bearer $token' : '',
+      if (token != null && token.isNotEmpty) 
+        'Authorization': 'Bearer $token',
     };
   }
 
-  // Safe JSON parsing with validation
-  dynamic _parseResponse(String responseBody) {
+  Future<ApiResponse<T>> get<T>(
+    String endpoint, 
+    T Function(dynamic)? fromJson
+  ) async {
     try {
       if (responseBody.isEmpty) {
         throw FormatException('Empty response from server');
@@ -31,31 +34,26 @@ class ApiService {
         throw FormatException('Invalid JSON format');
       }
 
-      return jsonDecode(trimmed);
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return ApiResponse<T>(
+          success: data['success'] ?? true,
+          message: data['message'] ?? 'Success',
+          data: data['data'] != null && fromJson != null 
+              ? fromJson(data['data']) 
+              : null,
+          statusCode: response.statusCode,
+        );
+      } else {
+        return ApiResponse<T>(
+          success: false,
+          message: data['message'] ?? 'Request failed',
+          statusCode: response.statusCode,
+        );
+      }
     } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<ApiResponse<T>> get<T>(
-    String endpoint,
-    T Function(dynamic) fromJson,
-  ) async {
-    try {
-      final response = await http
-          .get(Uri.parse('$baseUrl$endpoint'), headers: await _getHeaders())
-          .timeout(const Duration(seconds: 30));
-
-      final data = _parseResponse(response.body);
-      return ApiResponse.fromJson(data, fromJson);
-    } on FormatException catch (e) {
-      return ApiResponse(
-        success: false,
-        message: 'Invalid server response',
-        statusCode: 500,
-      );
-    } catch (e) {
-      return ApiResponse(
+      return ApiResponse<T>(
         success: false,
         message: 'Network error: $e',
         statusCode: 500,
@@ -64,9 +62,9 @@ class ApiService {
   }
 
   Future<ApiResponse<T>> post<T>(
-    String endpoint,
-    Map<String, dynamic> body,
-    T Function(dynamic) fromJson,
+    String endpoint, 
+    Map<String, dynamic> body, 
+    T Function(dynamic)? fromJson
   ) async {
     try {
       final response = await http
@@ -77,16 +75,103 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 30));
 
-      final data = _parseResponse(response.body);
-      return ApiResponse.fromJson(data, fromJson);
-    } on FormatException catch (e) {
-      return ApiResponse(
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return ApiResponse<T>(
+          success: data['success'] ?? true,
+          message: data['message'] ?? 'Success',
+          data: data['data'] != null && fromJson != null 
+              ? fromJson(data['data']) 
+              : null,
+          statusCode: response.statusCode,
+        );
+      } else {
+        return ApiResponse<T>(
+          success: false,
+          message: data['message'] ?? 'Request failed',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse<T>(
         success: false,
-        message: 'Invalid server response',
+        message: e.toString(),
         statusCode: 500,
       );
+    }
+  }
+
+  // Tambahkan method PUT dan DELETE jika diperlukan
+  Future<ApiResponse<T>> put<T>(
+    String endpoint, 
+    Map<String, dynamic> body, 
+    T Function(dynamic)? fromJson
+  ) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await _getHeaders(),
+        body: jsonEncode(body),
+      );
+
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return ApiResponse<T>(
+          success: data['success'] ?? true,
+          message: data['message'] ?? 'Success',
+          data: data['data'] != null && fromJson != null 
+              ? fromJson(data['data']) 
+              : null,
+          statusCode: response.statusCode,
+        );
+      } else {
+        return ApiResponse<T>(
+          success: false,
+          message: data['message'] ?? 'Request failed',
+          statusCode: response.statusCode,
+        );
+      }
     } catch (e) {
-      return ApiResponse(
+      return ApiResponse<T>(
+        success: false,
+        message: e.toString(),
+        statusCode: 500,
+      );
+    }
+  }
+
+  Future<ApiResponse<T>> delete<T>(
+    String endpoint,
+    T Function(dynamic)? fromJson
+  ) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await _getHeaders(),
+      );
+
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return ApiResponse<T>(
+          success: data['success'] ?? true,
+          message: data['message'] ?? 'Success',
+          data: data['data'] != null && fromJson != null 
+              ? fromJson(data['data']) 
+              : null,
+          statusCode: response.statusCode,
+        );
+      } else {
+        return ApiResponse<T>(
+          success: false,
+          message: data['message'] ?? 'Request failed',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse<T>(
         success: false,
         message: 'Network error: $e',
         statusCode: 500,

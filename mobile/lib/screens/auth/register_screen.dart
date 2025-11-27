@@ -17,7 +17,7 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
@@ -27,11 +27,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
   PasswordStrength _passwordStrength = PasswordStrength.weak;
   bool _acceptedTerms = false;
 
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
   Future<void> _register() async {
     if (_formKey.currentState!.validate() && _acceptedTerms) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final success = await authProvider.register(
-        _emailController.text.trim(),
+        _usernameController.text.trim(),
         _passwordController.text.trim(),
       );
 
@@ -156,59 +164,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Email Field - Outline Style
                     TextFormField(
-                      controller: _emailController,
+                      controller: _usernameController,
                       decoration: InputDecoration(
-                        labelText: 'Email',
-                        hintText: 'your@email.com',
+                        labelText: 'Username',
                         prefixIcon: Icon(
-                          Icons.mail_outline_rounded,
+                          Icons.person_rounded,
                           color: AppThemes.primaryColor,
-                          size: 20,
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? AppThemes.darkOutline
-                                : Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? AppThemes.darkOutline
-                                : Colors.grey.shade300,
-                            width: 1.5,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: AppThemes.primaryColor,
-                            width: 2,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
-                        ),
-                        isDense: true,
-                        floatingLabelBehavior: FloatingLabelBehavior.auto,
+                        filled: true,
+                        fillColor: theme.cardTheme.color,
                       ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: Validators.validateEmail,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark
-                            ? AppThemes.darkTextPrimary
-                            : AppThemes.onSurfaceColor,
-                      ),
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Username is required';
+                        }
+                        if (value.length < 3) {
+                          return 'Username must be at least 3 characters';
+                        }
+                        return null;
+                      },
+                      style: TextStyle(color: theme.colorScheme.onSurface),
                     ),
                     const SizedBox(height: 20),
 

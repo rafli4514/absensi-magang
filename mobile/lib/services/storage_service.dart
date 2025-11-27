@@ -11,7 +11,7 @@ class StorageService {
     return await _prefs.setString(key, value);
   }
 
-  static String? getString(String key) {
+  static Future<String?> getString(String key) async {
     return _prefs.getString(key);
   }
 
@@ -19,7 +19,7 @@ class StorageService {
     return await _prefs.setBool(key, value);
   }
 
-  static bool? getBool(String key) {
+  static Future<bool?> getBool(String key) async {
     return _prefs.getBool(key);
   }
 

@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 
 import '../models/user.dart';
@@ -16,7 +15,7 @@ class AuthProvider with ChangeNotifier {
   User? get user => _user;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  String? get token => _token;
+  bool get isAuthenticated => _user != null;
 
   AuthProvider() {
     _loadUserData();
@@ -24,28 +23,43 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _loadUserData() async {
     try {
-      final token = StorageService.getString(AppConstants.tokenKey);
-      final userData = StorageService.getString(AppConstants.userDataKey);
-
-      if (token != null && userData != null) {
-        _token = token;
-        _user = User.fromJson(jsonDecode(userData));
+      final userDataStr = await StorageService.getString(AppConstants.userDataKey);
+      final token = await StorageService.getString(AppConstants.tokenKey);
+      
+      if (userDataStr != null && token != null) {
+        final userData = jsonDecode(userDataStr);
+        _user = User.fromJson(userData);
         notifyListeners();
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('Error loading user data: $e');
-      }
-      await _clearStorage();
+      print('Error loading user data: $e');
     }
   }
 
   Future<bool> checkAuthentication() async {
-    final token = StorageService.getString(AppConstants.tokenKey);
-    return token != null && token.isNotEmpty;
+    final token = await StorageService.getString(AppConstants.tokenKey);
+    if (token == null || token.isEmpty) {
+      return false;
+    }
+
+    // Optionally verify token dengan getProfile
+    try {
+      final profileResponse = await AuthService.getProfile();
+      if (profileResponse.success && profileResponse.data != null) {
+        _user = profileResponse.data;
+        await _saveUserData(_user!);
+        return true;
+      } else {
+        // Token invalid, clear storage
+        await logout();
+        return false;
+      }
+    } catch (e) {
+      return false;
+    }
   }
 
-  Future<bool> register(String email, String password) async {
+  Future<bool> login(String username, String password) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -54,66 +68,21 @@ class AuthProvider with ChangeNotifier {
     print('📧 [AUTH PROVIDER] Email: $email');
 
     try {
-      final response = await AuthService.register(email, password);
-
-      print('🔄 [AUTH PROVIDER] AuthService response received');
-      print('✅ [AUTH PROVIDER] Response success: ${response.success}');
-      print('📝 [AUTH PROVIDER] Response message: ${response.message}');
-      print('🔢 [AUTH PROVIDER] Response statusCode: ${response.statusCode}');
-      print('👤 [AUTH PROVIDER] Response data: ${response.data}');
-
+      final response = await AuthService.login(username, password);
+      
       if (response.success && response.data != null) {
-        print('✅ [AUTH PROVIDER] Registration successful!');
-        _user = response.data!;
-        _token = response.data!.token;
-
-        print('🔑 [AUTH PROVIDER] Token: $_token');
-        print('👤 [AUTH PROVIDER] User: ${_user!.toJson()}');
-
-        await StorageService.setString(AppConstants.tokenKey, _token!);
+        final loginResponse = response.data!;
+        
+        // Simpan token
         await StorageService.setString(
-          AppConstants.userDataKey,
-          jsonEncode(_user!.toJson()),
+          AppConstants.tokenKey, 
+          loginResponse.token
         );
-
-        print('💾 [AUTH PROVIDER] Data saved to storage');
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        _error = response.message;
-        print('❌ [AUTH PROVIDER] Registration failed: $_error');
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-    } catch (e) {
-      _error = 'Registration failed: $e';
-      print('❌ [AUTH PROVIDER] Registration error: $_error');
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  Future<bool> login(String email, String password) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      final response = await AuthService.login(email, password);
-
-      if (response.success && response.data != null) {
-        _user = response.data!;
-        _token = response.data!.token;
-
-        await StorageService.setString(AppConstants.tokenKey, _token!);
-        await StorageService.setString(
-          AppConstants.userDataKey,
-          jsonEncode(_user!.toJson()),
-        );
-
+        
+        // Simpan user data
+        _user = loginResponse.user;
+        await _saveUserData(_user!);
+        
         _isLoading = false;
         notifyListeners();
         return true;
@@ -124,7 +93,7 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _error = 'Login failed: $e';
+      _error = 'Login failed: ${e.toString()}';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -138,17 +107,20 @@ class AuthProvider with ChangeNotifier {
 
     try {
       final response = await AuthService.loginPesertaMagang(username, password);
-
+      
       if (response.success && response.data != null) {
-        _user = response.data!;
-        _token = response.data!.token;
-
-        await StorageService.setString(AppConstants.tokenKey, _token!);
+        final loginResponse = response.data!;
+        
+        // Simpan token
         await StorageService.setString(
-          AppConstants.userDataKey,
-          jsonEncode(_user!.toJson()),
+          AppConstants.tokenKey, 
+          loginResponse.token
         );
-
+        
+        // Simpan user data
+        _user = loginResponse.user;
+        await _saveUserData(_user!);
+        
         _isLoading = false;
         notifyListeners();
         return true;
@@ -159,7 +131,46 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _error = 'Login failed: $e';
+      _error = 'Login failed: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> register(String username, String password, {String? role}) async {
+    // Register hanya butuh username dan password sesuai backend
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final response = await AuthService.register(username, password, role: role);
+      
+      if (response.success && response.data != null) {
+        final loginResponse = response.data!;
+        
+        // Simpan token
+        await StorageService.setString(
+          AppConstants.tokenKey, 
+          loginResponse.token
+        );
+        
+        // Simpan user data
+        _user = loginResponse.user;
+        await _saveUserData(_user!);
+        
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _error = response.message;
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Registration failed: ${e.toString()}';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -191,8 +202,29 @@ class AuthProvider with ChangeNotifier {
     await StorageService.remove(AppConstants.userDataKey);
   }
 
+  Future<void> _saveUserData(User user) async {
+    await StorageService.setString(
+      AppConstants.userDataKey,
+      jsonEncode(user.toJson()),
+    );
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  // Refresh user profile
+  Future<void> refreshProfile() async {
+    try {
+      final response = await AuthService.getProfile();
+      if (response.success && response.data != null) {
+        _user = response.data;
+        await _saveUserData(_user!);
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error refreshing profile: $e');
+    }
   }
 }
