@@ -14,115 +14,233 @@ class OnboardWelcomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: isDark
           ? AppThemes.darkBackground
-          : AppThemes
-                .backgroundColor, // Changed to backgroundColor for better contrast
+          : AppThemes.backgroundColor,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              const Spacer(flex: 2),
-              // Logo dengan gradient
-              Image.asset(
-                'assets/images/Mascot4.png',
-                width: 360,
-                height: 360,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 32),
-              Text(
-                'Ready to Get Started?',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: isDark
-                      ? AppThemes.darkTextPrimary
-                      : AppThemes.onSurfaceColor,
-                  letterSpacing: -0.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Start managing your attendance and activities with our easy-to-use app',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: isDark
-                      ? AppThemes.darkTextSecondary
-                      : AppThemes.hintColor,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const Spacer(flex: 2),
-              // Get Started Button - Fixed styling
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushReplacementNamed(context, RouteNames.login);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppThemes.primaryColor,
-                    foregroundColor: Colors.white,
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        12,
-                      ), // Consistent border radius
-                    ),
-                    shadowColor: AppThemes.primaryColor.withOpacity(0.3),
-                  ),
-                  child: const Text(
-                    'Get Started',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
+              // Logo di paling atas
+              Container(
+                margin: const EdgeInsets.only(top: 20, bottom: 10),
+                child: Image.asset(
+                  'assets/images/InternLogoExpand.png',
+                  width: 80,
+                  height: 80,
+                  fit: BoxFit.contain,
                 ),
               ),
-              const SizedBox(height: 12),
-              // Create Account Button - Fixed styling
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.pushReplacementNamed(
-                      context,
-                      RouteNames.register,
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark
-                        ? AppThemes.darkAccentBlue
-                        : AppThemes.primaryColor,
-                    side: BorderSide(
-                      color: isDark
-                          ? AppThemes.darkAccentBlue
-                          : AppThemes.primaryColor,
-                      width: 1.5,
+
+              // Mascot dengan background bulat - sangat dominan
+              Expanded(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Background bulatan besar
+                    Container(
+                      width: 320,
+                      height: 320,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomLeft,
+                          end: Alignment.topRight,
+                          colors: isDark
+                              ? [
+                                  AppThemes.primaryColor.withOpacity(0.4),
+                                  AppThemes.primaryDark.withOpacity(0.15),
+                                ]
+                              : [
+                                  AppThemes.primaryLight.withOpacity(0.5),
+                                  AppThemes.primaryColor.withOpacity(0.15),
+                                ],
+                        ),
+                        borderRadius: BorderRadius.circular(160),
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        12,
-                      ), // Consistent border radius
+                    // Mascot yang "timbul" lebih tinggi
+                    Transform.translate(
+                      offset: const Offset(0, -40),
+                      child: Image.asset(
+                        'assets/images/Mascot4.png',
+                        width: 380,
+                        height: 380,
+                        fit: BoxFit.contain,
+                      ),
                     ),
-                    backgroundColor: Colors.transparent,
-                  ),
-                  child: const Text(
-                    'Create Account',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
+                  ],
                 ),
               ),
-              const Spacer(),
+
+              // Konten text dan buttons di bagian bawah
+              Container(
+                padding: const EdgeInsets.only(bottom: 30),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.rocket_launch,
+                          color: AppThemes.primaryColor,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Yuk, Mulai Petualanganmu!',
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: isDark
+                                ? AppThemes.darkTextPrimary
+                                : AppThemes.onSurfaceColor,
+                            letterSpacing: -0.5,
+                            fontSize: 24,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Absensi jadi lebih seru dan praktis! Pantau aktivitas magang, catat progress, dan raih prestasi terbaikmu',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: isDark
+                            ? AppThemes.darkTextSecondary
+                            : AppThemes.hintColor,
+                        height: 1.5,
+                        fontSize: 14,
+                        letterSpacing: 0.2,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushReplacementNamed(
+                            context,
+                            RouteNames.login,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppThemes.primaryColor,
+                          foregroundColor: Colors.white,
+                          elevation: 3,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          shadowColor: AppThemes.primaryColor.withOpacity(0.4),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.login, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Masuk & Eksplor!',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.pushReplacementNamed(
+                            context,
+                            RouteNames.register,
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isDark
+                              ? AppThemes.darkAccentBlue
+                              : AppThemes.primaryColor,
+                          side: BorderSide(
+                            color: isDark
+                                ? AppThemes.darkAccentBlue
+                                : AppThemes.primaryColor,
+                            width: 2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          backgroundColor: Colors.transparent,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.person_add, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Daftar Akun Baru',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3,
+                                color: isDark
+                                    ? AppThemes.darkAccentBlue
+                                    : AppThemes.primaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppThemes.darkAccentBlue.withOpacity(0.1)
+                            : AppThemes.primaryColor.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark
+                              ? AppThemes.darkAccentBlue.withOpacity(0.3)
+                              : AppThemes.primaryColor.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.people,
+                            color: isDark
+                                ? AppThemes.darkAccentBlue
+                                : AppThemes.primaryColor,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Gabung dengan komunitas magang terbaik',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: isDark
+                                  ? AppThemes.darkTextSecondary
+                                  : AppThemes.hintColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),

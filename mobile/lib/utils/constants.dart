@@ -1,26 +1,24 @@
 class AppConstants {
-  static const String appName = 'Employee App';
-  static const String baseUrl = 'https://your-api-url.com';
+  // Base URL
+  static const String baseUrl =
+      'http://10.0.2.2:3000/api'; // untuk Android emulator
 
-  // Storage keys
+  // Storage Keys
   static const String tokenKey = 'auth_token';
   static const String userDataKey = 'user_data';
-  static const String onboardSeenKey = 'onboard_seen';
   static const String themeModeKey = 'theme_mode';
+  static const String onboardSeenKey = 'onboard_seen';
+  static const String firstLaunchKey = 'first_launch'; // TAMBAHKAN INI
 
-  // API endpoints
+  // API Endpoints
   static const String loginEndpoint = '/auth/login';
   static const String registerEndpoint = '/auth/register';
-  static const String attendanceEndpoint = '/attendance';
-  static const String activitiesEndpoint = '/activities';
+  static const String loginPesertaEndpoint = '/auth/login-peserta';
+  static const String profileEndpoint = '/auth/profile';
 
-  // Time constants
-  static const int splashDelay = 2000;
-}
+  // Splash Screen
+  static const int splashDelay = 3000;
 
-class AssetPaths {
-  static const String onboard1 = 'assets/images/onboard1.png';
-  static const String onboard2 = 'assets/images/onboard2.png';
-  static const String onboard3 = 'assets/images/onboard3.png';
-  static const String logo = 'assets/images/logo.png';
+  // Other constants
+  static const String appName = 'MyInternPlus';
 }
