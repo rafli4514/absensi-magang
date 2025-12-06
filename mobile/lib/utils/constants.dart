@@ -1,12 +1,10 @@
 class AppConstants {
   static const String appName = 'MyInternPlus';
 
-  // Pilih salah satu sesuai yang Anda gunakan SEKARANG:
-
-  // UNCOMMENT salah satu di bawah ini:
+  // Base URL
   static const String baseUrl =
-      'http://172.16.3.170:3000/api'; // Android Emulator
-  // static const String baseUrl ='http://192.168.1.214:3000/api'; // Physical Device (IP Wi-Fi Anda)
+      'http://10.140.251.98:3000/api'; // Android Emulator
+  // static const String baseUrl = 'http://10.140.251.98:3000/api'; // Physical Device
   // static const String baseUrl = 'http://localhost:3000/api'; // iOS Simulator
 
   // Storage Keys
@@ -22,7 +20,11 @@ class AppConstants {
   static const String registerEndpoint = '/auth/register';
   static const String profileEndpoint = '/auth/profile';
   static const String refreshTokenEndpoint = '/auth/refresh-token';
-  static const String attendanceEndpoint = '/absensi';
+
+  // Settings & QR Endpoints
+  static const String settingsEndpoint = '/settings';
+  static const String qrEndpoint = '/qr';
+  static const String attendanceEndpoint = '/attendance';
   static const String activitiesEndpoint = '/logbook';
 
   // Splash Screen
