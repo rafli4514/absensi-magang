@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../navigation/route_names.dart';
+import '../../services/location_service.dart';
 import '../../themes/app_themes.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/floating_bottom_nav.dart';
@@ -23,7 +24,12 @@ class _QrScanScreenState extends State<QrScanScreen>
   String _attendanceType = '';
   final ImagePicker _imagePicker = ImagePicker();
   late AnimationController _animationController;
-  bool _hasPopped = false; // ✅ TAMBAH FLAG INI
+  bool _hasPopped = false;
+
+  OfficeLocationSettings? _locationSettings;
+  Map<String, dynamic>? _currentLocation;
+  bool _isLocationLoading = false;
+  String _locationStatus = 'Getting location...';
 
   MobileScannerController cameraController = MobileScannerController(
     detectionSpeed: DetectionSpeed.normal,
@@ -37,6 +43,53 @@ class _QrScanScreenState extends State<QrScanScreen>
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     _attendanceType = args?['type'] ?? '';
+    _loadLocationSettings();
+  }
+
+  Future<void> _loadLocationSettings() async {
+    setState(() {
+      _isLocationLoading = true;
+    });
+
+    final response = await LocationService.getLocationSettings();
+
+    if (response.success && response.data != null) {
+      setState(() {
+        _locationSettings = response.data;
+        _locationStatus = 'Location ready';
+      });
+    } else {
+      setState(() {
+        _locationStatus = 'Location settings not available';
+      });
+    }
+
+    setState(() {
+      _isLocationLoading = false;
+    });
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      _isLocationLoading = true;
+      _locationStatus = 'Getting your location...';
+    });
+
+    _currentLocation = await LocationService.getCurrentLocation();
+
+    if (_currentLocation != null) {
+      setState(() {
+        _locationStatus = 'Location acquired';
+      });
+    } else {
+      setState(() {
+        _locationStatus = 'Failed to get location';
+      });
+    }
+
+    setState(() {
+      _isLocationLoading = false;
+    });
   }
 
   bool _isValidClockOutTime() {
@@ -62,12 +115,68 @@ class _QrScanScreenState extends State<QrScanScreen>
     );
   }
 
-  void _submitAttendance() {
-    if (_isProcessing || _hasPopped) return; // ✅ CEK FLAG
+  void _showLocationErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => CustomDialog(
+        title: 'Location Error',
+        content: message,
+        primaryButtonText: 'OK',
+        primaryButtonColor: AppThemes.errorColor,
+        onPrimaryButtonPressed: () => Navigator.pop(context),
+      ),
+    );
+  }
 
-    // Validasi tambahan untuk clock out
+  Future<bool> _validateLocation() async {
+    if (_locationSettings == null) {
+      _showLocationErrorDialog(
+        'Location settings not available. Please try again.',
+      );
+      return false;
+    }
+
+    await _getCurrentLocation();
+    if (_currentLocation == null) {
+      _showLocationErrorDialog(
+        'Cannot get your current location. Please enable location services.',
+      );
+      return false;
+    }
+
+    final isWithinRadius = await LocationService.isWithinOfficeRadius(
+      _locationSettings!,
+    );
+    if (!isWithinRadius) {
+      final distance = LocationService.calculateDistance(
+        _currentLocation!['latitude'],
+        _currentLocation!['longitude'],
+        _locationSettings!.latitude,
+        _locationSettings!.longitude,
+      );
+
+      _showLocationErrorDialog(
+        'You are too far from the office.\n'
+        'Distance: ${distance.toStringAsFixed(0)} meters\n'
+        'Allowed radius: ${_locationSettings!.radius} meters\n'
+        'Office: ${_locationSettings!.officeAddress}',
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  void _submitAttendance() async {
+    if (_isProcessing || _hasPopped) return;
+
     if (_attendanceType == 'CLOCK_OUT' && !_isValidClockOutTime()) {
       _showTimeErrorDialog();
+      return;
+    }
+
+    final isLocationValid = await _validateLocation();
+    if (!isLocationValid) {
       return;
     }
 
@@ -75,30 +184,59 @@ class _QrScanScreenState extends State<QrScanScreen>
       _isProcessing = true;
     });
 
-    // Processing dengan navigation yang aman
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (!mounted || _hasPopped) return; // ✅ CEK LAGI
+    try {
+      final qrValidation = await LocationService.validateQRCode(
+        'dummy_qr_data',
+      );
 
-      final result = {
-        'time': _formatTime(DateTime.now()),
-        'type': _attendanceType,
-      };
+      if (!qrValidation.success || !qrValidation.data!.isValid) {
+        _showLocationErrorDialog('Invalid QR code. Please try again.');
+        setState(() {
+          _isProcessing = false;
+        });
+        return;
+      }
 
-      // ✅ NAVIGATION YANG AMAN
-      _safePop(result);
-    });
+      final attendanceResponse = await LocationService.submitAttendance(
+        type: _attendanceType,
+        sessionId: qrValidation.data!.sessionId,
+        latitude: _currentLocation!['latitude'],
+        longitude: _currentLocation!['longitude'],
+        locationAddress: _currentLocation!['address'],
+      );
+
+      if (attendanceResponse.success) {
+        final result = {
+          'time': _formatTime(DateTime.now()),
+          'type': _attendanceType,
+          'location': _currentLocation,
+          'success': true,
+        };
+
+        _safePop(result);
+      } else {
+        _showLocationErrorDialog(
+          attendanceResponse.message ?? 'Failed to record attendance',
+        );
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    } catch (e) {
+      _showLocationErrorDialog('Network error: ${e.toString()}');
+      setState(() {
+        _isProcessing = false;
+      });
+    }
   }
 
-  // ✅ METHOD BARU UNTUK SAFE NAVIGATION
   void _safePop(dynamic result) {
     if (_hasPopped || !mounted) return;
-
-    _hasPopped = true; // SET FLAG SEBELUM POP
+    _hasPopped = true;
 
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop(result);
     } else {
-      // Fallback jika tidak bisa pop
       Navigator.of(
         context,
       ).pushReplacementNamed(RouteNames.home, arguments: result);
@@ -146,21 +284,14 @@ class _QrScanScreenState extends State<QrScanScreen>
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // Scanner Background - Full Screen
           Positioned.fill(child: _buildScannerView()),
-
-          // Overlay UI - Full Screen
           Positioned.fill(child: _buildScannerOverlay(context)),
-
-          // Floating Action Buttons - Positioned at bottom
           Positioned(
             left: 0,
             right: 0,
             bottom: _showBottomNav ? 80 : 20,
             child: _buildFloatingButtons(),
           ),
-
-          // Floating Bottom Nav - Conditional visibility
           if (_showBottomNav)
             Positioned(
               left: 0,
@@ -181,8 +312,8 @@ class _QrScanScreenState extends State<QrScanScreen>
   }
 
   void _handleBackButton() {
-    if (_hasPopped) return; // ✅ CEK FLAG
-    _safePop(null); // ✅ GUNAKAN SAFE POP
+    if (_hasPopped) return;
+    _safePop(null);
   }
 
   Widget _buildScannerView() {
@@ -201,10 +332,7 @@ class _QrScanScreenState extends State<QrScanScreen>
       color: Colors.black.withOpacity(0.5),
       child: Column(
         children: [
-          // Top Spacer
           SizedBox(height: (size.height - scannerSize - 200) / 2),
-
-          // Scanner Frame
           Container(
             width: scannerSize,
             height: scannerSize,
@@ -217,7 +345,6 @@ class _QrScanScreenState extends State<QrScanScreen>
             ),
             child: Stack(
               children: [
-                // Animated scanning line
                 AnimatedBuilder(
                   animation: _animationController,
                   builder: (context, child) {
@@ -250,8 +377,6 @@ class _QrScanScreenState extends State<QrScanScreen>
               ],
             ),
           ),
-
-          // Instructions
           Container(
             margin: const EdgeInsets.only(top: 32),
             padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -276,11 +401,53 @@ class _QrScanScreenState extends State<QrScanScreen>
                   ),
                   textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _isLocationLoading
+                          ? AppThemes.warningColor
+                          : _locationSettings != null
+                          ? AppThemes.successColor
+                          : AppThemes.errorColor,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _isLocationLoading
+                            ? Icons.location_searching
+                            : _locationSettings != null
+                            ? Icons.location_on
+                            : Icons.location_off,
+                        color: _isLocationLoading
+                            ? AppThemes.warningColor
+                            : _locationSettings != null
+                            ? AppThemes.successColor
+                            : AppThemes.errorColor,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _locationStatus,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-
-          // Status Indicator
           if (_isProcessing)
             Container(
               margin: const EdgeInsets.only(top: 24),
@@ -327,15 +494,12 @@ class _QrScanScreenState extends State<QrScanScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          // Flash Button
           _buildFloatingButton(
             icon: _isFlashOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
             label: _isFlashOn ? 'Flash On' : 'Flash Off',
             color: _isFlashOn ? AppThemes.warningColor : AppThemes.primaryColor,
             onPressed: _isProcessing ? () {} : _toggleFlash,
           ),
-
-          // Scan Button
           _buildFloatingButton(
             icon: Icons.qr_code_scanner_rounded,
             label: 'Scan',
@@ -343,8 +507,6 @@ class _QrScanScreenState extends State<QrScanScreen>
             onPressed: _isProcessing ? () {} : _startScan,
             isLarge: true,
           ),
-
-          // Gallery Button
           _buildFloatingButton(
             icon: Icons.photo_library_rounded,
             label: 'Gallery',
@@ -415,13 +577,12 @@ class _QrScanScreenState extends State<QrScanScreen>
   }
 
   void _handleBarcodeDetected(BarcodeCapture capture) {
-    if (_isProcessing || !_isScanning || _hasPopped) return; // ✅ CEK FLAG
+    if (_isProcessing || !_isScanning || _hasPopped) return;
 
     final barcodes = capture.barcodes;
     if (barcodes.isNotEmpty) {
       final barcode = barcodes.first;
       if (barcode.rawValue != null && barcode.rawValue!.isNotEmpty) {
-        // AUTO-SUBMIT
         _submitAttendance();
       }
     }
@@ -454,14 +615,13 @@ class _QrScanScreenState extends State<QrScanScreen>
 
   Future<void> _pickImageFromGallery() async {
     try {
-      if (_isProcessing || _hasPopped) return; // ✅ CEK FLAG
+      if (_isProcessing || _hasPopped) return;
 
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
       );
 
       if (image != null) {
-        // AUTO-SUBMIT untuk gallery
         _submitAttendance();
       }
     } catch (e) {

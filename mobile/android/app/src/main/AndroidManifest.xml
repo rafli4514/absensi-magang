@@ -18,7 +18,7 @@
     <application
         android:label="myinternplus"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon">  <!-- PERUBAHAN DI SINI -->
+        android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
             android:usesCleartextTraffic="true"
