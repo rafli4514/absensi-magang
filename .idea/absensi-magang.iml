@@ -126,6 +126,12 @@
       <excludeFolder url="file://$MODULE_DIR$/mobile/windows/flutter/ephemeral/.plugin_symlinks/shared_preferences_windows/example/.dart_tool" />
       <excludeFolder url="file://$MODULE_DIR$/mobile/windows/flutter/ephemeral/.plugin_symlinks/shared_preferences_windows/example/.pub" />
       <excludeFolder url="file://$MODULE_DIR$/mobile/windows/flutter/ephemeral/.plugin_symlinks/shared_preferences_windows/example/build" />
+      <excludeFolder url="file://$MODULE_DIR$/mobile/linux/flutter/ephemeral/.plugin_symlinks/geolocator_linux/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/mobile/linux/flutter/ephemeral/.plugin_symlinks/geolocator_linux/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/mobile/linux/flutter/ephemeral/.plugin_symlinks/geolocator_linux/build" />
+      <excludeFolder url="file://$MODULE_DIR$/mobile/linux/flutter/ephemeral/.plugin_symlinks/geolocator_linux/example/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/mobile/linux/flutter/ephemeral/.plugin_symlinks/geolocator_linux/example/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/mobile/linux/flutter/ephemeral/.plugin_symlinks/geolocator_linux/example/build" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

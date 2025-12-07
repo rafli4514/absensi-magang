@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+
+import '../utils/indonesian_time.dart';
 
 class AttendanceProvider with ChangeNotifier {
   String _clockInTime = '--:--';
@@ -7,12 +11,39 @@ class AttendanceProvider with ChangeNotifier {
   bool _isClockedOut = false;
   DateTime? _lastClockIn;
 
+  // Untuk waktu real-time
+  late Timer _timeUpdateTimer;
+  String _currentTime = '';
+  String _currentDate = '';
+
   // Getters
   String get clockInTime => _clockInTime;
   String? get clockOutTime => _clockOutTime;
   bool get isClockedIn => _isClockedIn;
   bool get isClockedOut => _isClockedOut;
   DateTime? get lastClockIn => _lastClockIn;
+  String get currentTime => _currentTime;
+  String get currentDate => _currentDate;
+
+  AttendanceProvider() {
+    _updateCurrentTime();
+    // Setup timer untuk update waktu setiap menit
+    _timeUpdateTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      _updateCurrentTime();
+    });
+  }
+
+  void _updateCurrentTime() {
+    _currentTime = IndonesianTime.formatTime(IndonesianTime.now);
+    _currentDate = IndonesianTime.getFormattedDate();
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _timeUpdateTimer.cancel();
+    super.dispose();
+  }
 
   // Methods
   void clockIn(String time) {
@@ -59,15 +90,20 @@ class AttendanceProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Validasi waktu
+  // Validasi waktu - menggunakan waktu real-time
   bool get canClockIn {
-    final now = DateTime.now();
+    final now = IndonesianTime.now;
     return now.hour >= 8;
   }
 
   bool get canClockOut {
     if (!_isClockedIn || _isClockedOut) return false;
-    final now = DateTime.now();
+    final now = IndonesianTime.now;
     return now.hour >= 17;
+  }
+
+  // Get current greeting
+  String get currentGreeting {
+    return IndonesianTime.getGreeting();
   }
 }

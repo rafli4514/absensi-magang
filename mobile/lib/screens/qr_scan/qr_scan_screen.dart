@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../navigation/route_names.dart';
 import '../../services/location_service.dart';
+import '../../services/permission_service.dart'; // ADD THIS IMPORT
 import '../../themes/app_themes.dart';
+import '../../utils/indonesian_time.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/floating_bottom_nav.dart';
 
@@ -25,6 +29,10 @@ class _QrScanScreenState extends State<QrScanScreen>
   final ImagePicker _imagePicker = ImagePicker();
   late AnimationController _animationController;
   bool _hasPopped = false;
+
+  // Untuk waktu real-time
+  String _currentTime = '';
+  late Timer _timer;
 
   OfficeLocationSettings? _locationSettings;
   Map<String, dynamic>? _currentLocation;
@@ -70,6 +78,17 @@ class _QrScanScreenState extends State<QrScanScreen>
   }
 
   Future<void> _getCurrentLocation() async {
+    // ADD PERMISSION CHECK HERE
+    final hasPermission = await PermissionService.requestLocationPermission();
+
+    if (!hasPermission) {
+      _showPermissionDialog(
+        'Location Access Required',
+        'Please grant location access to get your current position',
+      );
+      return;
+    }
+
     setState(() {
       _isLocationLoading = true;
       _locationStatus = 'Getting your location...';
@@ -93,12 +112,18 @@ class _QrScanScreenState extends State<QrScanScreen>
   }
 
   bool _isValidClockOutTime() {
-    final now = DateTime.now();
+    final now = IndonesianTime.now;
     return now.hour >= 17;
   }
 
   String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    return IndonesianTime.formatTime(time);
+  }
+
+  void _updateCurrentTime() {
+    setState(() {
+      _currentTime = IndonesianTime.formatTime(IndonesianTime.now);
+    });
   }
 
   void _showTimeErrorDialog() {
@@ -107,7 +132,7 @@ class _QrScanScreenState extends State<QrScanScreen>
       builder: (context) => CustomDialog(
         title: 'Cannot Clock Out Yet',
         content:
-            'Clock out is only available after 17:00.\nCurrent time: ${_formatTime(DateTime.now())}',
+            'Clock out is only available after 17:00.\nCurrent time: $_currentTime',
         primaryButtonText: 'OK',
         primaryButtonColor: AppThemes.warningColor,
         onPrimaryButtonPressed: () => Navigator.pop(context),
@@ -124,6 +149,30 @@ class _QrScanScreenState extends State<QrScanScreen>
         primaryButtonText: 'OK',
         primaryButtonColor: AppThemes.errorColor,
         onPrimaryButtonPressed: () => Navigator.pop(context),
+      ),
+    );
+  }
+
+  // ADD THIS NEW METHOD FOR PERMISSION DIALOG
+  void _showPermissionDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              PermissionService.openAppSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
       ),
     );
   }
@@ -207,7 +256,7 @@ class _QrScanScreenState extends State<QrScanScreen>
 
       if (attendanceResponse.success) {
         final result = {
-          'time': _formatTime(DateTime.now()),
+          'time': _currentTime,
           'type': _attendanceType,
           'location': _currentLocation,
           'success': true,
@@ -251,12 +300,48 @@ class _QrScanScreenState extends State<QrScanScreen>
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
+
+    // Setup timer untuk update waktu setiap detik
+    _currentTime = IndonesianTime.formatTime(IndonesianTime.now);
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        _updateCurrentTime();
+      }
+    });
+
+    // ADD PERMISSION CHECK ON STARTUP
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPermissionsOnStart();
+    });
+  }
+
+  // ADD THIS NEW METHOD
+  Future<void> _checkPermissionsOnStart() async {
+    final permissions = await PermissionService.checkAllPermissions();
+
+    if (!permissions['location']! && mounted) {
+      _showPermissionDialog(
+        'Location Permission Required',
+        'Location access is required for attendance recording. '
+            'Please grant location permission in app settings.',
+      );
+    }
+
+    if (!permissions['camera']! && mounted) {
+      // Camera permission is usually requested by mobile_scanner automatically
+      // But we can show a reminder if needed
+      _showPermissionDialog(
+        'Camera Permission Required',
+        'Camera access is required for scanning QR codes.',
+      );
+    }
   }
 
   @override
   void dispose() {
     cameraController.dispose();
     _animationController.dispose();
+    _timer.cancel(); // Cancel timer
     super.dispose();
   }
 
@@ -402,6 +487,42 @@ class _QrScanScreenState extends State<QrScanScreen>
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
+
+                // Display current time
+                Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppThemes.primaryColor.withOpacity(0.5),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        color: AppThemes.primaryColor,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Time: $_currentTime',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -616,6 +737,17 @@ class _QrScanScreenState extends State<QrScanScreen>
   Future<void> _pickImageFromGallery() async {
     try {
       if (_isProcessing || _hasPopped) return;
+
+      // ADD PERMISSION CHECK HERE
+      final hasPermission = await PermissionService.requestGalleryPermission();
+
+      if (!hasPermission) {
+        _showPermissionDialog(
+          'Gallery Access Required',
+          'Please grant gallery access to pick images',
+        );
+        return;
+      }
 
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
