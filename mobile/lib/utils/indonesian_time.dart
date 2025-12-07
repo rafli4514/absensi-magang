@@ -1,11 +1,33 @@
+import 'dart:async';
+
 import 'package:intl/intl.dart';
 
 class IndonesianTime {
   // Timezone untuk WIB (Western Indonesian Time) - UTC+7
   static const int timeZoneOffset = 7;
 
+  // Stream untuk waktu real-time
+  static Stream<DateTime> get nowStream {
+    return Stream.periodic(
+      const Duration(seconds: 1),
+      (count) => _getCurrentIndonesianTime(),
+    );
+  }
+
+  static Stream<String> get formattedTimeStream {
+    return nowStream.map((time) => formatTime(time));
+  }
+
+  static Stream<String> get greetingStream {
+    return nowStream.map((time) => _getGreetingFromHour(time.hour));
+  }
+
   // Get current time in Indonesia timezone
   static DateTime get now {
+    return _getCurrentIndonesianTime();
+  }
+
+  static DateTime _getCurrentIndonesianTime() {
     final utcNow = DateTime.now().toUtc();
     return utcNow.add(const Duration(hours: timeZoneOffset));
   }
@@ -13,37 +35,40 @@ class IndonesianTime {
   // Format date to Indonesian format: "Rabu, 8 Oktober 2025"
   static String getFormattedDate() {
     final indonesianNow = now;
-    final dayName = _getDayName(indonesianNow.weekday);
-    final monthName = _getMonthName(indonesianNow.month);
+    final dayName = getDayName(indonesianNow.weekday);
+    final monthName = getMonthName(indonesianNow.month);
     return '$dayName, ${indonesianNow.day} $monthName ${indonesianNow.year}';
   }
 
   // Format time: "14.16"
+  static String formatTime(DateTime time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  }
+
   static String getFormattedTime() {
-    final indonesianNow = now;
-    return '${indonesianNow.hour.toString().padLeft(2, '0')}.${indonesianNow.minute.toString().padLeft(2, '0')}';
+    return formatTime(now);
   }
 
   // Format date for display: "Rabu • 8 Oktober 2025"
   static String getFormattedDateWithSeparator() {
     final indonesianNow = now;
-    final dayName = _getDayName(indonesianNow.weekday);
-    final monthName = _getMonthName(indonesianNow.month);
+    final dayName = getDayName(indonesianNow.weekday);
+    final monthName = getMonthName(indonesianNow.month);
     return '$dayName • ${indonesianNow.day} $monthName ${indonesianNow.year}';
   }
 
   // Format date only: "8 Oktober 2025"
   static String getFormattedDateOnly() {
     final indonesianNow = now;
-    final monthName = _getMonthName(indonesianNow.month);
+    final monthName = getMonthName(indonesianNow.month);
     return '${indonesianNow.day} $monthName ${indonesianNow.year}';
   }
 
   // Format day and date: "Rabu • 8 Oktober 2025"
   static String getDayAndDate() {
     final indonesianNow = now;
-    final dayName = _getDayName(indonesianNow.weekday);
-    final monthName = _getMonthName(indonesianNow.month);
+    final dayName = getDayName(indonesianNow.weekday);
+    final monthName = getMonthName(indonesianNow.month);
     return '$dayName • ${indonesianNow.day} $monthName ${indonesianNow.year}';
   }
 
@@ -59,7 +84,17 @@ class IndonesianTime {
     return '${indonesianNow.hour.toString().padLeft(2, '0')}.${indonesianNow.minute.toString().padLeft(2, '0')}.${indonesianNow.second.toString().padLeft(2, '0')}';
   }
 
-  // Helper function to get day name in Indonesian
+  // Helper function to get day name in Indonesian - PUBLIC VERSION
+  static String getDayName(int weekday) {
+    return _getDayName(weekday);
+  }
+
+  // Helper function to get month name in Indonesian - PUBLIC VERSION
+  static String getMonthName(int month) {
+    return _getMonthName(month);
+  }
+
+  // PRIVATE Helper function to get day name in Indonesian
   static String _getDayName(int weekday) {
     switch (weekday) {
       case 1:
@@ -81,7 +116,7 @@ class IndonesianTime {
     }
   }
 
-  // Helper function to get month name in Indonesian
+  // PRIVATE Helper function to get month name in Indonesian
   static String _getMonthName(int month) {
     switch (month) {
       case 1:
@@ -127,9 +162,10 @@ class IndonesianTime {
 
   // Get greeting based on time of day
   static String getGreeting() {
-    final indonesianNow = now;
-    final hour = indonesianNow.hour;
+    return _getGreetingFromHour(now.hour);
+  }
 
+  static String _getGreetingFromHour(int hour) {
     if (hour >= 5 && hour < 12) {
       return 'Selamat pagi';
     } else if (hour >= 12 && hour < 15) {
