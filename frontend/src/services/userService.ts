@@ -3,14 +3,14 @@ import api from '../lib/api';
 export interface CreateUserRequest {
   username: string;
   password: string;
-  role: 'ADMIN' | 'USER' | 'PEMBIMBING_MAGANG';
+  role: 'ADMIN' | 'PESERTA_MAGANG' | 'PEMBIMBING_MAGANG';
   isActive?: boolean;
 }
 
 export interface UpdateUserRequest {
   username?: string;
   password?: string;
-  role?: 'ADMIN' | 'USER' | 'PEMBIMBING_MAGANG';
+  role?: 'ADMIN' | 'PESERTA_MAGANG' | 'PEMBIMBING_MAGANG';
   isActive?: boolean;
 }
 

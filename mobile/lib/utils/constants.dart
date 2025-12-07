@@ -2,14 +2,14 @@ class AppConstants {
   static const String appName = 'Employee App';
     // static const String baseUrl = 'http://10.0.2.2:3000/api'; // Android Emulator
   // static const String baseUrl = 'http://localhost:3000/api'; // iOS Simulator
-  static const String baseUrl = 'http://20.25.3.211:3000/api'; // Physical Device
+  static const String baseUrl = 'http://10.115.178.175:3000/api'; // Physical Device
 
   // Storage Keys
   static const String tokenKey = 'auth_token';
   static const String userDataKey = 'user_data';
   static const String themeModeKey = 'theme_mode';
   static const String onboardSeenKey = 'onboard_seen';
-  static const String firstLaunchKey = 'first_launch'; // TAMBAHKAN INI
+  static const String firstLaunchKey = 'first_launch';
 
   // API Endpoints
   static const String loginEndpoint = '/auth/login';

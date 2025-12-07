@@ -11,7 +11,7 @@ model User {
   id        String   @id @default(cuid())
   username  String   @unique
   password  String
-  role      Role     @default(USER)
+  role      Role     @default(PESERTA_MAGANG)
   isActive  Boolean  @default(true)
   avatar    String?
   createdAt DateTime @default(now())
@@ -115,7 +115,7 @@ model Settings {
 
 enum Role {
   ADMIN
-  USER
+  PESERTA_MAGANG
   PEMBIMBING_MAGANG
 }
 

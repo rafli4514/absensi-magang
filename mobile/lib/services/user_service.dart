@@ -108,7 +108,7 @@ class UserService {
   static Future<ApiResponse<User>> createUser({
     required String username,
     required String password,
-    String role = 'user',
+    String role = 'peserta_magang',
     bool isActive = true,
   }) async {
     try {

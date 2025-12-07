@@ -4,8 +4,8 @@ import authService from '../services/authService';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'ADMIN' | 'USER' | 'PEMBIMBING_MAGANG';
-  allowedRoles?: ('ADMIN' | 'USER' | 'PEMBIMBING_MAGANG')[];
+  requiredRole?: 'ADMIN' | 'PESERTA_MAGANG' | 'PEMBIMBING_MAGANG';
+  allowedRoles?: ('ADMIN' | 'PESERTA_MAGANG' | 'PEMBIMBING_MAGANG')[];
 }
 
 export default function ProtectedRoute({ children, requiredRole, allowedRoles }: ProtectedRouteProps) {

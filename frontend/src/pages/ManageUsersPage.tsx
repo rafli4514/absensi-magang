@@ -11,7 +11,6 @@ import {
   Table,
   Text,
   TextField,
-  Badge,
 } from "@radix-ui/themes/components/index";
 import {
   Pencil2Icon,
@@ -23,13 +22,11 @@ import {
 } from "@radix-ui/react-icons";
 import userService, { type CreateUserRequest, type UpdateUserRequest } from "../services/userService";
 import type { User } from "../types";
-import { roleMapping, getDisplayRole } from "../lib/enums";
-import authService from "../services/authService";
 
 const RoleBadge = ({ role }: { role: User["role"] }) => {
   const roleConfig = {
     ADMIN: { color: "bg-purple-100 text-purple-800", label: "Admin" },
-    USER: { color: "bg-blue-100 text-blue-800", label: "User" },
+    PESERTA_MAGANG: { color: "bg-blue-100 text-blue-800", label: "Peserta Magang" },
     PEMBIMBING_MAGANG: { color: "bg-green-100 text-green-800", label: "Pembimbing Magang" },
   };
 
@@ -69,13 +66,12 @@ export default function ManageUsersPage() {
   const [roleFilter, setRoleFilter] = useState<string>("Semua");
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
-  const [currentEditingId, setCurrentEditingId] = useState<string | null>(null);
 
   // Form states for create/edit
   const [formData, setFormData] = useState<CreateUserRequest>({
     username: "",
     password: "",
-    role: "USER",
+    role: "PESERTA_MAGANG",
     isActive: true,
   });
 
@@ -114,7 +110,7 @@ export default function ManageUsersPage() {
         setFormData({
           username: "",
           password: "",
-          role: "USER",
+          role: "PESERTA_MAGANG",
           isActive: true,
         });
         setError(null);
@@ -136,7 +132,6 @@ export default function ManageUsersPage() {
       if (response.success) {
         await fetchUsers();
         setUpdateFormData({});
-        setCurrentEditingId(null);
         setError(null);
       } else {
         setError(response.message || "Failed to update user");
@@ -180,10 +175,9 @@ export default function ManageUsersPage() {
   };
 
   const initializeUpdateForm = (user: User) => {
-    setCurrentEditingId(user.id);
     setUpdateFormData({
       username: user.username,
-      role: user.role,
+      role: user.role as "ADMIN" | "PESERTA_MAGANG" | "PEMBIMBING_MAGANG",
       isActive: user.isActive,
     });
   };
@@ -224,7 +218,7 @@ export default function ManageUsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">
             Manajemen User
           </h1>
-          <p className="text-gray-600">Kelola data user (Admin, User, Pembimbing Magang)</p>
+          <p className="text-gray-600">Kelola data user (Admin, Peserta Magang, Pembimbing Magang)</p>
         </div>
         <Dialog.Root>
           <Dialog.Trigger>
@@ -280,13 +274,13 @@ export default function ManageUsersPage() {
                   onValueChange={(value) =>
                     setFormData({
                       ...formData,
-                      role: value as "ADMIN" | "USER" | "PEMBIMBING_MAGANG",
+                      role: value as "ADMIN" | "PESERTA_MAGANG" | "PEMBIMBING_MAGANG",
                     })
                   }
                 >
                   <Select.Trigger className="w-full" />
                   <Select.Content>
-                    <Select.Item value="USER">User</Select.Item>
+                    <Select.Item value="PESERTA_MAGANG">Peserta Magang</Select.Item>
                     <Select.Item value="ADMIN">Admin</Select.Item>
                     <Select.Item value="PEMBIMBING_MAGANG">Pembimbing Magang</Select.Item>
                   </Select.Content>
@@ -362,7 +356,7 @@ export default function ManageUsersPage() {
                 <Select.Content color="indigo">
                   <Select.Item value="Semua">Semua Role</Select.Item>
                   <Select.Item value="ADMIN">Admin</Select.Item>
-                  <Select.Item value="USER">User</Select.Item>
+                  <Select.Item value="PESERTA_MAGANG">Peserta Magang</Select.Item>
                   <Select.Item value="PEMBIMBING_MAGANG">Pembimbing Magang</Select.Item>
                 </Select.Content>
               </Select.Root>
@@ -468,13 +462,13 @@ export default function ManageUsersPage() {
                                 onValueChange={(value) =>
                                   setUpdateFormData({
                                     ...updateFormData,
-                                    role: value as "ADMIN" | "USER" | "PEMBIMBING_MAGANG",
+                                    role: value as "ADMIN" | "PESERTA_MAGANG" | "PEMBIMBING_MAGANG",
                                   })
                                 }
                               >
                                 <Select.Trigger className="w-full" />
                                 <Select.Content>
-                                  <Select.Item value="USER">User</Select.Item>
+                                  <Select.Item value="PESERTA_MAGANG">Peserta Magang</Select.Item>
                                   <Select.Item value="ADMIN">Admin</Select.Item>
                                   <Select.Item value="PEMBIMBING_MAGANG">Pembimbing Magang</Select.Item>
                                 </Select.Content>
