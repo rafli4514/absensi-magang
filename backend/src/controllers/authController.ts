@@ -128,7 +128,7 @@ export const loginPesertaMagang = async (req: Request, res: Response) => {
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { username, password, role = "user" } = req.body;
+    const { username, password, role = "peserta_magang" } = req.body;
 
     if (!username || !password) {
       return sendError(res, "Username and password are required", 400);

@@ -137,7 +137,7 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
       data: {
         username,
         password: hashedPassword,
-        role: 'USER',
+        role: 'PESERTA_MAGANG',
         isActive: true,
       },
     });
