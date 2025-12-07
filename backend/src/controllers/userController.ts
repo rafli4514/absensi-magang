@@ -79,7 +79,7 @@ export const getUserById = async (req: Request, res: Response) => {
 
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { username, password, role = 'user', isActive = true } = req.body;
+    const { username, password, role = 'peserta_magang', isActive = true } = req.body;
 
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({

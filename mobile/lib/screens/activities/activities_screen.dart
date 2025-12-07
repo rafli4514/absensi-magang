@@ -1,16 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/activity.dart';
 import '../../models/enum/activity_status.dart';
 import '../../models/enum/activity_type.dart';
+import '../../models/logbook.dart';
+import '../../models/timeline_activity.dart';
 import '../../navigation/route_names.dart';
 import '../../providers/theme_provider.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/navigation_helper.dart';
+import '../../utils/responsive_layout.dart';
+import '../../widgets/activities_header.dart';
+import '../../widgets/activities_statistics.dart';
+import '../../widgets/activities_timeline.dart';
+import '../../widgets/activity_card.dart';
+import '../../widgets/activity_form_dialog.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/floating_bottom_nav.dart';
+import '../../widgets/logbook_card.dart';
+import '../../widgets/logbook_form_dialog.dart';
 
 class ActivitiesScreen extends StatefulWidget {
   const ActivitiesScreen({super.key});
@@ -20,6 +31,48 @@ class ActivitiesScreen extends StatefulWidget {
 }
 
 class _ActivitiesScreenState extends State<ActivitiesScreen> {
+  // --- STATE VARIABLES ---
+  int _selectedTabIndex = 0; // 0 = Activity, 1 = LogBook
+
+  // LOGIKA FILTER MINGGU
+  int _selectedWeekIndex = 0; // 0 artinya Minggu ke-1
+  late DateTime _startDateMagang; // Simulasi tanggal mulai magang
+  final int _totalWeeksDuration = 12; // Simulasi durasi 3 bulan (12 minggu)
+
+  // Dummy Data LogBook
+  final List<LogBook> _allLogBooks = [
+    LogBook(
+      id: '1',
+      title: 'Pemasangan Kabel Fiber (Minggu 1)',
+      content: 'Membantu teknisi senior memasang jalur baru.',
+      location: 'Perumahan Griya Indah',
+      mentorName: 'Pak Budi',
+      // Set tanggal agar masuk di Minggu ke-1 (Hari ke-2 magang)
+      createdAt: DateTime.now().subtract(const Duration(days: 20)),
+    ),
+    LogBook(
+      id: '2',
+      title: 'Konfigurasi Router (Minggu 3)',
+      content: 'Belajar setting Mikrotik dasar.',
+      location: 'Lab Jaringan',
+      mentorName: 'Pak Dedi',
+      // Set tanggal agar masuk di Minggu ke-3 (Hari ke-15 magang)
+      createdAt: DateTime.now().subtract(const Duration(days: 5)),
+    ),
+    LogBook(
+      id: '3',
+      title: 'Maintenance Server (Hari Ini)',
+      content: 'Cek suhu dan update OS server.',
+      location: 'Ruang Server',
+      mentorName: 'Pak Budi',
+      createdAt: DateTime.now(), // Masuk di minggu saat ini
+    ),
+  ];
+
+  // List yang akan ditampilkan setelah difilter
+  List<LogBook> _filteredLogBooks = [];
+
+  // Dummy Data Activities
   final List<Activity> _activities = [
     Activity(
       id: '1',
@@ -43,78 +96,222 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       createdAt: DateTime(2024, 1, 20),
       updatedAt: DateTime(2024, 1, 20),
     ),
-    Activity(
-      id: '3',
-      pesertaMagangId: '1',
-      tanggal: '2024-01-18',
-      kegiatan: 'Training Session',
-      deskripsi: 'New software tools training',
-      type: ActivityType.training,
-      status: ActivityStatus.inProgress,
-      createdAt: DateTime(2024, 1, 18),
-      updatedAt: DateTime(2024, 1, 18),
+  ];
+
+  final List<TimelineActivity> _timelineActivities = [
+    TimelineActivity(
+      time: '08:15',
+      activity: 'Check-in pagi hari',
+      status: 'Selesai',
+      location: 'Kantor PLN UID',
     ),
-    Activity(
-      id: '4',
-      pesertaMagangId: '1',
-      tanggal: '2024-01-22',
-      kegiatan: 'Client Presentation',
-      deskripsi: 'Present project progress to client',
-      type: ActivityType.presentation,
-      status: ActivityStatus.pending,
-      createdAt: DateTime(2024, 1, 22),
-      updatedAt: DateTime(2024, 1, 22),
+    TimelineActivity(
+      time: '09:00',
+      activity: 'Briefing morning',
+      status: 'Selesai',
+      location: 'Ruang Meeting Lt. 2',
+    ),
+    TimelineActivity(
+      time: '12:00',
+      activity: 'Istirahat siang',
+      status: 'Menunggu',
+      location: 'Kantin',
     ),
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // SIMULASI: Anggap user mulai magang 3 minggu lalu dari hari ini
+    // Nanti ganti ini dengan data dari AuthProvider: authProvider.user.startDate
+    _startDateMagang = DateTime.now().subtract(const Duration(days: 21));
+
+    // Set default selected week ke minggu saat ini (atau minggu terakhir yg ada log)
+    _selectedWeekIndex = 3; // Misal kita set default ke Minggu 4
+
+    _filterLogBooks();
+  }
+
+  void _filterLogBooks() {
+    // Hitung tanggal mulai dan akhir untuk minggu yang dipilih
+    // Minggu 1: hari 0 s/d hari 6
+    // Minggu 2: hari 7 s/d hari 13
+    final weekStartDate = _startDateMagang.add(
+      Duration(days: _selectedWeekIndex * 7),
+    );
+    final weekEndDate = weekStartDate.add(
+      const Duration(days: 6, hours: 23, minutes: 59),
+    );
+
+    setState(() {
+      _filteredLogBooks = _allLogBooks.where((log) {
+        return log.createdAt.isAfter(
+              weekStartDate.subtract(const Duration(seconds: 1)),
+            ) &&
+            log.createdAt.isBefore(weekEndDate);
+      }).toList();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.isDarkMode;
+    final isDark = themeProvider.isDarkMode;
 
     return Scaffold(
+      backgroundColor: isDark
+          ? AppThemes.darkBackground
+          : AppThemes.backgroundColor,
       appBar: CustomAppBar(
         title: 'Activities',
         showBackButton: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _showFilterDialog,
+            icon: const Icon(Icons.filter_list_rounded),
+            onPressed: () => {},
           ),
         ],
       ),
-      body: Stack(
+      body: ResponsiveLayout(
+        mobileBody: _buildMobileLayout(isDark),
+        tabletBody: _buildTabletLayout(isDark),
+      ),
+    );
+  }
+
+  // === LAYOUT BUILDERS ===
+  Widget _buildMobileLayout(bool isDark) {
+    return Stack(
+      children: [
+        CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: ActivitiesHeader(
+                  onAddActivity: () => _showActivityForm(context, null),
+                  onAddLogbook: () => _showLogBookForm(context, null),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ActivitiesStatistics(isMobile: true),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: ActivitiesTimeline(activities: _timelineActivities),
+              ),
+            ),
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _StickyTabDelegate(
+                isDark: isDark,
+                selectedIndex: _selectedTabIndex,
+                onTabSelected: (index) =>
+                    setState(() => _selectedTabIndex = index),
+              ),
+            ),
+
+            // WIDGET FILTER MINGGU (Hanya muncul jika Tab Logbook aktif)
+            if (_selectedTabIndex == 1)
+              SliverToBoxAdapter(child: _buildWeekFilter(isDark)),
+
+            _buildListContent(isDark),
+            const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+          ],
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: FloatingBottomNav(
+            currentRoute: RouteNames.activities,
+            onQRScanTap: () => NavigationHelper.navigateWithoutAnimation(
+              context,
+              RouteNames.qrScan,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabletLayout(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _activities.isEmpty
-              ? Center(
-                  child: Text(
-                    'No activities found',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppThemes.hintColor,
+          Expanded(
+            flex: 5,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  ActivitiesHeader(
+                    onAddActivity: () => _showActivityForm(context, null),
+                    onAddLogbook: () => _showLogBookForm(context, null),
+                  ),
+                  const SizedBox(height: 24),
+                  const ActivitiesStatistics(isMobile: false),
+                  const SizedBox(height: 24),
+                  ActivitiesTimeline(activities: _timelineActivities),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 24),
+          Expanded(
+            flex: 4,
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? AppThemes.darkOutline : Colors.grey.shade200,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        _TabButton(
+                          title: 'Activity',
+                          isActive: _selectedTabIndex == 0,
+                          onTap: () => setState(() => _selectedTabIndex = 0),
+                          isDark: isDark,
+                        ),
+                        const SizedBox(width: 8),
+                        _TabButton(
+                          title: 'Log Book',
+                          isActive: _selectedTabIndex == 1,
+                          onTap: () => setState(() => _selectedTabIndex = 1),
+                          isDark: isDark,
+                        ),
+                      ],
                     ),
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _activities.length,
-                  itemBuilder: (context, index) {
-                    final activity = _activities[index];
-                    return _buildActivityCard(context, activity, isDarkMode);
-                  },
-                ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: FloatingBottomNav(
-              currentRoute: RouteNames.activities,
-              onQRScanTap: () {
-                NavigationHelper.navigateWithoutAnimation(
-                  context,
-                  RouteNames.qrScan,
-                );
-              },
+                  // Filter Minggu untuk Tablet
+                  if (_selectedTabIndex == 1)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildWeekFilter(isDark),
+                    ),
+
+                  const Divider(height: 1),
+                  Expanded(
+                    child: CustomScrollView(
+                      slivers: [_buildListContent(isDark)],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -122,61 +319,321 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     );
   }
 
-  Widget _buildActivityCard(
-    BuildContext context,
-    Activity activity,
-    bool isDarkMode,
-  ) {
-    final theme = Theme.of(context);
+  // WIDGET FILTER MINGGU
+  Widget _buildWeekFilter(bool isDark) {
+    return Container(
+      height: 50,
+      margin: const EdgeInsets.only(bottom: 8, top: 8),
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        scrollDirection: Axis.horizontal,
+        itemCount: _totalWeeksDuration, // Misal 12 minggu
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final isSelected = index == _selectedWeekIndex;
+          final weekStart = _startDateMagang.add(Duration(days: index * 7));
+          final weekEnd = weekStart.add(const Duration(days: 6));
+          final dateRange =
+              "${DateFormat('dd MMM').format(weekStart)} - ${DateFormat('dd MMM').format(weekEnd)}";
 
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 12),
-      color: theme.cardTheme.color,
-      shape: theme.cardTheme.shape,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildActivityTypeChip(activity.type, isDarkMode),
-                _buildStatusChip(activity.status, isDarkMode),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              activity.title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              activity.description,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppThemes.hintColor,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: AppThemes.hintColor,
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedWeekIndex = index;
+                _filterLogBooks();
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppThemes.primaryColor
+                    : (isDark ? AppThemes.darkSurfaceElevated : Colors.white),
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: isSelected
+                      ? AppThemes.primaryColor
+                      : (isDark ? AppThemes.darkOutline : Colors.grey.shade300),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  _formatDateTime(activity.date),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppThemes.hintColor,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Minggu ${index + 1}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isSelected
+                          ? Colors.white
+                          : (isDark
+                                ? AppThemes.darkTextPrimary
+                                : AppThemes.onSurfaceColor),
+                    ),
+                  ),
+                  Text(
+                    dateRange,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isSelected
+                          ? Colors.white.withOpacity(0.9)
+                          : (isDark
+                                ? AppThemes.darkTextSecondary
+                                : AppThemes.hintColor),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildListContent(bool isDark) {
+    if (_selectedTabIndex == 0) {
+      // --- TAB ACTIVITY ---
+      return _activities.isEmpty
+          ? _buildEmptyState(isDark, 'No activities found')
+          : SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  child: InkWell(
+                    onTap: () => _showActivityForm(context, _activities[index]),
+                    borderRadius: BorderRadius.circular(12),
+                    child: ActivityCard(
+                      activity: _activities[index],
+                      isDark: isDark,
+                    ),
                   ),
                 ),
-              ],
+                childCount: _activities.length,
+              ),
+            );
+    } else {
+      // --- TAB LOG BOOK (Filtered) ---
+      return _filteredLogBooks.isEmpty
+          ? _buildEmptyState(isDark, 'Belum ada Log Book di Minggu ini')
+          : SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  child: LogBookCard(
+                    log: _filteredLogBooks[index],
+                    isDark: isDark,
+                    onEdit: () =>
+                        _showLogBookForm(context, _filteredLogBooks[index]),
+                    onDelete: () => _confirmDeleteLog(context, index),
+                  ),
+                ),
+                childCount: _filteredLogBooks.length,
+              ),
+            );
+    }
+  }
+
+  // === CRUD LOGIC ===
+
+  void _showLogBookForm(BuildContext context, LogBook? existingLog) {
+    showDialog(
+      context: context,
+      builder: (context) => LogBookFormDialog(
+        existingLog: existingLog,
+        onSave: (title, location, mentor, content) {
+          setState(() {
+            if (existingLog != null) {
+              final index = _allLogBooks.indexWhere(
+                (log) => log.id == existingLog.id,
+              );
+              if (index != -1) {
+                _allLogBooks[index] = existingLog.copyWith(
+                  title: title,
+                  location: location,
+                  mentorName: mentor,
+                  content: content,
+                );
+              }
+            } else {
+              _allLogBooks.insert(
+                0,
+                LogBook(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  title: title,
+                  location: location,
+                  mentorName: mentor,
+                  content: content,
+                  createdAt: DateTime.now(), // Akan masuk ke minggu saat ini
+                ),
+              );
+              // Pindah ke tab LogBook dan pilih minggu sesuai tanggal created
+              _selectedTabIndex = 1;
+              // Opsional: hitung logic untuk auto-select minggu jika perlu
+            }
+            _filterLogBooks(); // Refresh filter
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Data berhasil disimpan'),
+              backgroundColor: AppThemes.successColor,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showActivityForm(BuildContext context, Activity? existingActivity) {
+    showDialog(
+      context: context,
+      builder: (context) => ActivityFormDialog(
+        existingActivity: existingActivity,
+        onSave: (kegiatan, deskripsi, date, type, status) {
+          setState(() {
+            if (existingActivity != null) {
+              final index = _activities.indexWhere(
+                (a) => a.id == existingActivity.id,
+              );
+              if (index != -1) {
+                _activities[index] = Activity(
+                  id: existingActivity.id,
+                  pesertaMagangId: existingActivity.pesertaMagangId,
+                  tanggal: DateFormat('yyyy-MM-dd').format(date),
+                  kegiatan: kegiatan,
+                  deskripsi: deskripsi,
+                  type: type,
+                  status: status,
+                  createdAt: existingActivity.createdAt,
+                  updatedAt: DateTime.now(),
+                );
+              }
+            } else {
+              _activities.insert(
+                0,
+                Activity(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  pesertaMagangId: '1',
+                  tanggal: DateFormat('yyyy-MM-dd').format(date),
+                  kegiatan: kegiatan,
+                  deskripsi: deskripsi,
+                  type: type,
+                  status: status,
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                ),
+              );
+              _selectedTabIndex = 0;
+            }
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                existingActivity == null
+                    ? 'Berhasil tambah'
+                    : 'Berhasil update',
+              ),
+              backgroundColor: AppThemes.successColor,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _confirmDeleteLog(BuildContext context, int index) {
+    showDialog(
+      context: context,
+      builder: (context) => CustomDialog(
+        title: 'Hapus Log?',
+        content: 'Data yang dihapus tidak dapat dikembalikan.',
+        primaryButtonText: 'Hapus',
+        secondaryButtonText: 'Batal',
+        onPrimaryButtonPressed: () {
+          // Cari item yg mau dihapus di list utama
+          final itemToDelete = _filteredLogBooks[index];
+          setState(() {
+            _allLogBooks.removeWhere(
+              (element) => element.id == itemToDelete.id,
+            );
+            _filterLogBooks();
+          });
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(bool isDark, String message) {
+    return SliverFillRemaining(
+      hasScrollBody: false,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.inbox_outlined,
+              size: 48,
+              color: AppThemes.hintColor.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: TextStyle(
+                color: isDark
+                    ? AppThemes.darkTextSecondary
+                    : AppThemes.hintColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Helper Class Sticky Header (Sama seperti sebelumnya)
+class _StickyTabDelegate extends SliverPersistentHeaderDelegate {
+  final bool isDark;
+  final int selectedIndex;
+  final Function(int) onTabSelected;
+
+  _StickyTabDelegate({
+    required this.isDark,
+    required this.selectedIndex,
+    required this.onTabSelected,
+  });
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return SizedBox.expand(
+      child: Container(
+        color: isDark ? AppThemes.darkBackground : AppThemes.backgroundColor,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            _TabButton(
+              title: 'Recent Activities',
+              isActive: selectedIndex == 0,
+              onTap: () => onTabSelected(0),
+              isDark: isDark,
+            ),
+            const SizedBox(width: 12),
+            _TabButton(
+              title: 'Log Books',
+              isActive: selectedIndex == 1,
+              onTap: () => onTabSelected(1),
+              isDark: isDark,
             ),
           ],
         ),
@@ -184,112 +641,53 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     );
   }
 
-  Widget _buildActivityTypeChip(ActivityType type, bool isDarkMode) {
-    final Map<ActivityType, Map<String, dynamic>> typeData = {
-      ActivityType.meeting: {
-        'label': 'Meeting',
-        'color': AppThemes.infoColor,
-        'lightColor': AppThemes.infoLight,
-      },
-      ActivityType.training: {
-        'label': 'Training',
-        'color': AppThemes.warningColor,
-        'lightColor': AppThemes.warningLight,
-      },
-      ActivityType.presentation: {
-        'label': 'Presentation',
-        'color': AppThemes.successColor,
-        'lightColor': AppThemes.successLight,
-      },
-      ActivityType.deadline: {
-        'label': 'Deadline',
-        'color': AppThemes.errorColor,
-        'lightColor': AppThemes.errorLight,
-      },
-      ActivityType.other: {
-        'label': 'Other',
-        'color': AppThemes.hintColor,
-        'lightColor': AppThemes.hintColor.withOpacity(0.1),
-      },
-    };
+  @override
+  double get minExtent => 65.0;
+  @override
+  double get maxExtent => 65.0;
+  @override
+  bool shouldRebuild(_StickyTabDelegate oldDelegate) =>
+      selectedIndex != oldDelegate.selectedIndex ||
+      isDark != oldDelegate.isDark;
+}
 
-    final data = typeData[type]!;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: isDarkMode ? data['color'].withOpacity(0.2) : data['lightColor'],
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: data['color'].withOpacity(0.3), width: 1),
-      ),
-      child: Text(
-        data['label'],
-        style: TextStyle(
-          color: data['color'],
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
+class _TabButton extends StatelessWidget {
+  final String title;
+  final bool isActive;
+  final VoidCallback onTap;
+  final bool isDark;
+  const _TabButton({
+    required this.title,
+    required this.isActive,
+    required this.onTap,
+    required this.isDark,
+  });
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive
+              ? AppThemes.primaryColor
+              : (isDark ? AppThemes.darkSurface : Colors.transparent),
+          borderRadius: BorderRadius.circular(20),
+          border: isActive || isDark
+              ? null
+              : Border.all(color: AppThemes.hintColor.withOpacity(0.3)),
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatusChip(ActivityStatus status, bool isDarkMode) {
-    final Map<ActivityStatus, Map<String, dynamic>> statusData = {
-      ActivityStatus.completed: {
-        'label': 'Completed',
-        'color': AppThemes.successColor,
-        'lightColor': AppThemes.successLight,
-      },
-      ActivityStatus.pending: {
-        'label': 'Pending',
-        'color': AppThemes.warningColor,
-        'lightColor': AppThemes.warningLight,
-      },
-      ActivityStatus.inProgress: {
-        'label': 'In Progress',
-        'color': AppThemes.infoColor,
-        'lightColor': AppThemes.infoLight,
-      },
-      ActivityStatus.cancelled: {
-        'label': 'Cancelled',
-        'color': AppThemes.errorColor,
-        'lightColor': AppThemes.errorLight,
-      },
-    };
-
-    final data = statusData[status]!;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: isDarkMode ? data['color'].withOpacity(0.2) : data['lightColor'],
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: data['color'].withOpacity(0.3), width: 1),
-      ),
-      child: Text(
-        data['label'],
-        style: TextStyle(
-          color: data['color'],
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
+        child: Text(
+          title,
+          style: TextStyle(
+            color: isActive
+                ? Colors.white
+                : (isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor),
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
         ),
-      ),
-    );
-  }
-
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-  }
-
-  void _showFilterDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => CustomDialog(
-        title: 'Filter Activities',
-        content: 'Filter options will be implemented here',
-        primaryButtonText: 'Apply',
-        onPrimaryButtonPressed: () => Navigator.pop(context),
-        secondaryButtonText: 'Cancel',
       ),
     );
   }

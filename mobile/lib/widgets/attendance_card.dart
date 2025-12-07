@@ -1,11 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../navigation/route_names.dart';
 import '../providers/theme_provider.dart';
 import '../themes/app_themes.dart';
+import '../utils/indonesian_time.dart';
 
-class AttendanceCard extends StatelessWidget {
+class AttendanceCard extends StatefulWidget {
   final VoidCallback onClockIn;
   final VoidCallback onClockOut;
   final bool isClockedIn;
@@ -19,16 +22,38 @@ class AttendanceCard extends StatelessWidget {
     required this.isClockedOut,
   });
 
+  @override
+  State<AttendanceCard> createState() => _AttendanceCardState();
+}
+
+class _AttendanceCardState extends State<AttendanceCard> {
+  late StreamSubscription<DateTime> _timeSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // Subscribe ke stream waktu
+    _timeSubscription = IndonesianTime.nowStream.listen((_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timeSubscription.cancel();
+    super.dispose();
+  }
+
   // Fungsi untuk cek apakah sudah waktunya clock out (setelah jam 17:00)
   bool _isClockOutTime() {
-    final now = DateTime.now();
-    return now.hour >= 17; // Bisa disesuaikan dengan kebutuhan
+    return IndonesianTime.now.hour >= 17;
   }
 
   // Fungsi untuk cek apakah sudah waktunya clock in (setelah jam 08:00)
   bool _isClockInTime() {
-    final now = DateTime.now();
-    return now.hour >= 8; // Bisa disesuaikan dengan kebutuhan
+    return IndonesianTime.now.hour >= 8;
   }
 
   @override
@@ -39,8 +64,10 @@ class AttendanceCard extends StatelessWidget {
     final canClockOut = _isClockOutTime();
     final canClockIn = _isClockInTime();
 
-    final bool showClockIn = !isClockedIn || (isClockedIn && isClockedOut);
-    final bool showClockOut = isClockedIn && !isClockedOut && canClockOut;
+    final bool showClockIn =
+        !widget.isClockedIn || (widget.isClockedIn && widget.isClockedOut);
+    final bool showClockOut =
+        widget.isClockedIn && !widget.isClockedOut && canClockOut;
 
     return Card(
       elevation: isDarkMode ? 4 : 2,
@@ -73,7 +100,7 @@ class AttendanceCard extends StatelessWidget {
                 if (showClockIn) ...[
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: canClockIn ? onClockIn : null,
+                      onPressed: canClockIn ? widget.onClockIn : null,
                       icon: const Icon(Icons.login_rounded),
                       label: const Text('Clock In'),
                       style: ElevatedButton.styleFrom(
@@ -98,7 +125,7 @@ class AttendanceCard extends StatelessWidget {
                 if (showClockOut) ...[
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: onClockOut,
+                      onPressed: widget.onClockOut,
                       icon: const Icon(Icons.logout_rounded),
                       label: const Text('Clock Out'),
                       style: ElevatedButton.styleFrom(
@@ -143,7 +170,7 @@ class AttendanceCard extends StatelessWidget {
               ],
             ),
 
-            // Info waktu saat ini
+            // Info waktu saat ini - StreamBuilder untuk update otomatis
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(8),
@@ -153,27 +180,33 @@ class AttendanceCard extends StatelessWidget {
                     : AppThemes.backgroundColor,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.access_time_rounded,
-                    size: 16,
-                    color: isDarkMode
-                        ? AppThemes.darkTextSecondary
-                        : AppThemes.hintColor,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Current Time: ${_formatTime(DateTime.now())}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDarkMode
-                          ? AppThemes.darkTextSecondary
-                          : AppThemes.hintColor,
-                    ),
-                  ),
-                ],
+              child: StreamBuilder<DateTime>(
+                stream: IndonesianTime.nowStream,
+                builder: (context, snapshot) {
+                  final currentTime = snapshot.data ?? IndonesianTime.now;
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 16,
+                        color: isDarkMode
+                            ? AppThemes.darkTextSecondary
+                            : AppThemes.hintColor,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Current Time: ${IndonesianTime.formatTime(currentTime)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDarkMode
+                              ? AppThemes.darkTextSecondary
+                              : AppThemes.hintColor,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
 
@@ -193,9 +226,5 @@ class AttendanceCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 }

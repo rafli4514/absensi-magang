@@ -14,7 +14,7 @@ class AuthService {
     String username,
     String password,
   ) async {
-    print('🔵 [AUTH SERVICE] Attempting login with username: $username');
+    print('鳩 [AUTH SERVICE] Attempting login with username: $username');
 
     final response = await _apiService.post(AppConstants.loginEndpoint, {
       'username': username,
@@ -22,7 +22,7 @@ class AuthService {
     }, (data) => LoginResponse.fromJson(data));
 
     print(
-      '🔵 [AUTH SERVICE] Login response: ${response.success} - ${response.message}',
+      '鳩 [AUTH SERVICE] Login response: ${response.success} - ${response.message}',
     );
     return response;
   }
@@ -33,7 +33,7 @@ class AuthService {
     String password,
   ) async {
     print(
-      '🔵 [AUTH SERVICE] Attempting peserta login with username: $username',
+      '鳩 [AUTH SERVICE] Attempting peserta login with username: $username',
     );
 
     final response = await _apiService.post(AppConstants.loginPesertaEndpoint, {
@@ -42,12 +42,12 @@ class AuthService {
     }, (data) => LoginResponse.fromJson(data));
 
     print(
-      '🔵 [AUTH SERVICE] Peserta login response: ${response.success} - ${response.message}',
+      '鳩 [AUTH SERVICE] Peserta login response: ${response.success} - ${response.message}',
     );
     return response;
   }
 
-  // Register dengan semua field untuk peserta magang - UPDATED TO MATCH BACKEND
+  // Register dengan semua field untuk peserta magang
   static Future<ApiResponse<LoginResponse>> register({
     required String username,
     required String password,
@@ -59,7 +59,7 @@ class AuthService {
     String? tanggalSelesai,
     String? role = "user", // Default sesuai backend
   }) async {
-    print('🔵 [AUTH SERVICE] Attempting register with username: $username');
+    print('鳩 [AUTH SERVICE] Attempting register with username: $username');
 
     // Prepare data sesuai dengan yang diharapkan backend
     final data = {
@@ -76,7 +76,7 @@ class AuthService {
         'tanggalSelesai': tanggalSelesai,
     };
 
-    print('🔵 [AUTH SERVICE] Registration data: $data');
+    print('[AUTH SERVICE] Registration data: $data');
 
     final response = await _apiService.post(
       AppConstants.registerEndpoint,
@@ -85,7 +85,7 @@ class AuthService {
     );
 
     print(
-      '🔵 [AUTH SERVICE] Register response: ${response.success} - ${response.message}',
+      '鳩 [AUTH SERVICE] Register response: ${response.success} - ${response.message}',
     );
     return response;
   }
@@ -99,7 +99,7 @@ class AuthService {
     return response;
   }
 
-  // Update profile (protected route) - UPDATED TO MATCH BACKEND
+  // Update profile (protected route) - PERBAIKAN DI SINI
   static Future<ApiResponse<User>> updateProfile({
     String? username,
     String? nama,
@@ -108,6 +108,9 @@ class AuthService {
     String? nomorHp,
     String? currentPassword,
     String? newPassword,
+    // Menambahkan parameter tanggal agar AuthProvider tidak error
+    String? tanggalMulai,
+    String? tanggalSelesai,
   }) async {
     final body = <String, dynamic>{};
     if (username != null) body['username'] = username;
@@ -115,6 +118,10 @@ class AuthService {
     if (divisi != null) body['divisi'] = divisi;
     if (instansi != null) body['instansi'] = instansi;
     if (nomorHp != null) body['nomorHp'] = nomorHp;
+
+    // Menambahkan logic untuk mengirim tanggal ke backend
+    if (tanggalMulai != null) body['tanggalMulai'] = tanggalMulai;
+    if (tanggalSelesai != null) body['tanggalSelesai'] = tanggalSelesai;
 
     // Password change logic sesuai backend
     if (newPassword != null) {
@@ -125,14 +132,14 @@ class AuthService {
     }
 
     final response = await _apiService.put(
-      AppConstants.profileEndpoint, // Endpoint sesuai backend
+      AppConstants.profileEndpoint,
       body,
       (data) => User.fromJson(data),
     );
     return response;
   }
 
-  // Upload avatar - NEW METHOD
+  // Upload avatar
   static Future<ApiResponse<Map<String, dynamic>>> uploadAvatar(
     List<int> imageBytes,
     String fileName,
@@ -156,7 +163,7 @@ class AuthService {
     }
   }
 
-  // Remove avatar - NEW METHOD
+  // Remove avatar
   static Future<ApiResponse<User>> removeAvatar() async {
     final response = await _apiService.delete(
       '${AppConstants.profileEndpoint}/avatar',
