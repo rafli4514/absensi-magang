@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
@@ -20,20 +21,47 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  // Controllers
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _divisiController = TextEditingController();
   final _instansiController = TextEditingController();
   final _nomorHpController = TextEditingController();
+  final _tanggalMulaiController = TextEditingController();
+  final _tanggalSelesaiController = TextEditingController(); // Read-only
+
   final ImagePicker _imagePicker = ImagePicker();
+  final DateFormat _dateFormat = DateFormat('yyyy-MM-dd'); // Format standar DB
 
   bool _isLoading = false;
   XFile? _selectedImage;
 
+  // Logic Durasi (Default 3 bulan)
+  int _selectedDuration = 3;
+  final List<int> _durations = [1, 2, 3, 4, 5, 6, 12];
+
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    // Memuat data setelah frame pertama selesai dirender
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadUserData();
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _usernameController.dispose();
+    _emailController.dispose();
+    _divisiController.dispose();
+    _instansiController.dispose();
+    _nomorHpController.dispose();
+    _tanggalMulaiController.dispose();
+    _tanggalSelesaiController.dispose();
+    super.dispose();
   }
 
   void _loadUserData() {
@@ -41,47 +69,145 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = authProvider.user;
 
     if (user != null) {
-      _nameController.text = user.nama ?? '';
-      _usernameController.text = user.username;
-      _divisiController.text = user.divisi ?? '';
-      _instansiController.text = user.instansi ?? '';
-      _nomorHpController.text = user.nomorHp ?? '';
+      setState(() {
+        _nameController.text = user.nama ?? '';
+        _usernameController.text = user.username;
+        _emailController.text = user.email ?? '';
+        _divisiController.text = user.divisi ?? '';
+        _instansiController.text = user.instansi ?? '';
+        _nomorHpController.text = user.nomorHp ?? '';
+
+        // Load Tanggal
+        _tanggalMulaiController.text = user.tanggalMulai ?? '';
+        _tanggalSelesaiController.text = user.tanggalSelesai ?? '';
+
+        // Coba hitung durasi dari data yang ada agar UI Chip sesuai
+        if (user.tanggalMulai != null && user.tanggalSelesai != null) {
+          try {
+            DateTime start = DateTime.parse(user.tanggalMulai!);
+            DateTime end = DateTime.parse(user.tanggalSelesai!);
+
+            // Hitung selisih bulan secara kasar
+            int diffMonths =
+                ((end.year - start.year) * 12) + end.month - start.month;
+
+            // Jika selisih hari > 15, anggap tambah 1 bulan (rounding)
+            if (end.day - start.day > 15) diffMonths++;
+
+            if (_durations.contains(diffMonths)) {
+              _selectedDuration = diffMonths;
+            }
+          } catch (e) {
+            debugPrint("Error parsing date for duration: $e");
+          }
+        }
+      });
     }
   }
 
+  // --- DATE LOGIC ---
+  Future<void> _selectStartDate() async {
+    DateTime initialDate = DateTime.now();
+    if (_tanggalMulaiController.text.isNotEmpty) {
+      try {
+        initialDate = DateTime.parse(_tanggalMulaiController.text);
+      } catch (_) {}
+    }
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        final isDarkMode = Provider.of<ThemeProvider>(
+          context,
+          listen: false,
+        ).isDarkMode;
+        return Theme(
+          data: isDarkMode ? AppThemes.darkTheme : AppThemes.lightTheme,
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _tanggalMulaiController.text = _dateFormat.format(picked);
+        _calculateEndDate();
+      });
+    }
+  }
+
+  void _updateDuration(int duration) {
+    setState(() {
+      _selectedDuration = duration;
+      _calculateEndDate();
+    });
+  }
+
+  void _calculateEndDate() {
+    if (_tanggalMulaiController.text.isNotEmpty) {
+      try {
+        final startDate = DateTime.parse(_tanggalMulaiController.text);
+        // Menambahkan bulan ke tanggal mulai
+        final endDate = DateTime(
+          startDate.year,
+          startDate.month + _selectedDuration,
+          startDate.day,
+        );
+        _tanggalSelesaiController.text = _dateFormat.format(endDate);
+      } catch (e) {
+        debugPrint("Error calculating end date: $e");
+      }
+    }
+  }
+  // ------------------
+
   Future<void> _updateProfile() async {
     if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      // Simulate API call dengan upload gambar
-      await Future.delayed(const Duration(seconds: 2));
+      setState(() => _isLoading = true);
 
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-      // Jika ada gambar yang dipilih, upload gambar
-      if (_selectedImage != null) {
-        // Di sini Anda bisa mengupload gambar ke server
-        print('Uploading image: ${_selectedImage!.path}');
-      }
+      // Integrasi ke AuthProvider
+      final success = await authProvider.updateUserProfile(
+        nama: _nameController.text.trim(),
+        username: _usernameController.text.trim(),
+        divisi: _divisiController.text.trim(),
+        instansi: _instansiController.text.trim(),
+        nomorHp: _nomorHpController.text.trim(),
+        tanggalMulai: _tanggalMulaiController.text.trim(),
+        tanggalSelesai: _tanggalSelesaiController.text.trim(),
+      );
 
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Profile updated successfully!'),
-            backgroundColor: AppThemes.successColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Profile updated successfully!'),
+              backgroundColor: AppThemes.successColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
-          ),
-        );
-        Navigator.pop(context);
+          );
+          Navigator.pop(context); // Kembali ke ProfileScreen
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authProvider.error ?? 'Failed to update profile'),
+              backgroundColor: AppThemes.errorColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          );
+        }
       }
     }
   }
@@ -94,14 +220,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         maxHeight: 800,
         imageQuality: 80,
       );
-
-      if (image != null) {
-        setState(() {
-          _selectedImage = image;
-        });
-      }
+      if (image != null) setState(() => _selectedImage = image);
     } catch (e) {
-      _showErrorSnackBar('Failed to pick image from gallery: $e');
+      _showErrorSnackBar('Failed to pick image: $e');
     }
   }
 
@@ -113,12 +234,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         maxHeight: 800,
         imageQuality: 80,
       );
-
-      if (image != null) {
-        setState(() {
-          _selectedImage = image;
-        });
-      }
+      if (image != null) setState(() => _selectedImage = image);
     } catch (e) {
       _showErrorSnackBar('Failed to take photo: $e');
     }
@@ -135,10 +251,284 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildProfilePicture() {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final authProvider = Provider.of<AuthProvider>(context);
+    final isStudent = authProvider.isStudent; // Cek role user
     final isDarkMode = themeProvider.isDarkMode;
 
+    return Scaffold(
+      appBar: CustomAppBar(title: 'Edit Profile', showBackButton: true),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- Profile Picture Section ---
+              Center(
+                child: Stack(
+                  children: [
+                    _buildProfilePicture(isDarkMode),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: _showImageSourceDialog,
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: isDarkMode
+                                ? AppThemes.darkAccentBlue
+                                : AppThemes.primaryColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isDarkMode
+                                  ? AppThemes.darkSurface
+                                  : Colors.white,
+                              width: 3,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton.icon(
+                  onPressed: _showImageSourceDialog,
+                  icon: Icon(
+                    Icons.edit_rounded,
+                    color: isDarkMode
+                        ? AppThemes.darkAccentBlue
+                        : AppThemes.primaryColor,
+                  ),
+                  label: Text(
+                    'Change Profile Picture',
+                    style: TextStyle(
+                      color: isDarkMode
+                          ? AppThemes.darkAccentBlue
+                          : AppThemes.primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // --- Personal Info Section ---
+              _buildSectionTitle('Personal Info', isDarkMode),
+              _buildModernFormField(
+                controller: _nameController,
+                label: 'Nama Lengkap',
+                icon: Icons.person_rounded,
+                validator: Validators.validateName,
+                isDarkMode: isDarkMode,
+              ),
+              const SizedBox(height: 20),
+              _buildModernFormField(
+                controller: _usernameController,
+                label: 'Username',
+                icon: Icons.alternate_email_rounded,
+                validator: Validators.validateUsername,
+                isDarkMode: isDarkMode,
+              ),
+              const SizedBox(height: 20),
+              _buildModernFormField(
+                controller: _emailController,
+                label: 'Email',
+                icon: Icons.email_rounded,
+                validator: Validators.validateEmail,
+                keyboardType: TextInputType.emailAddress,
+                isDarkMode: isDarkMode,
+              ),
+              const SizedBox(height: 20),
+              _buildModernFormField(
+                controller: _nomorHpController,
+                label: 'Nomor HP',
+                icon: Icons.phone_rounded,
+                validator: Validators.validatePhoneNumber,
+                keyboardType: TextInputType.phone,
+                isDarkMode: isDarkMode,
+              ),
+
+              const SizedBox(height: 32),
+
+              // --- Internship Info (Conditional) ---
+              // Hanya ditampilkan jika user adalah student/magang
+              if (isStudent) ...[
+                _buildSectionTitle('Internship Info', isDarkMode),
+                _buildModernFormField(
+                  controller: _divisiController,
+                  label: 'Divisi',
+                  icon: Icons.business_center_rounded,
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Wajib diisi' : null,
+                  isDarkMode: isDarkMode,
+                ),
+                const SizedBox(height: 20),
+                _buildModernFormField(
+                  controller: _instansiController,
+                  label: 'Instansi / Kampus',
+                  icon: Icons.school_rounded,
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Wajib diisi' : null,
+                  isDarkMode: isDarkMode,
+                ),
+                const SizedBox(height: 20),
+
+                // Tanggal Mulai (Date Picker Style)
+                _buildDateField(
+                  controller: _tanggalMulaiController,
+                  label: 'Tanggal Mulai',
+                  icon: Icons.calendar_today_rounded,
+                  onTap: _selectStartDate,
+                  isDarkMode: isDarkMode,
+                ),
+                const SizedBox(height: 20),
+
+                // Durasi Selector
+                Text(
+                  'Durasi Magang',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode
+                        ? AppThemes.darkTextPrimary
+                        : AppThemes.onSurfaceColor,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _durations
+                        .map(
+                          (d) => Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ChoiceChip(
+                              label: Text('$d Bulan'),
+                              selected: _selectedDuration == d,
+                              onSelected: (selected) {
+                                if (selected) _updateDuration(d);
+                              },
+                              selectedColor: isDarkMode
+                                  ? AppThemes.darkAccentBlue
+                                  : AppThemes.primaryColor,
+                              labelStyle: TextStyle(
+                                color: _selectedDuration == d
+                                    ? Colors.white
+                                    : (isDarkMode
+                                          ? AppThemes.darkTextPrimary
+                                          : AppThemes.onSurfaceColor),
+                              ),
+                              backgroundColor: isDarkMode
+                                  ? AppThemes.darkSurface
+                                  : Colors.grey.shade100,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Tanggal Selesai (Read Only - Auto Calculated)
+                _buildDateField(
+                  controller: _tanggalSelesaiController,
+                  label: 'Tanggal Selesai (Auto)',
+                  icon: Icons.event_available_rounded,
+                  isDarkMode: isDarkMode,
+                  isReadOnly: true,
+                ),
+
+                const SizedBox(height: 40),
+              ],
+
+              // --- Update Button ---
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: _isLoading
+                    ? const LoadingIndicator()
+                    : ElevatedButton(
+                        onPressed: _updateProfile,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDarkMode
+                              ? AppThemes.darkAccentBlue
+                              : AppThemes.primaryColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: Text(
+                          'Update Profile',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- WIDGET HELPERS ---
+
+  Widget _buildSectionTitle(String title, bool isDarkMode) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isDarkMode
+                  ? AppThemes.darkTextPrimary
+                  : AppThemes.onSurfaceColor,
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            width: 40,
+            height: 3,
+            color: isDarkMode
+                ? AppThemes.darkAccentBlue
+                : AppThemes.primaryColor,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfilePicture(bool isDarkMode) {
     if (_selectedImage != null) {
       return Container(
         width: 120,
@@ -164,9 +554,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       );
     } else {
-      final authProvider = Provider.of<AuthProvider>(context);
-      final user = authProvider.user;
-
+      // Fallback UI
       return Container(
         width: 120,
         height: 120,
@@ -179,13 +567,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     .withOpacity(0.3),
             width: 3,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Icon(
           Icons.person_rounded,
@@ -200,12 +581,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     required TextEditingController controller,
     required String label,
     required IconData icon,
-    required String? Function(String?) validator,
+    String? Function(String?)? validator,
     TextInputType? keyboardType,
     required bool isDarkMode,
   }) {
     final theme = Theme.of(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -272,7 +652,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                    hintText: 'Enter your $label',
+                    hintText: 'Enter $label',
                     hintStyle: theme.textTheme.bodyMedium?.copyWith(
                       color: isDarkMode
                           ? AppThemes.darkTextSecondary
@@ -288,184 +668,95 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _usernameController.dispose();
-    _divisiController.dispose();
-    _instansiController.dispose();
-    _nomorHpController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildDateField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    VoidCallback? onTap,
+    required bool isDarkMode,
+    bool isReadOnly = false,
+  }) {
     final theme = Theme.of(context);
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.isDarkMode;
-
-    return Scaffold(
-      appBar: CustomAppBar(title: 'Edit Profile', showBackButton: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              // Profile Picture Section
-              Stack(
-                children: [
-                  _buildProfilePicture(),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: isDarkMode
-                            ? AppThemes.darkAccentBlue
-                            : AppThemes.primaryColor,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isDarkMode
-                              ? AppThemes.darkSurface
-                              : Colors.white,
-                          width: 3,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(
-                              isDarkMode ? 0.3 : 0.2,
-                            ),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: IconButton(
-                        onPressed: _showImageSourceDialog,
-                        icon: const Icon(
-                          Icons.camera_alt_rounded,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                        padding: EdgeInsets.zero,
-                      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: isDarkMode
+                ? AppThemes.darkTextPrimary
+                : theme.colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDarkMode
+                  ? AppThemes.darkSurface
+                  : (isReadOnly ? Colors.grey.shade200 : theme.cardColor),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDarkMode
+                    ? AppThemes.darkOutline
+                    : theme.dividerColor.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color:
+                        (isDarkMode
+                                ? AppThemes.darkAccentBlue
+                                : AppThemes.primaryColor)
+                            .withOpacity(0.1),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextButton.icon(
-                onPressed: _showImageSourceDialog,
-                icon: Icon(
-                  Icons.edit_rounded,
-                  color: isDarkMode
-                      ? AppThemes.darkAccentBlue
-                      : AppThemes.primaryColor,
-                ),
-                label: Text(
-                  'Change Profile Picture',
-                  style: TextStyle(
+                  child: Icon(
+                    icon,
                     color: isDarkMode
                         ? AppThemes.darkAccentBlue
                         : AppThemes.primaryColor,
-                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-              const SizedBox(height: 32),
-
-              // Form Fields
-              _buildModernFormField(
-                controller: _nameController,
-                label: 'Nama Lengkap',
-                icon: Icons.person_rounded,
-                validator: Validators.validateName,
-                isDarkMode: isDarkMode,
-              ),
-              const SizedBox(height: 20),
-              _buildModernFormField(
-                controller: _usernameController,
-                label: 'Username',
-                icon: Icons.person_rounded,
-                validator: Validators.validateUsername,
-                keyboardType: TextInputType.text,
-                isDarkMode: isDarkMode,
-              ),
-              const SizedBox(height: 20),
-              _buildModernFormField(
-                controller: _divisiController,
-                label: 'Divisi',
-                icon: Icons.business_center_rounded,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Divisi is required';
-                  }
-                  return null;
-                },
-                isDarkMode: isDarkMode,
-              ),
-              const SizedBox(height: 20),
-              _buildModernFormField(
-                controller: _instansiController,
-                label: 'Instansi',
-                icon: Icons.school_rounded,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Instansi is required';
-                  }
-                  return null;
-                },
-                isDarkMode: isDarkMode,
-              ),
-              const SizedBox(height: 20),
-              _buildModernFormField(
-                controller: _nomorHpController,
-                label: 'Nomor HP',
-                icon: Icons.phone_rounded,
-                validator: Validators.validatePhoneNumber,
-                keyboardType: TextInputType.phone,
-                isDarkMode: isDarkMode,
-              ),
-              const SizedBox(height: 32),
-
-              // Update Button
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: _isLoading
-                    ? const LoadingIndicator()
-                    : ElevatedButton(
-                        onPressed: _updateProfile,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isDarkMode
-                              ? AppThemes.darkAccentBlue
-                              : AppThemes.primaryColor,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 2,
-                          shadowColor: Colors.black.withOpacity(
-                            isDarkMode ? 0.3 : 0.1,
-                          ),
-                        ),
-                        child: Text(
-                          'Update Profile',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      controller.text.isEmpty
+                          ? 'Pilih Tanggal'
+                          : controller.text,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: isDarkMode
+                            ? AppThemes.darkTextPrimary
+                            : theme.textTheme.bodyMedium?.color,
                       ),
-              ),
-              const SizedBox(height: 20),
-            ],
+                    ),
+                  ),
+                ),
+                if (!isReadOnly)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Icon(
+                      Icons.arrow_drop_down,
+                      color: isDarkMode
+                          ? AppThemes.darkTextSecondary
+                          : theme.hintColor,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -498,15 +789,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   color: isDarkMode
                       ? AppThemes.darkTextPrimary
                       : theme.textTheme.titleMedium?.color,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Choose image source',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isDarkMode
-                      ? AppThemes.darkTextSecondary
-                      : theme.hintColor,
                 ),
               ),
               const SizedBox(height: 24),
@@ -559,7 +841,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     required bool isDarkMode,
   }) {
     final theme = Theme.of(context);
-
     return GestureDetector(
       onTap: onTap,
       child: Column(

@@ -273,7 +273,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Update profile - NEW METHOD
   Future<bool> updateUserProfile({
     String? username,
     String? nama,
@@ -282,6 +281,8 @@ class AuthProvider with ChangeNotifier {
     String? nomorHp,
     String? currentPassword,
     String? newPassword,
+    String? tanggalMulai,
+    String? tanggalSelesai,
   }) async {
     _isLoading = true;
     _error = null;
@@ -296,6 +297,8 @@ class AuthProvider with ChangeNotifier {
         nomorHp: nomorHp,
         currentPassword: currentPassword,
         newPassword: newPassword,
+        tanggalMulai: tanggalMulai,
+        tanggalSelesai: tanggalSelesai,
       );
 
       if (response.success && response.data != null) {
@@ -318,7 +321,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Refresh token - NEW METHOD
+  // Refresh token
   Future<bool> refreshAuthToken() async {
     try {
       final response = await AuthService.refreshToken();
