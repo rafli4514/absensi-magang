@@ -191,7 +191,7 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
                     const SizedBox(height: 10),
                     // User Name - clean and prominent
                     Text(
-                      user?.name?.split(' ').first ?? 'Teman',
+                      user?.displayName ?? 'Pengguna',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,

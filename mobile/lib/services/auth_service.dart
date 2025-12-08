@@ -85,7 +85,7 @@ class AuthService {
     );
 
     print(
-      '鳩 [AUTH SERVICE] Register response: ${response.success} - ${response.message}',
+      '[AUTH SERVICE] Register response: ${response.success} - ${response.message}',
     );
     return response;
   }
@@ -99,7 +99,6 @@ class AuthService {
     return response;
   }
 
-  // Update profile (protected route) - PERBAIKAN DI SINI
   static Future<ApiResponse<User>> updateProfile({
     String? username,
     String? nama,

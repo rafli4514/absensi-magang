@@ -1,3 +1,4 @@
+// lib/screens/profile/edit_profile_screen.dart
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -171,6 +172,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
       // Integrasi ke AuthProvider
+      // AuthProvider sekarang sudah otomatis melakukan refreshProfile() jika sukses
       final success = await authProvider.updateUserProfile(
         nama: _nameController.text.trim(),
         username: _usernameController.text.trim(),
@@ -195,7 +197,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             ),
           );
-          Navigator.pop(context); // Kembali ke ProfileScreen
+          Navigator.pop(context); // Kembali ke ProfileScreen dengan data baru
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -253,7 +255,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
     final isStudent = authProvider.isStudent; // Cek role user
@@ -350,6 +351,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 icon: Icons.alternate_email_rounded,
                 validator: Validators.validateUsername,
                 isDarkMode: isDarkMode,
+                readOnly: true,
               ),
               const SizedBox(height: 20),
               _buildModernFormField(
@@ -482,10 +484,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                         child: Text(
                           'Update Profile',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+                          style: themeProvider.themeMode == ThemeMode.dark
+                              ? null // Use default style for dark mode if needed or customize
+                              : const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
               ),
@@ -584,6 +585,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     String? Function(String?)? validator,
     TextInputType? keyboardType,
     required bool isDarkMode,
+    bool readOnly = false,
   }) {
     final theme = Theme.of(context);
     return Column(
@@ -601,19 +603,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: isDarkMode ? AppThemes.darkSurface : theme.cardColor,
+            // Warna background tetap abu-abu jika readOnly (memberi efek visual locked)
+            color: isDarkMode
+                ? (readOnly ? Colors.black12 : AppThemes.darkSurface)
+                : (readOnly ? Colors.grey.shade200 : theme.cardColor),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isDarkMode
                   ? AppThemes.darkOutline
                   : theme.dividerColor.withOpacity(0.3),
             ),
+            // Hilangkan shadow jika readOnly agar terlihat 'flat' (tidak bisa ditekan)
             boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDarkMode ? 0.1 : 0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
+              if (!readOnly)
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDarkMode ? 0.1 : 0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
             ],
           ),
           child: Row(
@@ -626,7 +633,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       (isDarkMode
                               ? AppThemes.darkAccentBlue
                               : AppThemes.primaryColor)
-                          .withOpacity(0.1),
+                          .withOpacity(readOnly ? 0.05 : 0.1),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(12),
                     bottomLeft: Radius.circular(12),
@@ -634,9 +641,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 child: Icon(
                   icon,
-                  color: isDarkMode
-                      ? AppThemes.darkAccentBlue
-                      : AppThemes.primaryColor,
+                  // Warna icon jadi abu-abu jika readOnly
+                  color: readOnly
+                      ? Colors.grey
+                      : (isDarkMode
+                            ? AppThemes.darkAccentBlue
+                            : AppThemes.primaryColor),
                 ),
               ),
               Expanded(
@@ -644,10 +654,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   controller: controller,
                   validator: validator,
                   keyboardType: keyboardType,
+
+                  // --- PERUBAHAN UTAMA DI SINI ---
+                  // Gunakan enabled: false untuk mematikan TOTAL semua interaksi (klik/hover)
+                  enabled: !readOnly,
+
                   style: theme.textTheme.bodyMedium?.copyWith(
+                    // Kita paksa warnanya tetap terbaca meski disabled
                     color: isDarkMode
-                        ? AppThemes.darkTextPrimary
-                        : theme.textTheme.bodyMedium?.color,
+                        ? (readOnly ? Colors.grey : AppThemes.darkTextPrimary)
+                        : (readOnly
+                              ? Colors.grey.shade600
+                              : theme.textTheme.bodyMedium?.color),
                   ),
                   decoration: InputDecoration(
                     border: InputBorder.none,
@@ -661,6 +679,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                 ),
               ),
+              // Icon Gembok (Visual Lock)
+              if (readOnly)
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Icon(Icons.lock_outline, size: 18, color: Colors.grey),
+                ),
             ],
           ),
         ),
@@ -762,7 +786,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   void _showImageSourceDialog() {
     final theme = Theme.of(context);
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.isDarkMode;
 
     showDialog(

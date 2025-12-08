@@ -1,3 +1,4 @@
+// lib/services/location_service.dart
 import 'dart:math';
 
 import 'package:geolocator/geolocator.dart';
@@ -96,6 +97,7 @@ class LocationService {
     }
   }
 
+  // PERBAIKAN: Menambahkan parameter akurasi dan detail waktu
   static Future<ApiResponse<Map<String, dynamic>>> submitAttendance({
     required String type,
     required String sessionId,
@@ -104,16 +106,28 @@ class LocationService {
     required String locationAddress,
   }) async {
     try {
-      final response = await _apiService.post(AppConstants.attendanceEndpoint, {
+      final now = DateTime.now();
+
+      // Data yang dikirim disinkronkan agar formatnya jelas di Backend
+      final Map<String, dynamic> body = {
         'type': type,
         'sessionId': sessionId,
         'location': {
           'latitude': latitude,
           'longitude': longitude,
           'address': locationAddress,
+          // Opsional: Tambahkan akurasi jika didukung backend
+          // 'accuracy': 0.0,
         },
-        'timestamp': DateTime.now().toIso8601String(),
-      }, (data) => data as Map<String, dynamic>);
+        'timestamp': now.toIso8601String(),
+        'timezone_offset': now.timeZoneOffset.inMinutes, // Info zona waktu
+      };
+
+      final response = await _apiService.post(
+        AppConstants.attendanceEndpoint,
+        body,
+        (data) => data as Map<String, dynamic>,
+      );
 
       return response;
     } catch (e) {
@@ -160,8 +174,10 @@ class LocationService {
         return true;
       }
 
+      // Gunakan akurasi tinggi untuk validasi jarak kantor
       final Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.bestForNavigation,
+        timeLimit: const Duration(seconds: 10),
       );
 
       final distance = calculateDistance(
@@ -171,6 +187,8 @@ class LocationService {
         settings.longitude,
       );
 
+      // Tambahkan toleransi sedikit (misal akurasi GPS)
+      // Jarak harus <= radius kantor
       return distance <= settings.radius;
     } catch (e) {
       print('❌ [LOCATION SERVICE] Error checking location: $e');
@@ -178,15 +196,17 @@ class LocationService {
     }
   }
 
+  // PERBAIKAN: Format alamat lebih informatif untuk ditampilkan di QR Screen
   static Future<Map<String, dynamic>?> getCurrentLocation() async {
     try {
-      // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
+        // Coba request enable service
+        // serviceEnabled = await Geolocator.openLocationSettings();
+        // if (!serviceEnabled) return null;
         return null;
       }
 
-      // Check permissions
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -199,19 +219,24 @@ class LocationService {
         return null;
       }
 
-      // Get current position
+      // Gunakan 'high' accuracy untuk presensi, jangan 'best' jika hanya untuk display (hemat baterai)
       final Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      // Simple address format - you can enhance this later
+      // Format alamat yang lebih rapi
       String address =
           'Lat: ${position.latitude.toStringAsFixed(6)}, Lng: ${position.longitude.toStringAsFixed(6)}';
+
+      // Jika nanti mau pakai reverse geocoding (ambil nama jalan), bisa ditambahkan di sini
+      // String realAddress = await _getGeocodingAddress(position);
 
       return {
         'latitude': position.latitude,
         'longitude': position.longitude,
-        'address': address,
+        'accuracy': position.accuracy,
+        'altitude': position.altitude,
+        'address': address, // Bisa diganti real address jika ada geocoding
         'timestamp': DateTime.now().toIso8601String(),
       };
     } catch (e) {

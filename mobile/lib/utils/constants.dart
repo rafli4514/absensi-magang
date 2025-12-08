@@ -2,9 +2,9 @@ class AppConstants {
   static const String appName = 'MyInternPlus';
 
   // Base URL
+  // static const String baseUrl = 'http://10.140.254.115:3000/api'; // Android Emulator
   static const String baseUrl =
-      'http://10.140.161.174:3000/api'; // Android Emulator
-  // static const String baseUrl = 'http://192.168.1.247:3000/api'; // Physical Device
+      'http://10.115.188.6:3000/api'; // Physical Device
   // static const String baseUrl = 'http://localhost:3000/api'; // iOS Simulator
 
   // Storage Keys

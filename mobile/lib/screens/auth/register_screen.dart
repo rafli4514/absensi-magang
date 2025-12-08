@@ -39,7 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Duration variables
   int _selectedDuration = 3;
   final List<int> _durations = [1, 2, 3, 4, 5, 6, 12];
-  final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
+  final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
 
   @override
   void dispose() {
@@ -121,6 +121,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         nomorHp: _nomorHpController.text.trim(),
         tanggalMulai: _tanggalMulaiController.text.trim(),
         tanggalSelesai: _tanggalSelesaiController.text.trim(),
+        role: 'peserta_magang',
       );
 
       if (success && mounted) {

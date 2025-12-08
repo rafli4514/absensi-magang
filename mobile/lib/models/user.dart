@@ -1,3 +1,4 @@
+// lib/models/user.dart
 class User {
   final String id;
   final String username;
@@ -40,7 +41,7 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
-    print('🔍 User.fromJson received: $json');
+    // print('🔍 User.fromJson received: $json'); // Debugging
 
     // Handle nested pesertaMagang data from backend
     final pesertaMagang = json['pesertaMagang'];
@@ -54,6 +55,7 @@ class User {
       username: json['username'] ?? '',
       nama: json['nama'] ?? json['name'] ?? pesertaMagang?['nama'],
       email: json['email'],
+      // Pastikan role selalu lowercase agar konsisten
       role: (json['role']?.toLowerCase() ?? ''),
       divisi: json['divisi'] ?? pesertaMagang?['divisi'],
       instansi: json['instansi'] ?? pesertaMagang?['instansi'],
@@ -94,17 +96,41 @@ class User {
     };
   }
 
+  // --- HELPER GETTERS ---
+
+  // Getter untuk tampilan UI yang rapi (Title Case)
+  // Contoh: 'peserta_magang' -> 'Peserta Magang'
+  String get displayRole {
+    if (role.isEmpty) return '-';
+    return role
+        .replaceAll('_', ' ') // Ganti underscore dengan spasi
+        .toLowerCase() // Kecilkan semua huruf
+        .split(' ') // Pisah per kata
+        .map(
+          (word) => word.isNotEmpty
+              ? '${word[0].toUpperCase()}${word.substring(1)}' // Kapital huruf pertama
+              : '',
+        )
+        .join(' '); // Gabung kembali
+  }
+
   // Helper getter untuk mendapatkan nama yang benar
   String get displayName => nama ?? username;
 
   // Helper getters untuk backward compatibility
   String? get name => nama;
   String? get department => divisi ?? instansi;
-  String? get position => role;
+
+  // Gunakan displayRole agar tampilan di UI rapi
+  String? get position => displayRole;
 
   // Helper untuk mengecek role
   bool get isAdmin => role.toLowerCase() == 'admin';
-  bool get isStudent => role.toLowerCase() == 'student';
+
+  // PERBAIKAN DI SINI: Cek juga 'peserta_magang'
+  bool get isStudent =>
+      role.toLowerCase() == 'student' || role.toLowerCase() == 'peserta_magang';
+
   bool get isPembimbing => role.toLowerCase() == 'pembimbing_magang';
   bool get isActiveUser => isActive ?? true;
 }
