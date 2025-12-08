@@ -3,6 +3,7 @@ import {
   login,
   loginPesertaMagang,
   register,
+  registerPesertaMagang,
   getProfile,
   updateProfile,
   uploadAvatar,
@@ -18,6 +19,7 @@ const router = Router();
 router.post('/login', login);
 router.post('/login-peserta', loginPesertaMagang);
 router.post('/register', register);
+router.post('/register-peserta-magang', registerPesertaMagang);
 
 // Protected routes
 router.use(authenticateToken);
