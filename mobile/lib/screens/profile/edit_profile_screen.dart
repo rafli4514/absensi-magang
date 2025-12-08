@@ -21,9 +21,10 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _departmentController = TextEditingController();
-  final _positionController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _divisiController = TextEditingController();
+  final _instansiController = TextEditingController();
+  final _nomorHpController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
 
   bool _isLoading = false;
@@ -40,10 +41,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = authProvider.user;
 
     if (user != null) {
-      _nameController.text = user.displayName;
-      _emailController.text = user.email ?? '';
-      _departmentController.text = user.department ?? '';
-      _positionController.text = user.position ?? user.role;
+      _nameController.text = user.nama ?? '';
+      _usernameController.text = user.username;
+      _divisiController.text = user.divisi ?? '';
+      _instansiController.text = user.instansi ?? '';
+      _nomorHpController.text = user.nomorHp ?? '';
     }
   }
 
@@ -289,9 +291,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose();
-    _departmentController.dispose();
-    _positionController.dispose();
+    _usernameController.dispose();
+    _divisiController.dispose();
+    _instansiController.dispose();
+    _nomorHpController.dispose();
     super.dispose();
   }
 
@@ -377,39 +380,53 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               // Form Fields
               _buildModernFormField(
                 controller: _nameController,
-                label: 'Full Name',
+                label: 'Nama Lengkap',
                 icon: Icons.person_rounded,
                 validator: Validators.validateName,
                 isDarkMode: isDarkMode,
               ),
               const SizedBox(height: 20),
               _buildModernFormField(
-                controller: _emailController,
-                label: 'Email',
-                icon: Icons.email_rounded,
-                validator: Validators.validateEmail,
-                keyboardType: TextInputType.emailAddress,
+                controller: _usernameController,
+                label: 'Username',
+                icon: Icons.person_rounded,
+                validator: Validators.validateUsername,
+                keyboardType: TextInputType.text,
                 isDarkMode: isDarkMode,
               ),
               const SizedBox(height: 20),
               _buildModernFormField(
-                controller: _departmentController,
-                label: 'Department',
-                icon: Icons.business_rounded,
-                validator: Validators.validateDepartment,
-                isDarkMode: isDarkMode,
-              ),
-              const SizedBox(height: 20),
-              _buildModernFormField(
-                controller: _positionController,
-                label: 'Position',
-                icon: Icons.work_rounded,
+                controller: _divisiController,
+                label: 'Divisi',
+                icon: Icons.business_center_rounded,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Position is required';
+                    return 'Divisi is required';
                   }
                   return null;
                 },
+                isDarkMode: isDarkMode,
+              ),
+              const SizedBox(height: 20),
+              _buildModernFormField(
+                controller: _instansiController,
+                label: 'Instansi',
+                icon: Icons.school_rounded,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Instansi is required';
+                  }
+                  return null;
+                },
+                isDarkMode: isDarkMode,
+              ),
+              const SizedBox(height: 20),
+              _buildModernFormField(
+                controller: _nomorHpController,
+                label: 'Nomor HP',
+                icon: Icons.phone_rounded,
+                validator: Validators.validatePhoneNumber,
+                keyboardType: TextInputType.phone,
                 isDarkMode: isDarkMode,
               ),
               const SizedBox(height: 32),
