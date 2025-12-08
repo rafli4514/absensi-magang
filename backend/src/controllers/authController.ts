@@ -128,7 +128,7 @@ export const loginPesertaMagang = async (req: Request, res: Response) => {
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { username, password, role = "user" } = req.body;
+    const { username, password, role = "peserta_magang" } = req.body;
 
     if (!username || !password) {
       return sendError(res, "Username and password are required", 400);
@@ -166,6 +166,33 @@ export const register = async (req: Request, res: Response) => {
       },
     });
 
+    // If role peserta magang, create peserta_magang record linked to user
+    let pesertaMagang = null;
+    if ((user.role as string) === "PESERTA_MAGANG") {
+      pesertaMagang = await prisma.pesertaMagang.create({
+        data: {
+          userId: user.id,
+          nama: username, // default nama sama dengan username saat ini
+          username,
+          divisi: "Belum diisi",
+          instansi: "Belum diisi",
+          status: "AKTIF",
+          nomorHp: "",
+          tanggalMulai: "",
+          tanggalSelesai: "",
+        },
+        select: {
+          id: true,
+          nama: true,
+          username: true,
+          divisi: true,
+          instansi: true,
+          status: true,
+          avatar: true,
+        },
+      });
+    }
+
     // Generate JWT token
     const token = generateToken({
       id: user.id,
@@ -178,6 +205,7 @@ export const register = async (req: Request, res: Response) => {
       "Registration successful",
       {
         user,
+        pesertaMagang,
         token,
         expiresIn: "24h",
       },
@@ -186,6 +214,200 @@ export const register = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Registration error:", error);
     sendError(res, "Registration failed", 500);
+  }
+};
+
+export const registerPesertaMagang = async (req: Request, res: Response) => {
+  try {
+    const {
+      nama,
+      username,
+      password,
+      divisi,
+      instansi = "Universitas/Instansi Tidak Diketahui",
+      id_instansi,
+      nomorHp,
+      tanggalMulai,
+      tanggalSelesai,
+      status = "AKTIF",
+      avatar,
+    } = req.body;
+
+    // Validate required fields
+    if (!nama || !username || !password || !divisi || !nomorHp || !tanggalMulai || !tanggalSelesai) {
+      return sendError(
+        res,
+        "Required fields: nama, username, password, divisi, nomorHp, tanggalMulai, tanggalSelesai",
+        400
+      );
+    }
+
+    // Validate status value
+    const validStatuses = ["AKTIF", "NONAKTIF", "SELESAI"];
+    const upperStatus = status.toUpperCase();
+    if (!validStatuses.includes(upperStatus)) {
+      return sendError(
+        res,
+        `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
+        400
+      );
+    }
+
+    // Check if username already exists in users
+    const existingUser = await prisma.user.findUnique({
+      where: { username },
+    });
+
+    if (existingUser) {
+      return sendError(res, "Username already exists in users", 400);
+    }
+
+    // Check if username already exists in peserta magang
+    const existingPeserta = await prisma.pesertaMagang.findUnique({
+      where: { username },
+    });
+
+    if (existingPeserta) {
+      return sendError(res, "Username already exists in peserta magang", 400);
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Use transaction to ensure atomicity
+    const result = await prisma.$transaction(async (tx) => {
+      // Create user first
+      const user = await tx.user.create({
+        data: {
+          username,
+          password: hashedPassword,
+          role: "PESERTA_MAGANG" as any,
+          isActive: true,
+          avatar,
+        },
+        select: {
+          id: true,
+          username: true,
+          role: true,
+          isActive: true,
+          avatar: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      // Create peserta magang with user relation
+      const pesertaMagang = await tx.pesertaMagang.create({
+        data: {
+          nama,
+          username,
+          divisi,
+          instansi,
+          id_instansi: id_instansi || null,
+          nomorHp,
+          tanggalMulai,
+          tanggalSelesai,
+          status: upperStatus as any,
+          avatar,
+          userId: user.id,
+        },
+        select: {
+          id: true,
+          nama: true,
+          username: true,
+          divisi: true,
+          instansi: true,
+          id_instansi: true,
+          nomorHp: true,
+          tanggalMulai: true,
+          tanggalSelesai: true,
+          status: true,
+          avatar: true,
+        },
+      });
+
+      return { user, pesertaMagang };
+    });
+
+    // Generate JWT token
+    const token = generateToken({
+      id: result.user.id,
+      username: result.user.username,
+      role: result.user.role,
+    });
+
+    sendSuccess(
+      res,
+      "Peserta magang registration successful",
+      {
+        user: result.user,
+        pesertaMagang: result.pesertaMagang,
+        token,
+        expiresIn: "24h",
+      },
+      201
+    );
+  } catch (error: any) {
+    console.error("Peserta magang registration error:", error);
+    
+    // Handle Prisma errors
+    if (error?.code === "P2002") {
+      // Unique constraint violation
+      const target = error?.meta?.target;
+      if (Array.isArray(target) && target.includes("username")) {
+        return sendError(
+          res,
+          "Username already exists",
+          400,
+          error?.message
+        );
+      }
+      return sendError(
+        res,
+        "Duplicate entry. One or more fields already exist",
+        400,
+        error?.message
+      );
+    }
+
+    if (error?.code === "P2003") {
+      // Foreign key constraint violation
+      return sendError(
+        res,
+        "Invalid reference. Related record not found",
+        400,
+        error?.message
+      );
+    }
+
+    if (error?.code === "P2025") {
+      // Record not found
+      return sendError(
+        res,
+        "Record not found",
+        404,
+        error?.message
+      );
+    }
+
+    // Handle validation errors
+    if (error?.name === "ValidationError" || error?.message?.includes("Invalid")) {
+      return sendError(
+        res,
+        error.message || "Validation error",
+        400,
+        error?.stack
+      );
+    }
+
+    // Generic error
+    const errorMessage = error?.message || "Unknown error occurred";
+    return sendError(
+      res,
+      "Peserta magang registration failed",
+      500,
+      process.env.NODE_ENV === "development" ? errorMessage : undefined
+    );
   }
 };
 

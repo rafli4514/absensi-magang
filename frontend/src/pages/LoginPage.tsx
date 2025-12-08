@@ -32,7 +32,18 @@
           password: formData.password,
         });
 
-        if (response.success) {
+        if (response.success && response.data) {
+          // Validasi role - hanya ADMIN dan PEMBIMBING_MAGANG yang boleh akses web
+          const user = response.data.user;
+          if (user && user.role === 'PESERTA_MAGANG') {
+            // Jika role PESERTA_MAGANG, logout dan tampilkan error
+            authService.logout();
+            setError("Akses ditolak. Hanya Admin dan Pembimbing Magang yang dapat mengakses aplikasi web. Silakan gunakan aplikasi mobile.");
+            setIsLoading(false);
+            return;
+          }
+
+          // Lanjutkan untuk ADMIN dan PEMBIMBING_MAGANG
           navigate("/");
         } else {
           setError(response.message || "Login failed");

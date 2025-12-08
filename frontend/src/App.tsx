@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { Theme } from "@radix-ui/themes";
 import Login from "./pages/LoginPage";
 import UserManagementPage from "./pages/UserManagementPage";
+import ManageUsersPage from "./pages/ManageUsersPage";
 import AbsensiPage from "./pages/AbsensiPage";
 import "./App.css";
 import DashboardPage from "./pages/DashboardPage";
@@ -23,13 +24,21 @@ function App() {
           <Route
             path="/"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['ADMIN', 'PEMBIMBING_MAGANG']}>
                 <Layout />
               </ProtectedRoute>
             }
           >
             <Route index element={<DashboardPage />} />
             <Route path="/peserta-magang" element={<UserManagementPage />} />
+            <Route
+              path="/manage-users"
+              element={
+                <ProtectedRoute requiredRole="ADMIN">
+                  <ManageUsersPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/absensi" element={<AbsensiPage />} />
             <Route path="/izin" element={<PengajuanIzinPage />} />
             <Route path="/laporan" element={<LaporanPage />} />

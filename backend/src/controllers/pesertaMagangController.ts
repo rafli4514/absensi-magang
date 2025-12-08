@@ -134,8 +134,7 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
       data: {
         username,
         password: hashedPassword,
-        // 👇 SEKARANG INI AKAN BERHASIL KARENA Role SUDAH DIIMPORT
-        role: Role.PESERTA_MAGANG,
+        role: 'PESERTA_MAGANG',
         isActive: true,
       },
     });

@@ -4,8 +4,8 @@ import authService from '../services/authService';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'ADMIN' | 'USER' | 'PEMBIMBING_MAGANG';
-  allowedRoles?: ('ADMIN' | 'USER' | 'PEMBIMBING_MAGANG')[];
+  requiredRole?: 'ADMIN' | 'PESERTA_MAGANG' | 'PEMBIMBING_MAGANG';
+  allowedRoles?: ('ADMIN' | 'PESERTA_MAGANG' | 'PEMBIMBING_MAGANG')[];
 }
 
 export default function ProtectedRoute({ children, requiredRole, allowedRoles }: ProtectedRouteProps) {
@@ -53,7 +53,7 @@ export default function ProtectedRoute({ children, requiredRole, allowedRoles }:
     };
 
     checkAuth();
-  }, [requiredRole]);
+  }, [requiredRole, allowedRoles]);
 
   if (isLoading) {
     return (
@@ -71,7 +71,8 @@ export default function ProtectedRoute({ children, requiredRole, allowedRoles }:
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (requiredRole && !hasPermission) {
+  // Check permission menggunakan state hasPermission yang sudah di-set di useEffect
+  if ((requiredRole || allowedRoles) && !hasPermission) {
     // User doesn't have required role
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -80,9 +81,21 @@ export default function ProtectedRoute({ children, requiredRole, allowedRoles }:
           <p className="text-gray-600 mb-4">
             Anda tidak memiliki akses untuk halaman ini.
           </p>
-          <p className="text-sm text-gray-500">
-            Required role: {requiredRole}
+          <p className="text-sm text-gray-500 mb-4">
+            {allowedRoles ? `Role yang diizinkan: ${allowedRoles.join(', ')}` : `Role yang dibutuhkan: ${requiredRole}`}
           </p>
+          <p className="text-sm text-gray-500 mb-4">
+            Role Anda: {authService.getCurrentUser()?.role || 'Tidak diketahui'}
+          </p>
+          <button
+            onClick={() => {
+              authService.logout();
+              window.location.href = '/login';
+            }}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            Kembali ke Login
+          </button>
         </div>
       </div>
     );

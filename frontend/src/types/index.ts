@@ -1,7 +1,7 @@
 export interface User {
   id: string;
   username: string;
-  role: "ADMIN" | "USER" | "PEMBIMBING_MAGANG";
+  role: "ADMIN" | "PESERTA_MAGANG" | "PEMBIMBING_MAGANG";
   isActive: boolean;
   avatar?: string | null;
   createdAt: string;
