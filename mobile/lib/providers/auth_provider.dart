@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../models/api_response.dart';
+import '../models/login_response.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
@@ -187,17 +189,41 @@ class AuthProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final response = await AuthService.register(
-        username: username,
-        password: password,
-        nama: nama,
-        divisi: divisi,
-        instansi: instansi,
-        nomorHp: nomorHp,
-        tanggalMulai: tanggalMulai,
-        tanggalSelesai: tanggalSelesai,
-        role: role,
-      );
+      // Jika semua field required tersedia, gunakan endpoint register peserta magang baru
+      final ApiResponse<LoginResponse> response;
+      if (nama != null &&
+          nama.isNotEmpty &&
+          divisi != null &&
+          divisi.isNotEmpty &&
+          nomorHp != null &&
+          nomorHp.isNotEmpty &&
+          tanggalMulai != null &&
+          tanggalMulai.isNotEmpty &&
+          tanggalSelesai != null &&
+          tanggalSelesai.isNotEmpty) {
+        response = await AuthService.registerPesertaMagang(
+          nama: nama,
+          username: username,
+          password: password,
+          divisi: divisi,
+          nomorHp: nomorHp,
+          tanggalMulai: tanggalMulai,
+          tanggalSelesai: tanggalSelesai,
+          instansi: instansi,
+        );
+      } else {
+        response = await AuthService.register(
+          username: username,
+          password: password,
+          nama: nama,
+          divisi: divisi,
+          instansi: instansi,
+          nomorHp: nomorHp,
+          tanggalMulai: tanggalMulai,
+          tanggalSelesai: tanggalSelesai,
+          role: role,
+        );
+      }
       if (response.success && response.data != null) {
         await _handleAuthSuccess(response.data!);
         return true;
