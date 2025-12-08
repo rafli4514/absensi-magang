@@ -19,6 +19,7 @@ class AppConstants {
   static const String loginEndpoint = '/auth/login';
   static const String loginPesertaEndpoint = '/auth/login-peserta';
   static const String registerEndpoint = '/auth/register';
+  static const String registerPesertaEndpoint = '/auth/register-peserta';
   static const String profileEndpoint = '/auth/profile';
   static const String refreshTokenEndpoint = '/auth/refresh-token';
 
