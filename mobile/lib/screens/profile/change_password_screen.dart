@@ -1,6 +1,8 @@
+// lib/screens/profile/change_password_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/validators.dart';
@@ -20,40 +22,39 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  bool _isLoading = false;
+
   bool _obscureCurrentPassword = true;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
-  String? _error;
 
   Future<void> _changePassword() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
     if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-      });
-
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-
-      // Check if new password and confirm password match
+      // 1. Validasi manual (match password)
       if (_newPasswordController.text != _confirmPasswordController.text) {
-        setState(() {
-          _error = 'New password and confirm password do not match';
-          _isLoading = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Password baru dan konfirmasi tidak cocok'),
+            backgroundColor: AppThemes.errorColor,
+          ),
+        );
         return;
       }
 
-      // Simulate password change success
-      setState(() {
-        _isLoading = false;
-      });
+      // 2. Panggil API via Provider
+      final success = await authProvider.changePassword(
+        _currentPasswordController.text,
+        _newPasswordController.text,
+      );
 
-      if (mounted) {
+      if (!mounted) return;
+
+      // 3. Handle Hasil
+      if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Password changed successfully!'),
+            content: const Text('Password berhasil diubah!'),
             backgroundColor: AppThemes.successColor,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -62,16 +63,25 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           ),
         );
         Navigator.pop(context);
+      } else {
+        // Error ditampilkan via widget di bawah (authProvider.error)
+        // atau bisa juga via snackbar:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.error ?? 'Gagal mengubah password'),
+            backgroundColor: AppThemes.errorColor,
+          ),
+        );
       }
     }
   }
 
   String? _validateConfirmPassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Please confirm your new password';
+      return 'Harap konfirmasi password baru';
     }
     if (value != _newPasswordController.text) {
-      return 'Passwords do not match';
+      return 'Password tidak cocok';
     }
     return null;
   }
@@ -88,10 +98,13 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final authProvider = Provider.of<AuthProvider>(
+      context,
+    ); // Listen to changes
     final isDarkMode = themeProvider.isDarkMode;
 
     return Scaffold(
-      appBar: CustomAppBar(title: 'Change Password', showBackButton: true),
+      appBar: CustomAppBar(title: 'Ganti Password', showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -127,7 +140,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                             : AppThemes.primaryColor,
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(
+                      child: const Icon(
                         Icons.lock_rounded,
                         color: Colors.white,
                         size: 24,
@@ -139,7 +152,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Password Security',
+                            'Keamanan Password',
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                               color: isDarkMode
@@ -149,7 +162,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Create a strong and secure password',
+                            'Buat password yang kuat dan aman',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: isDarkMode
                                   ? AppThemes.darkTextSecondary
@@ -167,8 +180,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               // Current Password
               _buildModernPasswordField(
                 controller: _currentPasswordController,
-                label: 'Current Password',
-                hintText: 'Enter your current password',
+                label: 'Password Saat Ini',
+                hintText: 'Masukkan password lama',
                 obscureText: _obscureCurrentPassword,
                 onToggleVisibility: () {
                   setState(() {
@@ -177,7 +190,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Current password is required';
+                    return 'Password saat ini wajib diisi';
                   }
                   return null;
                 },
@@ -188,8 +201,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               // New Password
               _buildModernPasswordField(
                 controller: _newPasswordController,
-                label: 'New Password',
-                hintText: 'Enter your new password',
+                label: 'Password Baru',
+                hintText: 'Masukkan password baru',
                 obscureText: _obscureNewPassword,
                 onToggleVisibility: () {
                   setState(() {
@@ -204,8 +217,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               // Confirm New Password
               _buildModernPasswordField(
                 controller: _confirmPasswordController,
-                label: 'Confirm New Password',
-                hintText: 'Confirm your new password',
+                label: 'Konfirmasi Password Baru',
+                hintText: 'Ulangi password baru',
                 obscureText: _obscureConfirmPassword,
                 onToggleVisibility: () {
                   setState(() {
@@ -217,24 +230,20 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Error Message
-              if (_error != null)
+              // Error Widget from Provider
+              if (authProvider.error != null)
                 CustomErrorWidget(
-                  message: _error!,
-                  onDismiss: () {
-                    setState(() {
-                      _error = null;
-                    });
-                  },
+                  message: authProvider.error!,
+                  onDismiss: () => authProvider.clearError(),
                 ),
 
-              if (_error != null) const SizedBox(height: 16),
+              if (authProvider.error != null) const SizedBox(height: 16),
 
               // Change Password Button
               SizedBox(
                 width: double.infinity,
                 height: 54,
-                child: _isLoading
+                child: authProvider.isLoading
                     ? const LoadingIndicator()
                     : ElevatedButton(
                         onPressed: _changePassword,
@@ -247,12 +256,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           elevation: 2,
-                          shadowColor: Colors.black.withOpacity(
-                            isDarkMode ? 0.3 : 0.1,
-                          ),
                         ),
                         child: Text(
-                          'Change Password',
+                          'Ubah Password',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -261,7 +267,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       ),
               ),
 
-              // Password Requirements
+              // Password Requirements (Static Info)
               const SizedBox(height: 32),
               Container(
                 padding: const EdgeInsets.all(20),
@@ -273,27 +279,20 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   border: Border.all(
                     color: AppThemes.infoColor.withOpacity(0.2),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(isDarkMode ? 0.1 : 0.05),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.security_rounded,
                           color: AppThemes.infoColor,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Password Requirements',
+                          'Syarat Password',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: isDarkMode
@@ -304,13 +303,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    _buildRequirementItem('At least 6 characters', isDarkMode),
+                    _buildRequirementItem('Minimal 8 karakter', isDarkMode),
                     _buildRequirementItem(
-                      'Combination of letters and numbers',
+                      'Kombinasi huruf dan angka',
                       isDarkMode,
                     ),
-                    _buildRequirementItem('Not easily guessable', isDarkMode),
-                    _buildRequirementItem('Avoid common words', isDarkMode),
+                    _buildRequirementItem('Tidak mudah ditebak', isDarkMode),
                   ],
                 ),
               ),
@@ -409,7 +407,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.check_circle_rounded,
             color: AppThemes.successColor,
             size: 16,

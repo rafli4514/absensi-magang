@@ -1,4 +1,5 @@
-// validators.dart
+// lib/utils/validators.dart
+
 enum PasswordStrength {
   weak(1),
   medium(2),
@@ -23,7 +24,6 @@ class Validators {
       return 'Name must be less than 50 characters';
     }
 
-    // Check for valid name characters (letters, spaces, and some special characters)
     final nameRegex = RegExp(r"^[a-zA-Z\s.'-]+$");
     if (!nameRegex.hasMatch(value)) {
       return 'Please enter a valid name';
@@ -45,7 +45,6 @@ class Validators {
       return 'Username must be less than 20 characters';
     }
 
-    // Username should only contain letters, numbers, and underscores
     final usernameRegex = RegExp(r'^[a-zA-Z0-9_]+$');
     if (!usernameRegex.hasMatch(value)) {
       return 'Username can only contain letters, numbers, and underscores';
@@ -72,10 +71,7 @@ class Validators {
       return 'Phone number is required';
     }
 
-    // Remove any non-digit characters
     final cleanedPhone = value.replaceAll(RegExp(r'[^\d+]'), '');
-
-    // Check if it's a valid Indonesian phone number format
     final phoneRegex = RegExp(r'^(\+62|62|0)8[1-9][0-9]{6,9}$');
 
     if (!phoneRegex.hasMatch(cleanedPhone)) {
@@ -85,50 +81,58 @@ class Validators {
     return null;
   }
 
+  // --- PERBAIKAN DI SINI ---
   static String? validateDate(String? value) {
     if (value == null || value.isEmpty) {
       return 'Tanggal harus diisi';
     }
 
-    // Terima berbagai format: DD/MM/YYYY, DD-MM-YYYY, atau input date picker
-    final dateRegex = RegExp(r'^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$');
+    // Regex diubah untuk menerima format YYYY-MM-DD
+    // \d{4} = Tahun (4 digit)
+    // \d{1,2} = Bulan/Hari (1 atau 2 digit)
+    final dateRegex = RegExp(r'^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$');
+
     if (!dateRegex.hasMatch(value)) {
-      return 'Format tanggal: DD/MM/YYYY atau DD-MM-YYYY';
+      // Kita toleransi error message, tapi logicnya sekarang terima YYYY-MM-DD
+      return 'Format tanggal tidak valid (gunakan Date Picker)';
     }
 
     try {
       final parts = value.split(RegExp(r'[/-]'));
-      final day = int.parse(parts[0]);
-      final month = int.parse(parts[1]);
-      final year = int.parse(parts[2]);
 
-      // Basic date validation
+      // PERBAIKAN PARSING:
+      // Format YYYY-MM-DD -> Index 0: Tahun, 1: Bulan, 2: Hari
+      final year = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      final day = int.parse(parts[2]);
+
+      // Validasi Bulan
       if (month < 1 || month > 12) {
         return 'Bulan harus antara 1-12';
       }
 
+      // Validasi Hari Dasar
       if (day < 1 || day > 31) {
         return 'Hari harus antara 1-31';
       }
 
-      // Check for specific month days
+      // Validasi Jumlah Hari per Bulan
       if ((month == 4 || month == 6 || month == 9 || month == 11) && day > 30) {
         return 'Bulan ini hanya memiliki 30 hari';
       }
 
-      // February check
+      // Validasi Februari (Kabisat)
       if (month == 2) {
         final isLeapYear =
             (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
         if (day > (isLeapYear ? 29 : 28)) {
-          return 'Februari hanya memiliki ${isLeapYear ? 29 : 28} hari di tahun $year';
+          return 'Februari tahun $year hanya memiliki ${isLeapYear ? 29 : 28} hari';
         }
       }
 
-      // HAPUS VALIDASI "TIDAK BOLEH DI MASA LALU" - biar user bebas milih tanggal
       return null;
     } catch (e) {
-      return 'Format tanggal tidak valid';
+      return 'Tanggal tidak valid';
     }
   }
 
@@ -151,16 +155,13 @@ class Validators {
   static PasswordStrength getPasswordStrength(String password) {
     int strength = 0;
 
-    // Length check
     if (password.length >= 8) strength++;
     if (password.length >= 12) strength++;
 
-    // Character variety checks (optional, tanpa uppercase requirement)
     if (password.contains(RegExp(r'[a-zA-Z]'))) strength++;
     if (password.contains(RegExp(r'[0-9]'))) strength++;
     if (password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) strength++;
 
-    // Determine strength level
     if (strength <= 2) return PasswordStrength.weak;
     if (strength <= 4) return PasswordStrength.medium;
     if (strength <= 6) return PasswordStrength.strong;

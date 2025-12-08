@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../themes/app_themes.dart';
-import 'modern_stautus_card.dart'; // Import yang benar
+import 'modern_status_card.dart'; // Import yang benar
 
 class AttendanceStatusCard extends StatelessWidget {
   final String clockInTime;

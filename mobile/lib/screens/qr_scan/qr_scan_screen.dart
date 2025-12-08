@@ -1,3 +1,4 @@
+// lib/screens/qr_scan/qr_scan_screen.dart
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -6,11 +7,55 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../navigation/route_names.dart';
 import '../../services/location_service.dart';
-import '../../services/permission_service.dart'; // ADD THIS IMPORT
+import '../../services/permission_service.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/indonesian_time.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/floating_bottom_nav.dart';
+
+// --- WIDGET JAM DIGITAL TERISOLASI ---
+class DigitalClockWidget extends StatefulWidget {
+  final TextStyle? style;
+  const DigitalClockWidget({super.key, this.style});
+
+  @override
+  State<DigitalClockWidget> createState() => _DigitalClockWidgetState();
+}
+
+class _DigitalClockWidgetState extends State<DigitalClockWidget> {
+  late Timer _timer;
+  String _timeString = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _timeString = IndonesianTime.formatTime(IndonesianTime.now);
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() {
+          _timeString = IndonesianTime.formatTime(IndonesianTime.now);
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      _timeString,
+      style:
+          widget.style ??
+          const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    );
+  }
+}
+// -------------------------------------------
 
 class QrScanScreen extends StatefulWidget {
   const QrScanScreen({super.key});
@@ -20,7 +65,7 @@ class QrScanScreen extends StatefulWidget {
 }
 
 class _QrScanScreenState extends State<QrScanScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   bool _isScanning = true;
   bool _isProcessing = false;
   bool _isFlashOn = false;
@@ -30,20 +75,56 @@ class _QrScanScreenState extends State<QrScanScreen>
   late AnimationController _animationController;
   bool _hasPopped = false;
 
-  // Untuk waktu real-time
-  String _currentTime = '';
-  late Timer _timer;
-
   OfficeLocationSettings? _locationSettings;
   Map<String, dynamic>? _currentLocation;
   bool _isLocationLoading = false;
-  String _locationStatus = 'Getting location...';
+  String _locationStatus = 'Mencari lokasi...';
 
   MobileScannerController cameraController = MobileScannerController(
     detectionSpeed: DetectionSpeed.normal,
     facing: CameraFacing.back,
     torchEnabled: false,
   );
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    _startScan();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPermissionsOnStart();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    cameraController.dispose();
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!mounted) return;
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      cameraController.stop();
+    } else if (state == AppLifecycleState.resumed) {
+      _checkPermissionsOnStart().then((_) {
+        if (!_isProcessing && !_hasPopped && mounted) {
+          _startScan();
+        }
+      });
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -55,84 +136,70 @@ class _QrScanScreenState extends State<QrScanScreen>
   }
 
   Future<void> _loadLocationSettings() async {
-    setState(() {
-      _isLocationLoading = true;
-    });
+    if (!mounted) return;
+    setState(() => _isLocationLoading = true);
 
     final response = await LocationService.getLocationSettings();
 
+    if (!mounted) return;
     if (response.success && response.data != null) {
       setState(() {
         _locationSettings = response.data;
-        _locationStatus = 'Location ready';
+        _locationStatus = 'Lokasi Siap';
       });
     } else {
       setState(() {
-        _locationStatus = 'Location settings not available';
+        _locationStatus = 'Gagal memuat setting lokasi';
       });
     }
 
-    setState(() {
-      _isLocationLoading = false;
-    });
+    if (mounted) setState(() => _isLocationLoading = false);
   }
 
   Future<void> _getCurrentLocation() async {
-    // ADD PERMISSION CHECK HERE
     final hasPermission = await PermissionService.requestLocationPermission();
 
     if (!hasPermission) {
       _showPermissionDialog(
-        'Location Access Required',
-        'Please grant location access to get your current position',
+        'Izin Lokasi Diperlukan',
+        'Harap berikan akses lokasi untuk melakukan presensi.',
       );
       return;
     }
 
+    if (!mounted) return;
     setState(() {
       _isLocationLoading = true;
-      _locationStatus = 'Getting your location...';
+      _locationStatus = 'Mendeteksi lokasi...';
     });
 
     _currentLocation = await LocationService.getCurrentLocation();
 
+    if (!mounted) return;
     if (_currentLocation != null) {
-      setState(() {
-        _locationStatus = 'Location acquired';
-      });
+      setState(() => _locationStatus = 'Lokasi Terdeteksi');
     } else {
-      setState(() {
-        _locationStatus = 'Failed to get location';
-      });
+      setState(() => _locationStatus = 'Gagal mendeteksi lokasi');
     }
 
-    setState(() {
-      _isLocationLoading = false;
-    });
+    if (mounted) setState(() => _isLocationLoading = false);
   }
+
+  // --- LOGIC HELPER ---
 
   bool _isValidClockOutTime() {
     final now = IndonesianTime.now;
     return now.hour >= 17;
   }
 
-  String _formatTime(DateTime time) {
-    return IndonesianTime.formatTime(time);
-  }
-
-  void _updateCurrentTime() {
-    setState(() {
-      _currentTime = IndonesianTime.formatTime(IndonesianTime.now);
-    });
-  }
-
   void _showTimeErrorDialog() {
+    final currentTime = IndonesianTime.formatTime(IndonesianTime.now);
     showDialog(
       context: context,
       builder: (context) => CustomDialog(
-        title: 'Cannot Clock Out Yet',
+        title: 'Belum Waktunya Pulang',
         content:
-            'Clock out is only available after 17:00.\nCurrent time: $_currentTime',
+            'Absen pulang hanya tersedia setelah jam 17:00.\nWaktu sekarang: $currentTime',
         primaryButtonText: 'OK',
         primaryButtonColor: AppThemes.warningColor,
         onPrimaryButtonPressed: () => Navigator.pop(context),
@@ -143,34 +210,48 @@ class _QrScanScreenState extends State<QrScanScreen>
   void _showLocationErrorDialog(String message) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => CustomDialog(
-        title: 'Location Error',
+        title: 'Gagal Presensi',
         content: message,
-        primaryButtonText: 'OK',
+        primaryButtonText: 'Coba Lagi',
         primaryButtonColor: AppThemes.errorColor,
-        onPrimaryButtonPressed: () => Navigator.pop(context),
+        onPrimaryButtonPressed: () {
+          Navigator.pop(context);
+          _startScan();
+        },
+        secondaryButtonText: 'Kembali',
+        onSecondaryButtonPressed: () {
+          Navigator.pop(context);
+          _handleBackButton();
+        },
       ),
     );
   }
 
-  // ADD THIS NEW METHOD FOR PERMISSION DIALOG
   void _showPermissionDialog(String title, String message) {
+    cameraController.stop();
+
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Text(title),
         content: Text(message),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
             onPressed: () {
               Navigator.pop(context);
-              PermissionService.openAppSettings();
+              _startScan();
             },
-            child: const Text('Open Settings'),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await PermissionService.openAppSettings();
+            },
+            child: const Text('Buka Pengaturan'),
           ),
         ],
       ),
@@ -180,7 +261,7 @@ class _QrScanScreenState extends State<QrScanScreen>
   Future<bool> _validateLocation() async {
     if (_locationSettings == null) {
       _showLocationErrorDialog(
-        'Location settings not available. Please try again.',
+        'Pengaturan lokasi kantor tidak ditemukan. Silakan coba lagi.',
       );
       return false;
     }
@@ -188,7 +269,7 @@ class _QrScanScreenState extends State<QrScanScreen>
     await _getCurrentLocation();
     if (_currentLocation == null) {
       _showLocationErrorDialog(
-        'Cannot get your current location. Please enable location services.',
+        'Tidak dapat mendeteksi lokasi Anda. Pastikan GPS aktif.',
       );
       return false;
     }
@@ -205,14 +286,12 @@ class _QrScanScreenState extends State<QrScanScreen>
       );
 
       _showLocationErrorDialog(
-        'You are too far from the office.\n'
-        'Distance: ${distance.toStringAsFixed(0)} meters\n'
-        'Allowed radius: ${_locationSettings!.radius} meters\n'
-        'Office: ${_locationSettings!.officeAddress}',
+        'Anda berada di luar jangkauan kantor.\n'
+        'Jarak: ${distance.toStringAsFixed(0)} meter\n'
+        'Radius diizinkan: ${_locationSettings!.radius} meter',
       );
       return false;
     }
-
     return true;
   }
 
@@ -225,13 +304,9 @@ class _QrScanScreenState extends State<QrScanScreen>
     }
 
     final isLocationValid = await _validateLocation();
-    if (!isLocationValid) {
-      return;
-    }
+    if (!isLocationValid) return;
 
-    setState(() {
-      _isProcessing = true;
-    });
+    setState(() => _isProcessing = true);
 
     try {
       final qrValidation = await LocationService.validateQRCode(
@@ -239,10 +314,8 @@ class _QrScanScreenState extends State<QrScanScreen>
       );
 
       if (!qrValidation.success || !qrValidation.data!.isValid) {
-        _showLocationErrorDialog('Invalid QR code. Please try again.');
-        setState(() {
-          _isProcessing = false;
-        });
+        _showLocationErrorDialog('Kode QR tidak valid atau kadaluwarsa.');
+        if (mounted) setState(() => _isProcessing = false);
         return;
       }
 
@@ -256,33 +329,27 @@ class _QrScanScreenState extends State<QrScanScreen>
 
       if (attendanceResponse.success) {
         final result = {
-          'time': _currentTime,
+          'time': IndonesianTime.formatTime(IndonesianTime.now),
           'type': _attendanceType,
           'location': _currentLocation,
           'success': true,
         };
-
         _safePop(result);
       } else {
         _showLocationErrorDialog(
-          attendanceResponse.message ?? 'Failed to record attendance',
+          attendanceResponse.message ?? 'Gagal mencatat presensi',
         );
-        setState(() {
-          _isProcessing = false;
-        });
+        if (mounted) setState(() => _isProcessing = false);
       }
     } catch (e) {
-      _showLocationErrorDialog('Network error: ${e.toString()}');
-      setState(() {
-        _isProcessing = false;
-      });
+      _showLocationErrorDialog('Terjadi kesalahan jaringan: ${e.toString()}');
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   void _safePop(dynamic result) {
     if (_hasPopped || !mounted) return;
     _hasPopped = true;
-
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop(result);
     } else {
@@ -292,91 +359,151 @@ class _QrScanScreenState extends State<QrScanScreen>
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _startScan();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
-
-    // Setup timer untuk update waktu setiap detik
-    _currentTime = IndonesianTime.formatTime(IndonesianTime.now);
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        _updateCurrentTime();
-      }
-    });
-
-    // ADD PERMISSION CHECK ON STARTUP
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkPermissionsOnStart();
-    });
-  }
-
-  // ADD THIS NEW METHOD
   Future<void> _checkPermissionsOnStart() async {
     final permissions = await PermissionService.checkAllPermissions();
-
     if (!permissions['location']! && mounted) {
       _showPermissionDialog(
-        'Location Permission Required',
-        'Location access is required for attendance recording. '
-            'Please grant location permission in app settings.',
-      );
-    }
-
-    if (!permissions['camera']! && mounted) {
-      // Camera permission is usually requested by mobile_scanner automatically
-      // But we can show a reminder if needed
-      _showPermissionDialog(
-        'Camera Permission Required',
-        'Camera access is required for scanning QR codes.',
+        'Izin Lokasi Diperlukan',
+        'Aplikasi membutuhkan akses lokasi untuk validasi presensi.',
       );
     }
   }
 
-  @override
-  void dispose() {
-    cameraController.dispose();
-    _animationController.dispose();
-    _timer.cancel(); // Cancel timer
-    super.dispose();
+  // --- CAMERA CONTROLS ---
+
+  void _startScan() {
+    if (_isScanning || _isProcessing) return;
+    setState(() => _isScanning = true);
+
+    try {
+      cameraController.start().catchError((error) {
+        if (mounted) setState(() => _isScanning = false);
+      });
+    } catch (e) {
+      if (mounted) setState(() => _isScanning = false);
+    }
   }
+
+  void _toggleFlash() {
+    if (_isProcessing) return;
+    setState(() => _isFlashOn = !_isFlashOn);
+    cameraController.toggleTorch();
+  }
+
+  void _handleBarcodeDetected(BarcodeCapture capture) {
+    if (!_isScanning || _isProcessing || _hasPopped) return;
+
+    final barcodes = capture.barcodes;
+    if (barcodes.isNotEmpty) {
+      final barcode = barcodes.first;
+      if (barcode.rawValue != null && barcode.rawValue!.isNotEmpty) {
+        setState(() {
+          _isScanning = false;
+        });
+        cameraController.stop();
+        _submitAttendance();
+      }
+    }
+  }
+
+  void _handleBackButton() {
+    if (_hasPopped) return;
+    _safePop(null);
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    try {
+      if (_isProcessing || _hasPopped) return;
+
+      cameraController.stop();
+
+      final hasPermission = await PermissionService.requestGalleryPermission();
+
+      if (!hasPermission) {
+        _showPermissionDialog(
+          'Izin Galeri Diperlukan',
+          'Berikan akses galeri untuk memilih kode QR.',
+        );
+        return;
+      }
+
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+      );
+
+      if (image == null) {
+        _startScan();
+      } else {
+        _submitAttendance();
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorDialog('Gagal mengambil gambar dari galeri');
+        _startScan();
+      }
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => CustomDialog(
+        title: 'Error',
+        content: message,
+        primaryButtonText: 'OK',
+        primaryButtonColor: AppThemes.errorColor,
+        onPrimaryButtonPressed: () => Navigator.pop(context),
+      ),
+    );
+  }
+
+  // --- UI BUILDER ---
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: isDarkMode ? Colors.black : Colors.white,
+      extendBodyBehindAppBar: true,
       appBar: _showBottomNav
           ? null
           : AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
               leading: IconButton(
-                icon: const Icon(
-                  Icons.arrow_back_rounded,
-                  color: Colors.white,
-                  size: 28,
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
                 onPressed: _handleBackButton,
               ),
             ),
-      extendBodyBehindAppBar: true,
       body: Stack(
         children: [
+          // 1. Camera Layer
           Positioned.fill(child: _buildScannerView()),
+
+          // 2. Overlay Layer (Info Badges di Atas + Scanner Box)
           Positioned.fill(child: _buildScannerOverlay(context)),
+
+          // 3. Bottom Controls Layer (KEMBALI KE 3 TOMBOL)
           Positioned(
             left: 0,
             right: 0,
-            bottom: _showBottomNav ? 80 : 20,
+            bottom: _showBottomNav ? 90 : 30,
             child: _buildFloatingButtons(),
           ),
+
+          // 4. Bottom Nav (Optional)
           if (_showBottomNav)
             Positioned(
               left: 0,
@@ -396,11 +523,6 @@ class _QrScanScreenState extends State<QrScanScreen>
     );
   }
 
-  void _handleBackButton() {
-    if (_hasPopped) return;
-    _safePop(null);
-  }
-
   Widget _buildScannerView() {
     return MobileScanner(
       controller: cameraController,
@@ -411,192 +533,166 @@ class _QrScanScreenState extends State<QrScanScreen>
   Widget _buildScannerOverlay(BuildContext context) {
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
-    final scannerSize = size.width * 0.75;
+    final scannerSize = size.width * 0.70;
 
-    return Container(
-      color: Colors.black.withOpacity(0.5),
-      child: Column(
-        children: [
-          SizedBox(height: (size.height - scannerSize - 200) / 2),
-          Container(
-            width: scannerSize,
-            height: scannerSize,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppThemes.primaryColor.withOpacity(0.8),
-                width: 3,
-              ),
-            ),
-            child: Stack(
-              children: [
-                AnimatedBuilder(
-                  animation: _animationController,
-                  builder: (context, child) {
-                    return Positioned(
-                      top: _animationController.value * scannerSize,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        height: 2,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppThemes.primaryColor.withOpacity(0.1),
-                              AppThemes.primaryColor,
-                              AppThemes.primaryColor.withOpacity(0.1),
-                            ],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppThemes.primaryColor.withOpacity(0.5),
-                              blurRadius: 8,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-          Container(
-            margin: const EdgeInsets.only(top: 32),
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+    return Stack(
+      children: [
+        // --- INFO SECTION (TOP) - Layout Baru ---
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Column(
               children: [
-                Text(
-                  'Scan QR Code',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 24,
-                  ),
+                // Row untuk Time (Kanan Atas)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    _buildInfoBadge(
+                      icon: Icons.access_time_rounded,
+                      color: AppThemes.primaryColor,
+                      child: DigitalClockWidget(
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  _isProcessing
-                      ? 'Processing attendance...'
-                      : 'Position the QR code within the frame',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 16,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-
-                // Display current time
-                Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppThemes.primaryColor.withOpacity(0.5),
+                // Location Status (Tengah Atas)
+                _buildInfoBadge(
+                  icon: _isLocationLoading
+                      ? Icons.location_searching_rounded
+                      : _locationSettings != null
+                      ? Icons.location_on_rounded
+                      : Icons.location_off_rounded,
+                  color: _isLocationLoading
+                      ? AppThemes.warningColor
+                      : _locationSettings != null
+                      ? AppThemes.successColor
+                      : AppThemes.errorColor,
+                  child: Text(
+                    _locationStatus,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.access_time,
-                        color: AppThemes.primaryColor,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Time: $_currentTime',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _isLocationLoading
-                          ? AppThemes.warningColor
-                          : _locationSettings != null
-                          ? AppThemes.successColor
-                          : AppThemes.errorColor,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _isLocationLoading
-                            ? Icons.location_searching
-                            : _locationSettings != null
-                            ? Icons.location_on
-                            : Icons.location_off,
-                        color: _isLocationLoading
-                            ? AppThemes.warningColor
-                            : _locationSettings != null
-                            ? AppThemes.successColor
-                            : AppThemes.errorColor,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _locationStatus,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.white,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ],
             ),
           ),
-          if (_isProcessing)
-            Container(
-              margin: const EdgeInsets.only(top: 24),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(25),
-                border: Border.all(
-                  color: AppThemes.successColor.withOpacity(0.5),
+        ),
+
+        // --- CENTER SCANNER ---
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Scanner Box
+              Container(
+                width: scannerSize,
+                height: scannerSize,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: AppThemes.primaryColor.withOpacity(0.8),
+                    width: 3,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppThemes.primaryColor.withOpacity(0.3),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(21),
+                  child: Stack(
+                    children: [
+                      AnimatedBuilder(
+                        animation: _animationController,
+                        builder: (context, child) {
+                          return Positioned(
+                            top: _animationController.value * scannerSize,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              height: 3,
+                              decoration: BoxDecoration(
+                                color: AppThemes.primaryColor,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppThemes.primaryColor,
+                                    blurRadius: 10,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              child: Row(
+              const SizedBox(height: 32),
+              // Instructions
+              Text(
+                'Scan QR Code Presensi',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  shadows: [
+                    const Shadow(
+                      color: Colors.black54,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _isProcessing
+                    ? 'Memproses data...'
+                    : 'Posisikan kode QR di dalam bingkai',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.white.withOpacity(0.9),
+                  shadows: [
+                    const Shadow(
+                      color: Colors.black54,
+                      blurRadius: 4,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+
+        // --- LOADING OVERLAY ---
+        if (_isProcessing)
+          Container(
+            color: Colors.black.withOpacity(0.7),
+            child: Center(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppThemes.successColor,
-                      ),
-                    ),
+                  const CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(height: 20),
                   Text(
-                    'Recording Attendance...',
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    'Mencatat Kehadiran...',
+                    style: theme.textTheme.titleMedium?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
                     ),
@@ -604,11 +700,36 @@ class _QrScanScreenState extends State<QrScanScreen>
                 ],
               ),
             ),
+          ),
+      ],
+    );
+  }
+
+  // Widget Helper untuk Badge Informasi
+  Widget _buildInfoBadge({
+    required IconData icon,
+    required Widget child,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.45),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.15), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          child,
         ],
       ),
     );
   }
 
+  // --- TOMBOL BAWAH: KEMBALI KE 3 TOMBOL (Flash - Scan - Gallery) ---
   Widget _buildFloatingButtons() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -646,7 +767,7 @@ class _QrScanScreenState extends State<QrScanScreen>
     required VoidCallback onPressed,
     bool isLarge = false,
   }) {
-    final bool isDisabled = onPressed == () {};
+    final bool isDisabled = _isProcessing;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -694,85 +815,6 @@ class _QrScanScreenState extends State<QrScanScreen>
           ),
         ),
       ],
-    );
-  }
-
-  void _handleBarcodeDetected(BarcodeCapture capture) {
-    if (_isProcessing || !_isScanning || _hasPopped) return;
-
-    final barcodes = capture.barcodes;
-    if (barcodes.isNotEmpty) {
-      final barcode = barcodes.first;
-      if (barcode.rawValue != null && barcode.rawValue!.isNotEmpty) {
-        _submitAttendance();
-      }
-    }
-  }
-
-  void _startScan() {
-    if (_isScanning || _isProcessing) return;
-
-    setState(() {
-      _isScanning = true;
-    });
-
-    cameraController.start().catchError((error) {
-      if (mounted) {
-        setState(() {
-          _isScanning = false;
-        });
-      }
-    });
-  }
-
-  void _toggleFlash() {
-    if (_isProcessing) return;
-
-    setState(() {
-      _isFlashOn = !_isFlashOn;
-    });
-    cameraController.toggleTorch();
-  }
-
-  Future<void> _pickImageFromGallery() async {
-    try {
-      if (_isProcessing || _hasPopped) return;
-
-      // ADD PERMISSION CHECK HERE
-      final hasPermission = await PermissionService.requestGalleryPermission();
-
-      if (!hasPermission) {
-        _showPermissionDialog(
-          'Gallery Access Required',
-          'Please grant gallery access to pick images',
-        );
-        return;
-      }
-
-      final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-      );
-
-      if (image != null) {
-        _submitAttendance();
-      }
-    } catch (e) {
-      if (mounted) {
-        _showErrorDialog('Failed to pick image from gallery');
-      }
-    }
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => CustomDialog(
-        title: 'Error',
-        content: message,
-        primaryButtonText: 'OK',
-        primaryButtonColor: AppThemes.errorColor,
-        onPrimaryButtonPressed: () => Navigator.pop(context),
-      ),
     );
   }
 }

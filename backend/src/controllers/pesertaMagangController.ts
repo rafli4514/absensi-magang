@@ -1,22 +1,24 @@
 import { type Request, type Response } from "express";
+import { Role } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import {
-  sendSuccess,
-  sendError,
-  sendPaginatedSuccess,
+sendSuccess,
+sendError,
+sendPaginatedSuccess,
 } from "../utils/response";
 import path from "path";
 import fs from "fs";
+import bcrypt from 'bcryptjs'; // Lebih rapi jika diimport di atas
 
 export const getAllPesertaMagang = async (req: Request, res: Response) => {
-  try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const skip = (page - 1) * limit;
-    const status = req.query.status as string;
+try {
+const page = parseInt(req.query.page as string) || 1;
+const limit = parseInt(req.query.limit as string) || 10;
+const skip = (page - 1) * limit;
+const status = req.query.status as string;
 
-    const where: any = {};
-    if (status && status !== "Semua") {
+const where: any = {};
+if (status && status !== "Semua") {
       where.status = status.toUpperCase();
     }
 
@@ -70,11 +72,11 @@ export const getPesertaMagangById = async (req: Request, res: Response) => {
         },
         absensi: {
           orderBy: { createdAt: "desc" },
-          take: 10, // Get last 10 attendance records
+          take: 10,
         },
         pengajuanIzin: {
           orderBy: { createdAt: "desc" },
-          take: 5, // Get last 5 leave requests
+          take: 5,
         },
       },
     });
@@ -96,22 +98,20 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
       nama,
       username,
       divisi,
-      instansi = "Universitas/Instansi Tidak Diketahui", // Default value untuk instansi
+      instansi = "Universitas/Instansi Tidak Diketahui",
       id_instansi,
       nomorHp,
       tanggalMulai,
       tanggalSelesai,
       status = "AKTIF",
       avatar,
-      password = "password123", // Default password jika tidak diberikan
+      password = "password123",
     } = req.body;
 
-    // Validate required fields
     if (!nama || !username || !divisi || !nomorHp || !tanggalMulai || !tanggalSelesai) {
       return sendError(res, "Required fields: nama, username, divisi, nomorHp, tanggalMulai, tanggalSelesai", 400);
     }
 
-    // Check if username already exists in peserta magang
     const existingPeserta = await prisma.pesertaMagang.findUnique({
       where: { username },
     });
@@ -120,7 +120,6 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
       return sendError(res, "Username already exists", 400);
     }
 
-    // Check if username already exists in users
     const existingUser = await prisma.user.findUnique({
       where: { username },
     });
@@ -129,8 +128,6 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
       return sendError(res, "Username already exists in users", 400);
     }
 
-    // Create user first
-    const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const user = await prisma.user.create({
@@ -142,7 +139,6 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
       },
     });
 
-    // Create peserta magang with user relation
     const pesertaMagang = await prisma.pesertaMagang.create({
       data: {
         nama,
@@ -192,7 +188,6 @@ export const updatePesertaMagang = async (req: Request, res: Response) => {
       avatar,
     } = req.body;
 
-    // Check if peserta magang exists
     const existingPeserta = await prisma.pesertaMagang.findUnique({
       where: { id },
     });
@@ -201,7 +196,6 @@ export const updatePesertaMagang = async (req: Request, res: Response) => {
       return sendError(res, "Peserta magang not found", 404);
     }
 
-    // Check if username already exists (excluding current peserta)
     if (username && username !== existingPeserta.username) {
       const duplicatePeserta = await prisma.pesertaMagang.findUnique({
         where: { username },
@@ -244,7 +238,6 @@ export const deletePesertaMagang = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    // Check if peserta magang exists and get avatar info
     const pesertaMagang = await prisma.pesertaMagang.findUnique({
       where: { id },
       select: {
@@ -258,31 +251,25 @@ export const deletePesertaMagang = async (req: Request, res: Response) => {
       return sendError(res, "Peserta magang not found", 404);
     }
 
-    // Delete avatar file if exists
     if (pesertaMagang.avatar) {
       try {
-        // Extract filename from avatar URL
         const avatarUrl = pesertaMagang.avatar;
         const filename = path.basename(avatarUrl);
         const filePath = path.join(__dirname, "..", "uploads", filename);
 
-        // Check if file exists and delete it
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
           console.log(`Avatar file deleted: ${filename}`);
         }
       } catch (fileError) {
         console.error("Error deleting avatar file:", fileError);
-        // Continue with deletion even if file deletion fails
       }
     }
 
-    // Delete peserta magang (this will cascade delete related absensi and pengajuanIzin)
     await prisma.pesertaMagang.delete({
       where: { id },
     });
 
-    // Delete associated user if exists
     if (pesertaMagang.userId) {
       try {
         await prisma.user.delete({
@@ -291,7 +278,6 @@ export const deletePesertaMagang = async (req: Request, res: Response) => {
         console.log(`Associated user deleted: ${pesertaMagang.userId}`);
       } catch (userError) {
         console.error("Error deleting associated user:", userError);
-        // Continue even if user deletion fails
       }
     }
 
@@ -316,7 +302,6 @@ export const uploadAvatar = async (req: Request, res: Response) => {
       return sendError(res, "No file uploaded", 400);
     }
 
-    // Check if peserta magang exists and get current avatar
     const existingPeserta = await prisma.pesertaMagang.findUnique({
       where: { id },
       select: {
@@ -330,30 +315,25 @@ export const uploadAvatar = async (req: Request, res: Response) => {
       return sendError(res, "Peserta magang not found", 404);
     }
 
-    // Delete old avatar file if exists
     if (existingPeserta.avatar) {
       try {
-        // Extract filename from old avatar URL
         const oldAvatarUrl = existingPeserta.avatar;
         const oldFilename = path.basename(oldAvatarUrl);
         const oldFilePath = path.join(__dirname, "..", "uploads", oldFilename);
 
-        // Check if old file exists and delete it
         if (fs.existsSync(oldFilePath)) {
           fs.unlinkSync(oldFilePath);
           console.log(`Old avatar file deleted: ${oldFilename}`);
         }
       } catch (fileError) {
         console.error("Error deleting old avatar file:", fileError);
-        // Continue with upload even if old file deletion fails
       }
     }
 
-    // Create avatar URL
+    // Pastikan URL ini sesuai dengan environment (jangan localhost hardcoded jika untuk production)
     const avatarUrl = `http://localhost:3000/uploads/${file.filename}`;
     console.log("Avatar URL:", avatarUrl);
 
-    // Update peserta magang with new avatar
     const updatedPesertaMagang = await prisma.pesertaMagang.update({
       where: { id },
       data: { avatar: avatarUrl },
@@ -386,11 +366,11 @@ export const getPesertaMagangByUserId = async (req: Request, res: Response) => {
         },
         absensi: {
           orderBy: { createdAt: "desc" },
-          take: 10, // Get last 10 attendance records
+          take: 10,
         },
         pengajuanIzin: {
           orderBy: { createdAt: "desc" },
-          take: 5, // Get last 5 leave requests
+          take: 5,
         },
       },
     });
@@ -423,7 +403,6 @@ export const changePassword = async (req: Request, res: Response) => {
       return sendError(res, "New password must be at least 6 characters", 400);
     }
 
-    // Get user with associated peserta magang
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -435,17 +414,13 @@ export const changePassword = async (req: Request, res: Response) => {
       return sendError(res, "Peserta magang not found", 404);
     }
 
-    // Verify current password
-    const bcrypt = require('bcryptjs');
     const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isCurrentPasswordValid) {
       return sendError(res, "Current password is incorrect", 400);
     }
 
-    // Hash new password
     const hashedNewPassword = await bcrypt.hash(newPassword, 12);
 
-    // Update password
     await prisma.user.update({
       where: { id: userId },
       data: { password: hashedNewPassword },
@@ -462,7 +437,6 @@ export const removeAvatar = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    // Check if peserta magang exists and get current avatar
     const pesertaMagang = await prisma.pesertaMagang.findUnique({
       where: { id },
       select: {
@@ -475,26 +449,21 @@ export const removeAvatar = async (req: Request, res: Response) => {
       return sendError(res, "Peserta magang not found", 404);
     }
 
-    // Delete physical file if avatar exists
     if (pesertaMagang.avatar) {
       try {
-        // Extract filename from avatar URL
         const avatarUrl = pesertaMagang.avatar;
         const filename = path.basename(avatarUrl);
         const filePath = path.join(__dirname, "..", "uploads", filename);
 
-        // Check if file exists and delete it
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
           console.log(`Avatar file deleted: ${filename}`);
         }
       } catch (fileError) {
         console.error("Error deleting avatar file:", fileError);
-        // Continue with database update even if file deletion fails
       }
     }
 
-    // Remove avatar from peserta magang
     const updatedPesertaMagang = await prisma.pesertaMagang.update({
       where: { id },
       data: { avatar: null },
