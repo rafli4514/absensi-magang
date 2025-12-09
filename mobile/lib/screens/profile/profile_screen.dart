@@ -92,6 +92,7 @@ class ProfileScreen extends StatelessWidget {
                   endDate: endDateTime,
                   remainingDays: remainingDays,
                   displayStartDate: displayStartDate,
+                  displayEndDate: displayEndDate,
                 ),
 
                 // --- SETTINGS ---
