@@ -26,7 +26,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   // Controllers
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
-  final _emailController = TextEditingController();
   final _divisiController = TextEditingController();
   final _instansiController = TextEditingController();
   final _nomorHpController = TextEditingController();
@@ -56,7 +55,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _usernameController.dispose();
-    _emailController.dispose();
     _divisiController.dispose();
     _instansiController.dispose();
     _nomorHpController.dispose();
@@ -73,7 +71,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() {
         _nameController.text = user.nama ?? '';
         _usernameController.text = user.username;
-        _emailController.text = user.email ?? '';
         _divisiController.text = user.divisi ?? '';
         _instansiController.text = user.instansi ?? '';
         _nomorHpController.text = user.nomorHp ?? '';
@@ -352,15 +349,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 validator: Validators.validateUsername,
                 isDarkMode: isDarkMode,
                 readOnly: true,
-              ),
-              const SizedBox(height: 20),
-              _buildModernFormField(
-                controller: _emailController,
-                label: 'Email',
-                icon: Icons.email_rounded,
-                validator: Validators.validateEmail,
-                keyboardType: TextInputType.emailAddress,
-                isDarkMode: isDarkMode,
               ),
               const SizedBox(height: 20),
               _buildModernFormField(

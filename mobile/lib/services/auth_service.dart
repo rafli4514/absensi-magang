@@ -47,6 +47,74 @@ class AuthService {
     return response;
   }
 
+  // Register peserta magang dengan endpoint baru /auth/register-peserta-magang
+  static Future<ApiResponse<LoginResponse>> registerPesertaMagang({
+    required String nama,
+    required String username,
+    required String password,
+    required String divisi,
+    required String nomorHp,
+    required String tanggalMulai,
+    required String tanggalSelesai,
+    String? instansi,
+    String? idInstansi,
+    String? status,
+  }) async {
+    print('🐛 [AUTH SERVICE] Attempting register peserta magang with username: $username');
+
+    // Prepare data sesuai dengan endpoint /auth/register-peserta-magang
+    final data = {
+      'nama': nama,
+      'username': username,
+      'password': password,
+      'divisi': divisi,
+      'nomorHp': nomorHp,
+      'tanggalMulai': tanggalMulai,
+      'tanggalSelesai': tanggalSelesai,
+      if (instansi != null && instansi.isNotEmpty) 'instansi': instansi,
+      if (idInstansi != null && idInstansi.isNotEmpty) 'id_instansi': idInstansi,
+      if (status != null && status.isNotEmpty) 'status': status,
+    };
+
+    print('[AUTH SERVICE] Registration data: $data');
+
+    final response = await _apiService.post(
+      AppConstants.registerPesertaMagangEndpoint,
+      data,
+      (data) {
+        // Backend mengembalikan { user, pesertaMagang, token, expiresIn }
+        // Gabungkan data pesertaMagang ke user agar UI mendapatkan nama/divisi/instansi/dates.
+        final userMap = <String, dynamic>{
+          ...(data['user'] ?? {}),
+          // mapping kolom peserta magang ke user
+          if (data['pesertaMagang'] != null) ...{
+            'nama': data['pesertaMagang']['nama'],
+            'divisi': data['pesertaMagang']['divisi'],
+            'instansi': data['pesertaMagang']['instansi'],
+            'nomorHp': data['pesertaMagang']['nomorHp'],
+            'tanggalMulai': data['pesertaMagang']['tanggalMulai'],
+            'tanggalSelesai': data['pesertaMagang']['tanggalSelesai'],
+            'avatar': data['pesertaMagang']['avatar'],
+          },
+          // pastikan role terisi
+          if (!(data['user'] ?? {}).containsKey('role'))
+            'role': 'PESERTA_MAGANG',
+        };
+
+        return LoginResponse(
+          user: User.fromJson(userMap),
+          token: data['token'] ?? '',
+          expiresIn: data['expiresIn'] ?? '24h',
+        );
+      },
+    );
+
+    print(
+      '[AUTH SERVICE] Register peserta magang response: ${response.success} - ${response.message}',
+    );
+    return response;
+  }
+
   // Register dengan semua field untuk peserta magang
   static Future<ApiResponse<LoginResponse>> register({
     required String username,
