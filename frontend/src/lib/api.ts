@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API Base URL
-const API_BASE_URL = import.meta.env.BASE_URL ?? "http://localhost:3000/api";
+const API_BASE_URL = 'http://localhost:3000/api';
 
 // Create axios instance
 const api = axios.create({
@@ -11,13 +11,7 @@ const api = axios.create({
   },
 });
 
-// Helper
-const clearAuth = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-};
-
-// Request interceptor
+// Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -26,23 +20,24 @@ api.interceptors.request.use(
     }
     return config;
   },
-  Promise.reject
+  (error) => {
+    return Promise.reject(error);
+  }
 );
 
-// Response interceptor
+// Response interceptor to handle errors
 api.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    const status = err.response?.status;
-
-    if (status === 401) {
-      clearAuth();
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid, redirect to login
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       window.location.href = '/login';
-    } else if (status === 403) {
-      alert("Bro lu ga punya akses ke resource ini 😅");
     }
-
-    return Promise.reject(err);
+    return Promise.reject(error);
   }
 );
 

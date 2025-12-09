@@ -159,6 +159,8 @@ class AuthProvider with ChangeNotifier {
       final response = await AuthService.login(username, password);
       if (response.success && response.data != null) {
         await _handleAuthSuccess(response.data!);
+        // Ambil profil lengkap (termasuk pesertaMagang) setelah login
+        await refreshProfile();
         return true;
       } else {
         _error = response.message;
@@ -226,6 +228,8 @@ class AuthProvider with ChangeNotifier {
       }
       if (response.success && response.data != null) {
         await _handleAuthSuccess(response.data!);
+        // Ambil profil lengkap setelah register
+        await refreshProfile();
         return true;
       } else {
         _error = response.message;

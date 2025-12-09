@@ -59,7 +59,8 @@ class User {
       role: (json['role']?.toLowerCase() ?? ''),
       divisi: json['divisi'] ?? pesertaMagang?['divisi'],
       instansi: json['instansi'] ?? pesertaMagang?['instansi'],
-      nomorHp: json['nomorHp'] ?? json['phoneNumber'],
+      nomorHp:
+          json['nomorHp'] ?? pesertaMagang?['nomorHp'] ?? json['phoneNumber'],
       tanggalMulai: json['tanggalMulai'] ?? pesertaMagang?['tanggalMulai'],
       tanggalSelesai:
           json['tanggalSelesai'] ?? pesertaMagang?['tanggalSelesai'],

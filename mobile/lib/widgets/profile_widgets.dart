@@ -427,15 +427,6 @@ class UserProfileCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // 4. Email
-          ProfileInfoRow(
-            icon: Icons.email_rounded,
-            label: "Email",
-            value: user?.email ?? '-',
-            isDarkMode: isDarkMode,
-          ),
-          ProfileDivider(isDarkMode: isDarkMode),
-
           // 5. Nomor HP
           ProfileInfoRow(
             icon: Icons.phone_rounded,
@@ -469,6 +460,7 @@ class InternshipInfoCard extends StatelessWidget {
   final DateTime? endDate;
   final int remainingDays;
   final String displayStartDate;
+  final String displayEndDate;
 
   const InternshipInfoCard({
     super.key,
@@ -481,6 +473,7 @@ class InternshipInfoCard extends StatelessWidget {
     this.endDate,
     required this.remainingDays,
     required this.displayStartDate,
+    required this.displayEndDate,
   });
 
   @override
@@ -613,12 +606,24 @@ class InternshipInfoCard extends StatelessWidget {
             // Fallback jika tanggal belum lengkap
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
-              child: ProfileInfoRow(
-                icon: Icons.date_range,
-                label: "Tanggal Mulai",
-                value: displayStartDate,
-                isDarkMode: isDarkMode,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ProfileInfoRow(
+                  icon: Icons.date_range,
+                  label: "Tanggal Mulai",
+                  value: displayStartDate,
+                  isDarkMode: isDarkMode,
+                ),
+                const SizedBox(height: 8),
+                ProfileInfoRow(
+                  icon: Icons.event_available,
+                  label: "Tanggal Selesai",
+                  value: displayEndDate,
+                  isDarkMode: isDarkMode,
+                ),
+              ],
+            ),
             ),
         ],
       ),

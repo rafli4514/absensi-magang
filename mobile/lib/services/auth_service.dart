@@ -81,7 +81,32 @@ class AuthService {
     final response = await _apiService.post(
       AppConstants.registerPesertaMagangEndpoint,
       data,
-      (data) => LoginResponse.fromJson(data),
+      (data) {
+        // Backend mengembalikan { user, pesertaMagang, token, expiresIn }
+        // Gabungkan data pesertaMagang ke user agar UI mendapatkan nama/divisi/instansi/dates.
+        final userMap = <String, dynamic>{
+          ...(data['user'] ?? {}),
+          // mapping kolom peserta magang ke user
+          if (data['pesertaMagang'] != null) ...{
+            'nama': data['pesertaMagang']['nama'],
+            'divisi': data['pesertaMagang']['divisi'],
+            'instansi': data['pesertaMagang']['instansi'],
+            'nomorHp': data['pesertaMagang']['nomorHp'],
+            'tanggalMulai': data['pesertaMagang']['tanggalMulai'],
+            'tanggalSelesai': data['pesertaMagang']['tanggalSelesai'],
+            'avatar': data['pesertaMagang']['avatar'],
+          },
+          // pastikan role terisi
+          if (!(data['user'] ?? {}).containsKey('role'))
+            'role': 'PESERTA_MAGANG',
+        };
+
+        return LoginResponse(
+          user: User.fromJson(userMap),
+          token: data['token'] ?? '',
+          expiresIn: data['expiresIn'] ?? '24h',
+        );
+      },
     );
 
     print(

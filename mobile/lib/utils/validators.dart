@@ -53,18 +53,18 @@ class Validators {
     return null;
   }
 
-  static String? validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Email is required';
-    }
+  // static String? validateEmail(String? value) {
+  //   if (value == null || value.isEmpty) {
+  //     return 'Email is required';
+  //   }
 
-    final emailRegex = RegExp(r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
-    if (!emailRegex.hasMatch(value)) {
-      return 'Please enter a valid email address';
-    }
+  //   final emailRegex = RegExp(r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
+  //   if (!emailRegex.hasMatch(value)) {
+  //     return 'Please enter a valid email address';
+  //   }
 
-    return null;
-  }
+  //   return null;
+  // }
 
   static String? validatePhoneNumber(String? value) {
     if (value == null || value.isEmpty) {
