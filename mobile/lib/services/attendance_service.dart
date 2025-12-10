@@ -21,23 +21,28 @@ class AttendanceService {
 
   static Future<ApiResponse<List<Attendance>>> getAllAttendance({
     int page = 1,
-    int limit = 10,
+    int limit = 100,
     String? pesertaMagangId,
     String? tipe,
     String? status,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     try {
       final headers = await _getHeaders();
-      final params = {
+      final params = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
-        if (pesertaMagangId != null) 'pesertaMagangId': pesertaMagangId,
-        if (tipe != null && tipe != 'Semua') 'tipe': tipe,
-        if (status != null && status != 'Semua') 'status': status,
+        if (pesertaMagangId != null && pesertaMagangId.isNotEmpty) 
+          'pesertaMagangId': pesertaMagangId,
+        if (tipe != null && tipe.isNotEmpty && tipe != 'Semua') 
+          'tipe': tipe,
+        if (status != null && status.isNotEmpty && status != 'Semua') 
+          'status': status,
       };
 
       final uri = Uri.parse(
-        '$baseUrl/attendance',
+        '$baseUrl/absensi',
       ).replace(queryParameters: params);
       final response = await http.get(uri, headers: headers).timeout(timeout);
 
@@ -83,7 +88,7 @@ class AttendanceService {
       final headers = await _getHeaders();
       final response = await http
           .post(
-            Uri.parse('$baseUrl/attendance'),
+            Uri.parse('$baseUrl/absensi'),
             headers: headers,
             body: jsonEncode({
               'pesertaMagangId': pesertaMagangId,
@@ -126,7 +131,7 @@ class AttendanceService {
     try {
       final headers = await _getHeaders();
       final response = await http
-          .get(Uri.parse('$baseUrl/attendance/$id'), headers: headers)
+          .get(Uri.parse('$baseUrl/absensi/$id'), headers: headers)
           .timeout(timeout);
 
       final data = jsonDecode(response.body);
@@ -157,7 +162,7 @@ class AttendanceService {
       final headers = await _getHeaders();
       final today = DateTime.now().toIso8601String().split('T')[0];
       final uri = Uri.parse(
-        '$baseUrl/attendance',
+        '$baseUrl/absensi',
       ).replace(queryParameters: {'tanggal': today, 'limit': '50'});
 
       final response = await http.get(uri, headers: headers).timeout(timeout);
