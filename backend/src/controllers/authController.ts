@@ -454,7 +454,17 @@ export const getProfile = async (req: Request, res: Response) => {
 export const updateProfile = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    const { username, currentPassword, newPassword } = req.body;
+    const {
+      username,
+      currentPassword,
+      newPassword,
+      nama,
+      divisi,
+      instansi,
+      nomorHp,
+      tanggalMulai,
+      tanggalSelesai,
+    } = req.body;
 
     if (!userId) {
       return sendError(res, "User not authenticated", 401);
@@ -505,6 +515,7 @@ export const updateProfile = async (req: Request, res: Response) => {
       updateData.password = await bcrypt.hash(newPassword, 12);
     }
 
+    // Update user table
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: updateData,
@@ -519,7 +530,44 @@ export const updateProfile = async (req: Request, res: Response) => {
       },
     });
 
-    sendSuccess(res, "Profile updated successfully", updatedUser);
+    // Update peserta magang profile if exists and payload contains fields
+    const pesertaUpdate: any = {};
+    if (nama) pesertaUpdate.nama = nama;
+    if (divisi) pesertaUpdate.divisi = divisi;
+    if (instansi) pesertaUpdate.instansi = instansi;
+    if (nomorHp) pesertaUpdate.nomorHp = nomorHp;
+    if (tanggalMulai) pesertaUpdate.tanggalMulai = tanggalMulai;
+    if (tanggalSelesai) pesertaUpdate.tanggalSelesai = tanggalSelesai;
+
+    let updatedPeserta = null;
+    if (Object.keys(pesertaUpdate).length > 0) {
+      const peserta = await prisma.pesertaMagang.findUnique({
+        where: { userId },
+      });
+      if (peserta) {
+        updatedPeserta = await prisma.pesertaMagang.update({
+          where: { userId },
+          data: pesertaUpdate,
+          select: {
+            id: true,
+            nama: true,
+            username: true,
+            divisi: true,
+            instansi: true,
+            nomorHp: true,
+            tanggalMulai: true,
+            tanggalSelesai: true,
+            status: true,
+            avatar: true,
+          },
+        });
+      }
+    }
+
+    sendSuccess(res, "Profile updated successfully", {
+      ...updatedUser,
+      pesertaMagang: updatedPeserta ?? undefined,
+    });
   } catch (error) {
     console.error("Update profile error:", error);
     sendError(res, "Failed to update profile", 500);
