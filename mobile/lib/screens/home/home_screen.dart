@@ -48,8 +48,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (attendanceType == 'CLOCK_IN') {
         attendanceProvider.clockIn(time);
+        // TAMBAHKAN INI: Feedback sukses
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Berhasil Absen Masuk!'),
+            backgroundColor: AppThemes.successColor,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       } else if (attendanceType == 'CLOCK_OUT') {
         attendanceProvider.clockOut(time);
+        // TAMBAHKAN INI: Feedback sukses
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Berhasil Absen Pulang! Hati-hati di jalan.'),
+            backgroundColor: AppThemes.successColor,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
 
       if (kDebugMode) {
@@ -72,9 +88,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark
-          ? AppThemes.darkBackground
-          : AppThemes.backgroundColor,
+      backgroundColor:
+          isDark ? AppThemes.darkBackground : AppThemes.backgroundColor,
       appBar: CustomAppBar(
         title: 'Home',
         showBackButton: false,
@@ -82,9 +97,8 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: Icon(
               Icons.notifications_outlined,
-              color: isDark
-                  ? AppThemes.darkTextPrimary
-                  : AppThemes.onSurfaceColor,
+              color:
+                  isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
             ),
             onPressed: () {
               // Navigate to notifications

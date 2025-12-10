@@ -16,21 +16,33 @@ class NavigationHelper {
       PageRouteBuilder(
         pageBuilder: (context, animation1, animation2) =>
             _getScreenForRoute(routeName),
-        transitionDuration: Duration.zero,
-        reverseTransitionDuration: Duration.zero,
+        // UBAH DURASI: Beri waktu sedikit (misal 300ms) agar transisi halus
+        transitionDuration: const Duration(milliseconds: 300),
+        reverseTransitionDuration: const Duration(milliseconds: 300),
+        // TAMBAHKAN TRANSITIONS BUILDER: Gunakan Fade (pudar)
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          // Animasi Fade In/Out
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
       ),
     );
   }
 
-  // TAMBAHKAN METHOD BARU INI
   static void pushWithoutAnimation(BuildContext context, String routeName) {
     Navigator.push(
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation1, animation2) =>
             _getScreenForRoute(routeName),
-        transitionDuration: Duration.zero,
-        reverseTransitionDuration: Duration.zero,
+        // Berikan durasi juga di sini jika ingin push halus
+        transitionDuration: const Duration(milliseconds: 100),
+        reverseTransitionDuration: const Duration(milliseconds: 100),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
       ),
     );
   }

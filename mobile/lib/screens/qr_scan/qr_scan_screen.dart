@@ -49,8 +49,7 @@ class _DigitalClockWidgetState extends State<DigitalClockWidget> {
   Widget build(BuildContext context) {
     return Text(
       _timeString,
-      style:
-          widget.style ??
+      style: widget.style ??
           const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
     );
   }
@@ -235,25 +234,21 @@ class _QrScanScreenState extends State<QrScanScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _startScan();
-            },
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await PermissionService.openAppSettings();
-            },
-            child: const Text('Buka Pengaturan'),
-          ),
-        ],
+      builder: (context) => CustomDialog(
+        // Gunakan CustomDialog
+        title: title,
+        content: message,
+        primaryButtonText: 'Buka Pengaturan',
+        primaryButtonColor: AppThemes.primaryColor,
+        onPrimaryButtonPressed: () async {
+          Navigator.pop(context);
+          await PermissionService.openAppSettings();
+        },
+        secondaryButtonText: 'Batal',
+        onSecondaryButtonPressed: () {
+          Navigator.pop(context);
+          _startScan();
+        },
       ),
     );
   }
@@ -566,13 +561,13 @@ class _QrScanScreenState extends State<QrScanScreen>
                   icon: _isLocationLoading
                       ? Icons.location_searching_rounded
                       : _locationSettings != null
-                      ? Icons.location_on_rounded
-                      : Icons.location_off_rounded,
+                          ? Icons.location_on_rounded
+                          : Icons.location_off_rounded,
                   color: _isLocationLoading
                       ? AppThemes.warningColor
                       : _locationSettings != null
-                      ? AppThemes.successColor
-                      : AppThemes.errorColor,
+                          ? AppThemes.successColor
+                          : AppThemes.errorColor,
                   child: Text(
                     _locationStatus,
                     style: theme.textTheme.bodyMedium?.copyWith(
