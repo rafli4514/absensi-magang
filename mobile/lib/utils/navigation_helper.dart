@@ -8,27 +8,31 @@ import '../screens/profile/edit_profile_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/qr_scan/qr_scan_screen.dart';
 import '../screens/report/report_screen.dart';
+import 'haptic_util.dart';
 
 class NavigationHelper {
+  // Tambahkan durasi standar
+  static const Duration defaultTransitionDuration = Duration(milliseconds: 300);
+
   static void navigateWithoutAnimation(BuildContext context, String routeName) {
+    HapticUtil.light(); // Feedback saat ganti tab
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation1, animation2) =>
             _getScreenForRoute(routeName),
-        // UBAH DURASI: Beri waktu sedikit (misal 300ms) agar transisi halus
-        transitionDuration: const Duration(milliseconds: 300),
-        reverseTransitionDuration: const Duration(milliseconds: 300),
-        // TAMBAHKAN TRANSITIONS BUILDER: Gunakan Fade (pudar)
+        transitionDuration: defaultTransitionDuration,
+        reverseTransitionDuration: defaultTransitionDuration,
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          // Animasi Fade In/Out
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
       ),
     );
+  }
+
+  static void navigateToLoginAndClear(BuildContext context) {
+    Navigator.pushNamedAndRemoveUntil(
+        context, RouteNames.login, (route) => false);
   }
 
   static void pushWithoutAnimation(BuildContext context, String routeName) {

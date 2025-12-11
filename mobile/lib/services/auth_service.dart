@@ -11,7 +11,6 @@ import '../../utils/constants.dart';
 class AuthService {
   static final ApiService _apiService = ApiService();
 
-  // Login untuk admin/staff (menggunakan username)
   static Future<ApiResponse<LoginResponse>> login(
     String username,
     String password,

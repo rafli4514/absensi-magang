@@ -1,4 +1,5 @@
 class RouteNames {
+  static const String mainLayout = '/main';
   static const String splash = '/';
   static const String onboard = '/onboard';
   static const String onboardWelcome = '/onboard-welcome';

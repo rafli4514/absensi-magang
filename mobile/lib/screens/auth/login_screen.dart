@@ -5,6 +5,7 @@ import '../../navigation/route_names.dart';
 import '../../providers/auth_provider.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/validators.dart';
+import '../../widgets/app_loading_overlay.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/loading_indicator.dart';
@@ -29,19 +30,50 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    // Validasi hanya terjadi saat tombol ditekan
-    if (_formKey.currentState!.validate()) {
-      // Tutup keyboard
-      FocusScope.of(context).unfocus();
+    if (!_formKey.currentState!.validate()) return;
 
+    // 1. Tampilkan Loading (Gunakan context lokal LoginScreen yang valid)
+    AppLoadingOverlay.show(context);
+
+    try {
+      // 2. Proses Login
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final success = await authProvider.login(
-        _usernameController.text.trim(),
-        _passwordController.text.trim(),
-      );
 
-      if (success && mounted) {
+      // Trim input untuk menghindari spasi tak sengaja
+      final success = await authProvider.login(
+          _usernameController.text.trim(), _passwordController.text.trim());
+
+      // 3. Sembunyikan Loading SEGERA setelah proses selesai (sebelum navigasi)
+      AppLoadingOverlay.hide();
+
+      if (!mounted) return;
+
+      if (success) {
+        // Navigasi ke Dashboard/Home
         Navigator.pushReplacementNamed(context, RouteNames.home);
+      } else {
+        // Tampilkan error dari provider
+        final errorMsg = authProvider.error;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg ?? 'Login gagal'),
+            backgroundColor: AppThemes.errorColor,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      // 4. Pastikan hide dipanggil jika terjadi crash/error network
+      AppLoadingOverlay.hide();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Terjadi kesalahan sistem: $e'),
+            backgroundColor: AppThemes.errorColor,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
@@ -162,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Tombol Login selalu aktif
+                    // Tombol Login
                     SizedBox(
                       width: double.infinity,
                       height: 44,
@@ -192,6 +224,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 24),
+
+              // Divider OR
               Row(
                 children: [
                   Expanded(
@@ -223,6 +257,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               const SizedBox(height: 20),
+
+              // Sign Up Link
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

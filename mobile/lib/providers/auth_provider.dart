@@ -26,23 +26,27 @@ class AuthProvider with ChangeNotifier {
     _loadUserData();
   }
 
-  // Ubah menjadi public method (hapus underscore) agar bisa dipanggil/ditunggu
-  Future<void> loadUserData() async {
-    await _loadUserData();
-  }
-
   Future<void> _loadUserData() async {
     try {
-      final userDataStr = await StorageService.getString(
-        AppConstants.userDataKey,
-      );
+      final userDataStr =
+          await StorageService.getString(AppConstants.userDataKey);
       final token = await StorageService.getString(AppConstants.tokenKey);
 
-      if (userDataStr != null && token != null) {
-        final userData = jsonDecode(userDataStr);
-        _user = User.fromJson(userData);
-        _token = token;
-        notifyListeners();
+      // Pastikan string tidak kosong sebelum decode
+      if (userDataStr != null &&
+          userDataStr.isNotEmpty &&
+          token != null &&
+          token.isNotEmpty) {
+        try {
+          final userData = jsonDecode(userDataStr);
+          _user = User.fromJson(userData);
+          _token = token;
+          notifyListeners();
+        } catch (e) {
+          // Jika JSON error (misal format berubah), hapus data corrupt agar user login ulang
+          print('Data corrupt, clearing storage...');
+          await logout();
+        }
       }
     } catch (e) {
       if (kDebugMode) print('❌ [AUTH PROVIDER] Error loading user data: $e');

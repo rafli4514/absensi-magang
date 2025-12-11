@@ -6,6 +6,8 @@ import 'package:http_parser/http_parser.dart';
 import '../../models/api_response.dart';
 import '../../services/storage_service.dart';
 import '../../utils/constants.dart';
+import '../utils/global_context.dart';
+import '../utils/global_error_handler.dart';
 
 class ApiService {
   static const String baseUrl = AppConstants.baseUrl;
@@ -23,6 +25,7 @@ class ApiService {
     };
   }
 
+  // --- GET METHOD ---
   Future<ApiResponse<T>> get<T>(
     String endpoint,
     T Function(dynamic)? fromJson,
@@ -37,7 +40,6 @@ class ApiService {
       }
 
       final trimmed = response.body.trim();
-
       if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
         throw FormatException('Invalid JSON format');
       }
@@ -54,21 +56,34 @@ class ApiService {
           statusCode: response.statusCode,
         );
       } else {
-        return ApiResponse<T>(
+        // Handle Server Error (e.g. 401, 404, 500)
+        final errorResponse = ApiResponse<T>(
           success: false,
           message: data['message'] ?? 'Request failed',
           statusCode: response.statusCode,
         );
+
+        if (GlobalContext.currentContext != null) {
+          GlobalErrorHandler.handle(errorResponse);
+        }
+
+        return errorResponse;
       }
     } catch (e) {
+      // Handle Exception (Network error, Timeout, Parsing error)
+      if (GlobalContext.currentContext != null) {
+        GlobalErrorHandler.handle(e);
+      }
+
       return ApiResponse<T>(
         success: false,
-        message: 'Network error: $e',
+        message: 'Network error: ${e.toString()}',
         statusCode: 500,
       );
     }
   }
 
+  // --- POST METHOD ---
   Future<ApiResponse<T>> post<T>(
     String endpoint,
     Map<String, dynamic> body,
@@ -104,13 +119,25 @@ class ApiService {
           statusCode: response.statusCode,
         );
       } else {
-        return ApiResponse<T>(
+        // Handle Server Error
+        final errorResponse = ApiResponse<T>(
           success: false,
           message: data['message'] ?? 'Request failed',
           statusCode: response.statusCode,
         );
+
+        if (GlobalContext.currentContext != null) {
+          GlobalErrorHandler.handle(errorResponse);
+        }
+
+        return errorResponse;
       }
     } catch (e) {
+      // Handle Exception
+      if (GlobalContext.currentContext != null) {
+        GlobalErrorHandler.handle(e);
+      }
+
       return ApiResponse<T>(
         success: false,
         message: 'Network error: ${e.toString()}',
@@ -119,6 +146,7 @@ class ApiService {
     }
   }
 
+  // --- PUT METHOD ---
   Future<ApiResponse<T>> put<T>(
     String endpoint,
     Map<String, dynamic> body,
@@ -154,13 +182,25 @@ class ApiService {
           statusCode: response.statusCode,
         );
       } else {
-        return ApiResponse<T>(
+        // Handle Server Error
+        final errorResponse = ApiResponse<T>(
           success: false,
           message: data['message'] ?? 'Request failed',
           statusCode: response.statusCode,
         );
+
+        if (GlobalContext.currentContext != null) {
+          GlobalErrorHandler.handle(errorResponse);
+        }
+
+        return errorResponse;
       }
     } catch (e) {
+      // Handle Exception
+      if (GlobalContext.currentContext != null) {
+        GlobalErrorHandler.handle(e);
+      }
+
       return ApiResponse<T>(
         success: false,
         message: 'Network error: ${e.toString()}',
@@ -169,6 +209,7 @@ class ApiService {
     }
   }
 
+  // --- DELETE METHOD ---
   Future<ApiResponse<T>> delete<T>(
     String endpoint,
     T Function(dynamic)? fromJson,
@@ -199,13 +240,25 @@ class ApiService {
           statusCode: response.statusCode,
         );
       } else {
-        return ApiResponse<T>(
+        // Handle Server Error
+        final errorResponse = ApiResponse<T>(
           success: false,
           message: data['message'] ?? 'Request failed',
           statusCode: response.statusCode,
         );
+
+        if (GlobalContext.currentContext != null) {
+          GlobalErrorHandler.handle(errorResponse);
+        }
+
+        return errorResponse;
       }
     } catch (e) {
+      // Handle Exception
+      if (GlobalContext.currentContext != null) {
+        GlobalErrorHandler.handle(e);
+      }
+
       return ApiResponse<T>(
         success: false,
         message: 'Network error: ${e.toString()}',
@@ -214,7 +267,7 @@ class ApiService {
     }
   }
 
-  // Multipart request for file uploads
+  // --- MULTIPART POST METHOD (File Upload) ---
   Future<ApiResponse<T>> multipartPost<T>(
     String endpoint,
     Map<String, String> fields,
@@ -230,7 +283,9 @@ class ApiService {
       var request = http.MultipartRequest('POST', uri);
 
       // Add headers
-      request.headers['Authorization'] = 'Bearer $token';
+      if (token != null && token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
 
       // Add fields
       fields.forEach((key, value) {
@@ -242,12 +297,13 @@ class ApiService {
         fieldName,
         fileBytes,
         filename: fileName,
-        contentType: MediaType('image', 'jpeg'),
+        contentType: MediaType('image', 'jpeg'), // Pastikan import http_parser
       );
       request.files.add(multipartFile);
 
-      final response = await request.send();
-      final responseBody = await response.stream.bytesToString();
+      final streamedResponse = await request.send();
+      final responseBody = await streamedResponse.stream.bytesToString();
+      final statusCode = streamedResponse.statusCode;
 
       if (responseBody.isEmpty) {
         throw FormatException('Empty response from server');
@@ -260,23 +316,35 @@ class ApiService {
 
       final data = jsonDecode(responseBody);
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (statusCode >= 200 && statusCode < 300) {
         return ApiResponse<T>(
           success: data['success'] ?? true,
           message: data['message'] ?? 'Success',
           data: data['data'] != null && fromJson != null
               ? fromJson(data['data'])
               : null,
-          statusCode: response.statusCode,
+          statusCode: statusCode,
         );
       } else {
-        return ApiResponse<T>(
+        // Handle Server Error
+        final errorResponse = ApiResponse<T>(
           success: false,
           message: data['message'] ?? 'Request failed',
-          statusCode: response.statusCode,
+          statusCode: statusCode,
         );
+
+        if (GlobalContext.currentContext != null) {
+          GlobalErrorHandler.handle(errorResponse);
+        }
+
+        return errorResponse;
       }
     } catch (e) {
+      // Handle Exception
+      if (GlobalContext.currentContext != null) {
+        GlobalErrorHandler.handle(e);
+      }
+
       return ApiResponse<T>(
         success: false,
         message: 'Network error: ${e.toString()}',
