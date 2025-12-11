@@ -48,24 +48,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (attendanceType == 'CLOCK_IN') {
         attendanceProvider.clockIn(time);
-        // TAMBAHKAN INI: Feedback sukses
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Berhasil Absen Masuk!'),
-            backgroundColor: AppThemes.successColor,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
       } else if (attendanceType == 'CLOCK_OUT') {
         attendanceProvider.clockOut(time);
-        // TAMBAHKAN INI: Feedback sukses
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Berhasil Absen Pulang! Hati-hati di jalan.'),
-            backgroundColor: AppThemes.successColor,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
       }
 
       if (kDebugMode) {
@@ -221,13 +205,61 @@ class _HomeScreenState extends State<HomeScreen> {
                             onDownload: () {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(
-                                    '${item.title} berhasil didownload',
-                                  ),
-                                  backgroundColor: AppThemes.successColor,
+                                  // 1. Background menggunakan warna Surface (bukan hijau solid) agar Border terlihat
+                                  backgroundColor: isDark
+                                      ? AppThemes.darkSurfaceElevated
+                                      : AppThemes.surfaceColor,
+
+                                  // 2. Behavior Floating dengan margin
                                   behavior: SnackBarBehavior.floating,
+                                  margin: const EdgeInsets.all(16),
+                                  elevation:
+                                      4, // Tambahkan sedikit bayangan agar pop-up
+
+                                  // 3. Shape dengan BORDER berwarna Success (Seperti Badge)
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: const BorderSide(
+                                      color: AppThemes
+                                          .successColor, // Warna border hijau
+                                      width: 1.5, // Ketebalan border
+                                    ),
+                                  ),
+
+                                  // 4. Konten Custom dengan Icon
+                                  content: Row(
+                                    children: [
+                                      // Indikator Icon (Bulat hijau transparan)
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: AppThemes.successColor
+                                              .withOpacity(0.15),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.check_circle_rounded,
+                                          color: AppThemes.successColor,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+
+                                      // Teks Pesan
+                                      Expanded(
+                                        child: Text(
+                                          '${item.title} berhasil didownload',
+                                          style: TextStyle(
+                                            // Warna teks menyesuaikan tema (bukan putih fix)
+                                            color: isDark
+                                                ? AppThemes.darkTextPrimary
+                                                : AppThemes.onSurfaceColor,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               );

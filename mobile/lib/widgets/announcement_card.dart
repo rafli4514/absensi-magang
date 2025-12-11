@@ -153,9 +153,8 @@ class _AnnouncementItem extends StatelessWidget {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: isDark
-                ? AppThemes.darkTextPrimary
-                : AppThemes.onSurfaceColor,
+            color:
+                isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
           ),
         ),
         const SizedBox(height: 8),

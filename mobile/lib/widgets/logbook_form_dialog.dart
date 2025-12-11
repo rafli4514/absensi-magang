@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../../models/logbook.dart';
 import '../../../themes/app_themes.dart';
+import 'custom_text_field.dart';
 
 class LogBookFormDialog extends StatefulWidget {
   final LogBook? existingLog;
   final Function(String title, String location, String mentor, String content)
-  onSave;
+      onSave;
 
   const LogBookFormDialog({super.key, this.existingLog, required this.onSave});
 
@@ -15,6 +16,7 @@ class LogBookFormDialog extends StatefulWidget {
 }
 
 class _LogBookFormDialogState extends State<LogBookFormDialog> {
+  final _formKey = GlobalKey<FormState>(); // Tambahkan form key untuk validasi
   late TextEditingController _titleController;
   late TextEditingController _locationController;
   late TextEditingController _mentorController;
@@ -53,7 +55,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
     return Dialog(
       backgroundColor: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: isDark ? AppThemes.darkOutline : Colors.transparent,
         ),
@@ -61,161 +63,121 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.existingLog != null
-                    ? 'Edit Log Book'
-                    : 'Tambah Log Book',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: isDark
-                      ? AppThemes.darkTextPrimary
-                      : AppThemes.onSurfaceColor,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.existingLog != null
+                      ? 'Edit Log Book'
+                      : 'Tambah Log Book',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? AppThemes.darkTextPrimary
+                        : AppThemes.onSurfaceColor,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              _StyledTextField(
-                label: 'Judul Kegiatan',
-                icon: Icons.event_note,
-                isDark: isDark,
-                controller: _titleController,
-              ),
-              const SizedBox(height: 16),
-              _StyledTextField(
-                label: 'Lokasi (Cth: Lapangan)',
-                icon: Icons.place,
-                isDark: isDark,
-                controller: _locationController,
-              ),
-              const SizedBox(height: 16),
-              _StyledTextField(
-                label: 'Mentor Pendamping',
-                icon: Icons.person,
-                isDark: isDark,
-                controller: _mentorController,
-              ),
-              const SizedBox(height: 16),
-              _StyledTextField(
-                label: 'Detail Keterangan',
-                icon: Icons.description,
-                isDark: isDark,
-                maxLines: 4,
-                controller: _contentController,
-              ),
-              const SizedBox(height: 32),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      'Batal',
-                      style: TextStyle(
-                        color: isDark
+                const SizedBox(height: 24),
+
+                // 1. Judul Kegiatan
+                CustomTextField(
+                  controller: _titleController,
+                  label: 'Judul Kegiatan',
+                  hint: 'Contoh: Instalasi Jaringan',
+                  icon: Icons.title_rounded,
+                  validator: (val) => val == null || val.isEmpty
+                      ? 'Judul tidak boleh kosong'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+
+                // 2. Lokasi
+                CustomTextField(
+                  controller: _locationController,
+                  label: 'Lokasi',
+                  hint: 'Contoh: Ruang Server Lt. 2',
+                  icon: Icons.location_on_rounded,
+                  validator: (val) =>
+                      val == null || val.isEmpty ? 'Lokasi wajib diisi' : null,
+                ),
+                const SizedBox(height: 16),
+
+                // 3. Mentor
+                CustomTextField(
+                  controller: _mentorController,
+                  label: 'Mentor Pendamping',
+                  hint: 'Nama mentor',
+                  icon: Icons.supervisor_account_rounded,
+                  validator: (val) => val == null || val.isEmpty
+                      ? 'Nama mentor wajib diisi'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+
+                // 4. Detail Keterangan (Multiline)
+                CustomTextField(
+                  controller: _contentController,
+                  label: 'Detail Keterangan',
+                  hint: 'Deskripsikan kegiatan yang dilakukan...',
+                  icon: Icons.notes_rounded,
+                  maxLines: 4,
+                  validator: (val) => val == null || val.isEmpty
+                      ? 'Keterangan tidak boleh kosong'
+                      : null,
+                ),
+
+                const SizedBox(height: 32),
+
+                // Action Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        foregroundColor: isDark
                             ? AppThemes.darkTextSecondary
                             : AppThemes.hintColor,
                       ),
+                      child: const Text('Batal'),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_titleController.text.isNotEmpty &&
-                          _contentController.text.isNotEmpty) {
-                        widget.onSave(
-                          _titleController.text,
-                          _locationController.text,
-                          _mentorController.text,
-                          _contentController.text,
-                        );
-                        Navigator.pop(context);
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppThemes.primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (_formKey.currentState!.validate()) {
+                          widget.onSave(
+                            _titleController.text,
+                            _locationController.text,
+                            _mentorController.text,
+                            _contentController.text,
+                          );
+                          Navigator.pop(context);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppThemes.primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
+                      child: const Text('Simpan'),
                     ),
-                    child: const Text('Simpan'),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _StyledTextField extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool isDark;
-  final int maxLines;
-  final TextEditingController? controller;
-
-  const _StyledTextField({
-    required this.label,
-    required this.icon,
-    required this.isDark,
-    this.maxLines = 1,
-    this.controller,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppThemes.darkSurfaceElevated : Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
-            ),
-          ),
-          child: TextField(
-            controller: controller,
-            maxLines: maxLines,
-            style: TextStyle(
-              color: isDark
-                  ? AppThemes.darkTextPrimary
-                  : AppThemes.onSurfaceColor,
-            ),
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(12),
-              prefixIcon: Icon(icon, size: 20, color: AppThemes.hintColor),
-              hintText: 'Enter $label',
-              hintStyle: TextStyle(
-                color: isDark
-                    ? AppThemes.darkTextTertiary
-                    : AppThemes.hintColor.withOpacity(0.5),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

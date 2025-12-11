@@ -14,6 +14,7 @@ class CustomTextField extends StatefulWidget {
   final VoidCallback? onTap;
   final int maxLines;
   final Widget? suffixIcon;
+  final Function(String)? onChanged;
 
   const CustomTextField({
     super.key,
@@ -28,6 +29,7 @@ class CustomTextField extends StatefulWidget {
     this.onTap,
     this.maxLines = 1,
     this.suffixIcon,
+    this.onChanged,
   });
 
   @override
@@ -47,32 +49,46 @@ class _CustomTextFieldState extends State<CustomTextField> {
       obscureText: widget.isPassword ? _obscureText : false,
       keyboardType: widget.keyboardType,
       readOnly: widget.readOnly,
-      onTap: widget.onTap,
+
+      // --- PERBAIKAN DI SINI (WRAPPER ONTAP) ---
+      // Membungkus onTap agar return type-nya dipaksa menjadi void
+      // Ini mencegah error interop pada fungsi async
+      onTap: widget.onTap != null
+          ? () {
+              widget.onTap!();
+            }
+          : null,
+
+      onChanged: widget.onChanged,
       maxLines: widget.maxLines,
       validator: widget.validator,
-
-      // --- PERUBAHAN PENTING DI SINI ---
-      // onUserInteraction: Validasi jalan hanya saat field ini disentuh/diketik.
-      // Tidak akan membebani field lain.
       autovalidateMode: AutovalidateMode.onUserInteraction,
-
       style: TextStyle(
         fontSize: 13,
         color: isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
       ),
       decoration: InputDecoration(
         labelText: widget.label,
-        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        labelStyle: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
+        ),
         hintText: widget.hint,
-        hintStyle: const TextStyle(fontSize: 13),
+        hintStyle: TextStyle(
+          fontSize: 13,
+          color: isDark
+              ? AppThemes.darkTextTertiary
+              : AppThemes.hintColor.withOpacity(0.5),
+        ),
         filled: true,
         fillColor: widget.readOnly
-            ? (isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100)
-            : (isDark ? Colors.transparent : Colors.white),
+            ? (isDark ? AppThemes.darkSurfaceVariant : Colors.grey.shade100)
+            : (isDark ? AppThemes.darkSurface : Colors.white),
         prefixIcon: Icon(
           widget.icon,
           color: widget.readOnly
-              ? (isDark ? Colors.grey : Colors.grey)
+              ? (isDark ? AppThemes.darkTextTertiary : Colors.grey)
               : AppThemes.primaryColor,
           size: 18,
         ),
@@ -95,7 +111,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
               )
             : widget.suffixIcon ??
                 ((widget.readOnly && widget.onTap != null)
-                    ? Icon(
+                    ? const Icon(
                         Icons.arrow_drop_down_rounded,
                         color: AppThemes.primaryColor,
                       )

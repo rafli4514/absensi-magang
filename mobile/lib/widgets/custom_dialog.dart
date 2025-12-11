@@ -24,19 +24,16 @@ class CustomDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Dialog(
+      backgroundColor: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: isDark
-            ? const BorderSide(color: AppThemes.darkOutline, width: 0.5)
-            : BorderSide.none,
+        side: BorderSide(
+          color: isDark ? AppThemes.darkOutline : Colors.transparent,
+        ),
       ),
-      backgroundColor: isDark ? AppThemes.darkSurface : Colors.white,
-      elevation: 8,
-      shadowColor: Colors.black.withOpacity(isDark ? 0.4 : 0.2),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -44,8 +41,9 @@ class CustomDialog extends StatelessWidget {
           children: [
             Text(
               title,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
                 color: isDark
                     ? AppThemes.darkTextPrimary
                     : AppThemes.onSurfaceColor,
@@ -54,47 +52,40 @@ class CustomDialog extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               content,
-              style: theme.textTheme.bodyMedium?.copyWith(
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
                 color: isDark
                     ? AppThemes.darkTextSecondary
-                    : AppThemes.hintColor,
+                    : AppThemes.onSurfaceColor.withOpacity(0.8),
               ),
-              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             Row(
               children: [
                 if (secondaryButtonText != null) ...[
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed:
-                          onSecondaryButtonPressed ??
+                    child: TextButton(
+                      onPressed: onSecondaryButtonPressed ??
                           () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: isDark
-                            ? AppThemes.darkAccentBlue
-                            : AppThemes.primaryColor,
-                        side: BorderSide(
+                      child: Text(
+                        secondaryButtonText!,
+                        style: TextStyle(
                           color: isDark
-                              ? AppThemes.darkAccentBlue
-                              : AppThemes.primaryColor,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                              ? AppThemes.darkTextSecondary
+                              : AppThemes.hintColor,
                         ),
                       ),
-                      child: Text(secondaryButtonText!),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                 ],
                 Expanded(
                   child: ElevatedButton(
                     onPressed:
                         onPrimaryButtonPressed ?? () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          primaryButtonColor ??
+                      backgroundColor: primaryButtonColor ??
                           (isDark
                               ? AppThemes.darkAccentBlue
                               : AppThemes.primaryColor),
@@ -102,8 +93,6 @@ class CustomDialog extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      elevation: 2,
-                      shadowColor: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
                     ),
                     child: Text(primaryButtonText),
                   ),

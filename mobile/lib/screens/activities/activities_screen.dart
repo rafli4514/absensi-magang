@@ -3,8 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/activity.dart';
-import '../../models/enum/activity_status.dart';
-import '../../models/enum/activity_type.dart';
 import '../../models/logbook.dart';
 import '../../models/timeline_activity.dart';
 import '../../navigation/route_names.dart';
@@ -33,7 +31,7 @@ class ActivitiesScreen extends StatefulWidget {
 
 class _ActivitiesScreenState extends State<ActivitiesScreen> {
   String? _errorMessage;
-  int _selectedTabIndex = 0; // 0 = Activity, 1 = LogBook
+  int _selectedTabIndex = 0;
 
   // LOGIKA FILTER MINGGU
   int _selectedWeekIndex = 0; // 0 artinya Minggu ke-1
@@ -72,30 +70,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
   List<LogBook> _filteredLogBooks = [];
 
   // Dummy Data Activities
-  final List<Activity> _activities = [
-    Activity(
-      id: '1',
-      pesertaMagangId: '1',
-      tanggal: '2024-01-15',
-      kegiatan: 'Team Meeting',
-      deskripsi: 'Weekly team sync meeting',
-      type: ActivityType.meeting,
-      status: ActivityStatus.completed,
-      createdAt: DateTime(2024, 1, 15),
-      updatedAt: DateTime(2024, 1, 15),
-    ),
-    Activity(
-      id: '2',
-      pesertaMagangId: '1',
-      tanggal: '2024-01-20',
-      kegiatan: 'Project Deadline',
-      deskripsi: 'Submit Q1 project report',
-      type: ActivityType.deadline,
-      status: ActivityStatus.pending,
-      createdAt: DateTime(2024, 1, 20),
-      updatedAt: DateTime(2024, 1, 20),
-    ),
-  ];
+  final List<Activity> _activities = [];
 
   final List<TimelineActivity> _timelineActivities = [
     TimelineActivity(

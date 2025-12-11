@@ -1,4 +1,3 @@
-// lib/providers/auth_provider.dart
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -27,6 +26,11 @@ class AuthProvider with ChangeNotifier {
     _loadUserData();
   }
 
+  // Ubah menjadi public method (hapus underscore) agar bisa dipanggil/ditunggu
+  Future<void> loadUserData() async {
+    await _loadUserData();
+  }
+
   Future<void> _loadUserData() async {
     try {
       final userDataStr = await StorageService.getString(
@@ -47,6 +51,26 @@ class AuthProvider with ChangeNotifier {
 
   // --- ACTIONS ---
 
+  // Perbaikan Logika Check Authentication
+  Future<bool> checkAuthentication() async {
+    // 1. Wajib tunggu load data dari HP selesai dulu
+    await _loadUserData();
+
+    // 2. Cek apakah di HP ada Token & Data User
+    if (_token != null && _user != null) {
+      // 3. Coba sync data terbaru ke server di background (Silent Sync)
+      // Kita tidak await ini agar app cepat masuk ke Home
+      // dan jika offline, user tetap bisa masuk.
+      refreshProfile().catchError((e) {
+        if (kDebugMode) print('Offline mode or sync failed: $e');
+      });
+
+      return true; // Izinkan masuk karena ada data di local
+    }
+
+    return false; // Tidak ada data login
+  }
+
   // 1. Refresh Profile (Ambil data terbaru dari server)
   Future<void> refreshProfile() async {
     try {
@@ -55,6 +79,9 @@ class AuthProvider with ChangeNotifier {
         _user = response.data;
         await _saveUserData(_user!); // Simpan data terbaru ke storage
         notifyListeners(); // Update UI
+      } else if (response.statusCode == 401) {
+        // Jika token expired (401), baru kita logout paksa
+        await logout();
       }
     } catch (e) {
       if (kDebugMode) print('❌ [AUTH PROVIDER] Error refreshing profile: $e');
@@ -117,7 +144,6 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Menggunakan endpoint updateProfile yang sudah mendukung parameter password
       final response = await AuthService.updateProfile(
         currentPassword: currentPassword,
         newPassword: newPassword,
@@ -159,8 +185,6 @@ class AuthProvider with ChangeNotifier {
       final response = await AuthService.login(username, password);
       if (response.success && response.data != null) {
         await _handleAuthSuccess(response.data!);
-        // Ambil profil lengkap (termasuk pesertaMagang) setelah login
-        await refreshProfile();
         return true;
       } else {
         _error = response.message;
@@ -191,7 +215,6 @@ class AuthProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      // Jika semua field required tersedia, gunakan endpoint register peserta magang baru
       final ApiResponse<LoginResponse> response;
       if (nama != null &&
           nama.isNotEmpty &&
@@ -228,8 +251,6 @@ class AuthProvider with ChangeNotifier {
       }
       if (response.success && response.data != null) {
         await _handleAuthSuccess(response.data!);
-        // Ambil profil lengkap setelah register
-        await refreshProfile();
         return true;
       } else {
         _error = response.message;
@@ -245,7 +266,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _handleAuthSuccess(dynamic loginResponse) async {
+  Future<void> _handleAuthSuccess(LoginResponse loginResponse) async {
     await StorageService.setString(AppConstants.tokenKey, loginResponse.token);
     _user = loginResponse.user;
     await _saveUserData(_user!);
@@ -259,15 +280,6 @@ class AuthProvider with ChangeNotifier {
       AppConstants.userDataKey,
       jsonEncode(user.toJson()),
     );
-  }
-
-  Future<bool> checkAuthentication() async {
-    final token = await StorageService.getString(AppConstants.tokenKey);
-    if (token != null && token.isNotEmpty) {
-      await refreshProfile(); // Validasi token & update data user
-      return _user != null;
-    }
-    return false;
   }
 
   void clearError() {
