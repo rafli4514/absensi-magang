@@ -10,6 +10,7 @@ import '../../providers/theme_provider.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/navigation_helper.dart';
 import '../../utils/responsive_layout.dart';
+import '../../utils/ui_utils.dart'; // Import UI Utils Baru
 import '../../widgets/activities_header.dart';
 import '../../widgets/activities_statistics.dart';
 import '../../widgets/activities_timeline.dart';
@@ -34,9 +35,9 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
   int _selectedTabIndex = 0;
 
   // LOGIKA FILTER MINGGU
-  int _selectedWeekIndex = 0; // 0 artinya Minggu ke-1
-  late DateTime _startDateMagang; // Simulasi tanggal mulai magang
-  final int _totalWeeksDuration = 12; // Simulasi durasi 3 bulan (12 minggu)
+  int _selectedWeekIndex = 0;
+  late DateTime _startDateMagang;
+  final int _totalWeeksDuration = 12;
 
   // Dummy Data LogBook
   final List<LogBook> _allLogBooks = [
@@ -48,30 +49,11 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       mentorName: 'Pak Budi',
       createdAt: DateTime.now().subtract(const Duration(days: 20)),
     ),
-    LogBook(
-      id: '2',
-      title: 'Konfigurasi Router (Minggu 3)',
-      content: 'Belajar setting Mikrotik dasar.',
-      location: 'Lab Jaringan',
-      mentorName: 'Pak Dedi',
-      createdAt: DateTime.now().subtract(const Duration(days: 5)),
-    ),
-    LogBook(
-      id: '3',
-      title: 'Maintenance Server (Hari Ini)',
-      content: 'Cek suhu dan update OS server.',
-      location: 'Ruang Server',
-      mentorName: 'Pak Budi',
-      createdAt: DateTime.now(),
-    ),
+    // ... data dummy lainnya
   ];
 
-  // List yang akan ditampilkan setelah difilter
   List<LogBook> _filteredLogBooks = [];
-
-  // Dummy Data Activities
   final List<Activity> _activities = [];
-
   final List<TimelineActivity> _timelineActivities = [
     TimelineActivity(
       time: '08:15',
@@ -79,18 +61,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       status: 'Selesai',
       location: 'Kantor PLN UID',
     ),
-    TimelineActivity(
-      time: '09:00',
-      activity: 'Briefing morning',
-      status: 'Selesai',
-      location: 'Ruang Meeting Lt. 2',
-    ),
-    TimelineActivity(
-      time: '12:00',
-      activity: 'Istirahat siang',
-      status: 'Menunggu',
-      location: 'Kantin',
-    ),
+    // ... timeline dummy
   ];
 
   @override
@@ -133,7 +104,14 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list_rounded),
-            onPressed: () => {},
+            onPressed: () {
+              // Contoh Notifikasi Filter (Info)
+              GlobalSnackBar.show(
+                'Filter fitur akan segera tersedia',
+                title: 'Info',
+                isInfo: true,
+              );
+            },
           ),
         ],
       ),
@@ -151,7 +129,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
         CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
-            // PERBAIKAN: Error Widget ditempatkan di dalam slivers
             if (_errorMessage != null)
               SliverToBoxAdapter(
                 child: Padding(
@@ -162,7 +139,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                   ),
                 ),
               ),
-
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -193,10 +169,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                     setState(() => _selectedTabIndex = index),
               ),
             ),
-
             if (_selectedTabIndex == 1)
               SliverToBoxAdapter(child: _buildWeekFilter(isDark)),
-
             _buildListContent(isDark),
             const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
           ],
@@ -228,7 +202,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  // PERBAIKAN: Tambahkan error widget di sini juga jika diperlukan
                   if (_errorMessage != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),
@@ -455,11 +428,14 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
             }
             _filterLogBooks();
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Data berhasil disimpan'),
-              backgroundColor: AppThemes.successColor,
-            ),
+
+          // NOTIFIKASI BARU: SUKSES
+          GlobalSnackBar.show(
+            existingLog == null
+                ? 'Logbook berhasil ditambahkan'
+                : 'Logbook berhasil diperbarui',
+            title: 'Berhasil',
+            isSuccess: true,
           );
         },
       ),
@@ -508,15 +484,14 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               _selectedTabIndex = 0;
             }
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                existingActivity == null
-                    ? 'Berhasil tambah'
-                    : 'Berhasil update',
-              ),
-              backgroundColor: AppThemes.successColor,
-            ),
+
+          // NOTIFIKASI BARU: SUKSES
+          GlobalSnackBar.show(
+            existingActivity == null
+                ? 'Aktivitas berhasil ditambahkan'
+                : 'Aktivitas berhasil diperbarui',
+            title: 'Berhasil',
+            isSuccess: true,
           );
         },
       ),
@@ -530,6 +505,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
         title: 'Hapus Log?',
         content: 'Data yang dihapus tidak dapat dikembalikan.',
         primaryButtonText: 'Hapus',
+        primaryButtonColor: AppThemes.errorColor,
         secondaryButtonText: 'Batal',
         onPrimaryButtonPressed: () {
           final itemToDelete = _filteredLogBooks[index];
@@ -540,6 +516,13 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
             _filterLogBooks();
           });
           Navigator.pop(context);
+
+          // NOTIFIKASI BARU: DELETE SUKSES
+          GlobalSnackBar.show(
+            'Logbook berhasil dihapus',
+            title: 'Dihapus',
+            isSuccess: true,
+          );
         },
       ),
     );

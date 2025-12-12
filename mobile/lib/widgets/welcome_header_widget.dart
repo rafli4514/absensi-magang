@@ -372,7 +372,8 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
                 children: [
                   _buildBadge(
                     icon: Icons.business_center_outlined,
-                    label: user!.department!,
+                    // FIX: Hapus ! terakhir karena logic if sudah menjamin tidak null
+                    label: user.department!,
                     isDark: isDark,
                   ),
                   _buildBadge(

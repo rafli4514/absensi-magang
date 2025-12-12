@@ -5,6 +5,8 @@ import '../models/api_response.dart';
 import '../navigation/route_names.dart';
 import '../providers/auth_provider.dart';
 import '../services/permission_service.dart';
+import '../services/storage_service.dart'; // Import StorageService
+import '../utils/constants.dart'; // Import Constants
 import 'global_context.dart';
 import 'ui_utils.dart';
 
@@ -19,7 +21,8 @@ class GlobalErrorHandler {
         _handleUnauthorized(ctx);
       } else if (error.statusCode == 403) {
         AppDialog.show(
-          ctx,
+          // Pass null jika ctx adalah global context untuk memicu logika aman di AppDialog
+          context == null ? null : ctx,
           title: 'Akses Ditolak',
           content: error.message,
           isError: true,
@@ -47,7 +50,7 @@ class GlobalErrorHandler {
           isWarning: true);
     } else if (errorMsg.contains('permission')) {
       AppDialog.show(
-        ctx,
+        context == null ? null : ctx,
         title: 'Izin Diperlukan',
         content: 'Aplikasi memerlukan izin untuk fitur ini. Buka pengaturan?',
         primaryText: 'Buka Pengaturan',
@@ -63,9 +66,20 @@ class GlobalErrorHandler {
     }
   }
 
-  static void _handleUnauthorized(BuildContext context) {
+  static void _handleUnauthorized(BuildContext context) async {
+    // CEK TOKEN DULU: Jangan tampilkan "Sesi Berakhir" jika user memang belum login
+    // Ini mencegah popup muncul saat "Invalid Credentials" di halaman Login
+    final token = await StorageService.getString(AppConstants.tokenKey);
+
+    if (token == null || token.isEmpty) {
+      // Jika tidak ada token, berarti ini error login biasa (salah pass),
+      // biarkan LoginScreen yang menanganinya via GlobalSnackBar.
+      return;
+    }
+
     AppDialog.show(
-      context,
+      // Gunakan null agar AppDialog menggunakan push route yang aman
+      null,
       title: 'Sesi Berakhir',
       content: 'Sesi login Anda telah berakhir. Silakan login kembali.',
       primaryText: 'Login Ulang',
@@ -73,9 +87,13 @@ class GlobalErrorHandler {
       dismissible: false,
       onPrimary: () async {
         // Logout & Navigate
-        await Provider.of<AuthProvider>(context, listen: false).logout();
-        Navigator.pushNamedAndRemoveUntil(
-            context, RouteNames.login, (r) => false);
+        // Kita butuh context untuk Provider, gunakan global navigator context
+        final navContext = GlobalContext.navigatorKey.currentContext;
+        if (navContext != null) {
+          await Provider.of<AuthProvider>(navContext, listen: false).logout();
+          Navigator.pushNamedAndRemoveUntil(
+              navContext, RouteNames.login, (r) => false);
+        }
       },
     );
   }

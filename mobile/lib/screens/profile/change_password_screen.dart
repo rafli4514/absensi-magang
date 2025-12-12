@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../themes/app_themes.dart';
+import '../../utils/ui_utils.dart'; // <<< DITAMBAHKAN
 import '../../utils/validators.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_text_field.dart';
@@ -28,11 +29,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
     if (_formKey.currentState!.validate()) {
       if (_newPasswordController.text != _confirmPasswordController.text) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Password baru dan konfirmasi tidak cocok'),
-            backgroundColor: AppThemes.errorColor,
-          ),
+        // GANTI ScaffoldMessenger dengan GlobalSnackBar.show
+        GlobalSnackBar.show(
+          'Password baru dan konfirmasi tidak cocok',
+          isWarning: true,
         );
         return;
       }
@@ -45,20 +45,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       if (!mounted) return;
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Password berhasil diubah!'),
-            backgroundColor: AppThemes.successColor,
-            behavior: SnackBarBehavior.floating,
-          ),
+        // GANTI ScaffoldMessenger dengan GlobalSnackBar.show
+        GlobalSnackBar.show(
+          'Password berhasil diubah!',
+          isSuccess: true,
         );
         Navigator.pop(context);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.error ?? 'Gagal mengubah password'),
-            backgroundColor: AppThemes.errorColor,
-          ),
+        // GANTI ScaffoldMessenger dengan GlobalSnackBar.show
+        GlobalSnackBar.show(
+          authProvider.error ?? 'Gagal mengubah password',
+          isError: true,
         );
       }
     }

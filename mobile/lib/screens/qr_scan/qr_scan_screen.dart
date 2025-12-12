@@ -331,9 +331,8 @@ class _QrScanScreenState extends State<QrScanScreen>
         };
         _safePop(result);
       } else {
-        _showLocationErrorDialog(
-          attendanceResponse.message ?? 'Gagal mencatat presensi',
-        );
+        // FIX: Hapus ?? karena message di ApiResponse tidak nullable
+        _showLocationErrorDialog(attendanceResponse.message);
         if (mounted) setState(() => _isProcessing = false);
       }
     } catch (e) {

@@ -125,7 +125,8 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _error = response.message ?? 'Profile update failed';
+        // FIX: response.message tidak null, jadi ?? redundant
+        _error = response.message;
         _isLoading = false;
         notifyListeners();
         return false;
@@ -158,7 +159,8 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _error = response.message ?? 'Gagal mengubah password';
+        // FIX: response.message tidak null, jadi ?? redundant
+        _error = response.message;
         _isLoading = false;
         notifyListeners();
         return false;

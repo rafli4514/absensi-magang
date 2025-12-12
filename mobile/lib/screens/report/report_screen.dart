@@ -7,6 +7,7 @@ import '../../navigation/route_names.dart';
 import '../../providers/theme_provider.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/navigation_helper.dart';
+import '../../utils/ui_utils.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/floating_bottom_nav.dart';
 
@@ -609,53 +610,12 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   void _exportReport() {
-    final isDark =
-        Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor:
-            isDark ? AppThemes.darkSurfaceElevated : AppThemes.surfaceColor,
-        content: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppThemes.successColor.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check_circle_rounded,
-                color: AppThemes.successColor,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Report exported successfully!',
-                style: TextStyle(
-                  color: isDark
-                      ? AppThemes.darkTextPrimary
-                      : AppThemes.onSurfaceColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ],
-        ),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(
-            color: AppThemes.successColor,
-            width: 1.5,
-          ),
-        ),
-      ),
+    // Simulasi export report
+    // NOTIFIKASI BARU: SUKSES
+    GlobalSnackBar.show(
+      'Laporan berhasil diexport ke PDF',
+      title: 'Export Berhasil',
+      isSuccess: true,
     );
   }
 }

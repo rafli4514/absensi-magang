@@ -5,9 +5,9 @@ import 'package:provider/provider.dart';
 import '../../navigation/route_names.dart';
 import '../../providers/auth_provider.dart';
 import '../../themes/app_themes.dart';
+import '../../utils/ui_utils.dart';
 import '../../utils/validators.dart';
 import '../../widgets/custom_text_field.dart';
-import '../../widgets/error_widget.dart';
 import '../../widgets/loading_indicator.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -19,6 +19,7 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  // ... (Controller tetap sama) ...
   final _namaController = TextEditingController();
   final _usernameController = TextEditingController();
   final _divisiController = TextEditingController();
@@ -37,6 +38,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final List<int> _durations = [1, 2, 3, 4, 5, 6, 12];
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
 
+  // ... (dispose, initState, _selectStartDate, _calculateEndDate, _updateDuration TETAP SAMA) ...
   @override
   void dispose() {
     _namaController.dispose();
@@ -54,8 +56,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
-    // Hanya mendengarkan password untuk update strength bar secara lokal
-    // Tidak memvalidasi form keseluruhan
     _passwordController.addListener(() {
       setState(() {
         _passwordStrength =
@@ -71,17 +71,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
       builder: (context, child) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppThemes.primaryColor,
-              onPrimary: Colors.white,
-              surface: Theme.of(context).cardColor,
-              onSurface:
-                  Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black,
-            ),
-            dialogBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          ),
+          data: isDark ? AppThemes.darkTheme : AppThemes.lightTheme,
           child: child!,
         );
       },
@@ -100,10 +92,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       try {
         final startDate = _dateFormat.parse(_tanggalMulaiController.text);
         final endDate = DateTime(
-          startDate.year,
-          startDate.month + _selectedDuration,
-          startDate.day,
-        );
+            startDate.year, startDate.month + _selectedDuration, startDate.day);
         _tanggalSelesaiController.text = _dateFormat.format(endDate);
       } catch (e) {
         _tanggalSelesaiController.text = '';
@@ -112,26 +101,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _updateDuration(int duration) {
-    setState(() {
-      _selectedDuration = duration;
-    });
+    setState(() => _selectedDuration = duration);
     _calculateEndDate();
   }
 
   Future<void> _register() async {
     if (!_acceptedTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Harap setujui Syarat & Ketentuan'),
-          backgroundColor: AppThemes.warningColor,
-        ),
-      );
+      GlobalSnackBar.show('Harap setujui Syarat & Ketentuan', isWarning: true);
       return;
     }
 
     if (_formKey.currentState!.validate()) {
       FocusScope.of(context).unfocus();
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
       final success = await authProvider.register(
         _usernameController.text.trim(),
         _passwordController.text.trim(),
@@ -146,6 +129,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (success && mounted) {
         Navigator.pushReplacementNamed(context, RouteNames.home);
+      } else if (!success && mounted) {
+        GlobalSnackBar.show(authProvider.error ?? 'Registrasi gagal',
+            isError: true);
+        authProvider.clearError();
       }
     }
   }
@@ -185,15 +172,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget _buildSectionHeader(String title, {String? subtitle}) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Container(
-              width: 3,
-              height: 16,
+              width: 4,
+              height: 18,
               decoration: BoxDecoration(
                 color: AppThemes.primaryColor,
                 borderRadius: BorderRadius.circular(2),
@@ -213,9 +199,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ],
         ),
         if (subtitle != null) ...[
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Padding(
-            padding: const EdgeInsets.only(left: 11),
+            padding: const EdgeInsets.only(left: 12),
             child: Text(
               subtitle,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -226,62 +212,65 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ),
         ],
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
       ],
     );
   }
 
   Widget _buildDurationSelection() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Durasi Magang',
-          style: theme.textTheme.bodyMedium?.copyWith(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 13,
             color:
                 isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: _durations.map((duration) {
               final isSelected = _selectedDuration == duration;
               return Padding(
-                padding: const EdgeInsets.only(right: 6),
+                padding: const EdgeInsets.only(right: 8),
                 child: GestureDetector(
                   onTap: () => _updateDuration(duration),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
+                        horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppThemes.primaryColor
-                          : AppThemes.primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
+                          : (isDark
+                              ? AppThemes.darkSurface
+                              : Colors.transparent),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: isSelected
                             ? AppThemes.primaryColor
-                            : AppThemes.primaryColor.withOpacity(0.3),
-                        width: 1.2,
+                            : (isDark
+                                ? AppThemes.darkOutline
+                                : Colors.grey.shade300),
+                        width: 1.5,
                       ),
                     ),
                     child: Text(
-                      '$duration ${duration == 1 ? 'Bulan' : 'Bulan'}',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontSize: 12,
+                      '$duration Bulan',
+                      style: TextStyle(
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color:
-                            isSelected ? Colors.white : AppThemes.primaryColor,
+                        color: isSelected
+                            ? Colors.white
+                            : (isDark
+                                ? AppThemes.darkTextPrimary
+                                : AppThemes.primaryColor),
                       ),
                     ),
                   ),
@@ -302,332 +291,258 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            children: [
-              const SizedBox(height: 10),
-              Hero(
-                tag: 'app_logo',
-                child: Center(
-                  child: Image.asset(
-                    'assets/images/InternLogoExpand.png',
-                    width: 120,
-                    height: 120,
-                    fit: BoxFit.contain,
+      // LAYOUT BUILDER ADALAH KUNCI FIX KEYBOARD
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+                  Hero(
+                    tag: 'app_logo',
+                    child: Image.asset(
+                      'assets/images/InternLogoExpand.png',
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.contain,
+                    ),
                   ),
-                ),
-              ),
-              Text(
-                'Buat Akun',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: theme.colorScheme.onSurface,
-                  fontSize: 20,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Mulai perjalanan magang Anda bersama kami',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontSize: 12,
-                  color: isDark
-                      ? AppThemes.darkTextSecondary
-                      : AppThemes.hintColor,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    _buildSectionHeader(
-                      'Informasi Pribadi',
-                      subtitle: 'Data diri lengkap untuk profil Anda',
+                  const SizedBox(height: 16),
+                  Text(
+                    'Buat Akun Baru',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface,
                     ),
-                    CustomTextField(
-                      controller: _namaController,
-                      label: 'Nama Lengkap',
-                      hint: 'Masukkan nama lengkap',
-                      icon: Icons.person_rounded,
-                      validator: Validators.validateName,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Lengkapi data diri untuk memulai',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: isDark
+                          ? AppThemes.darkTextSecondary
+                          : AppThemes.hintColor,
                     ),
-                    const SizedBox(height: 12),
+                  ),
+                  const SizedBox(height: 32),
 
-                    // Username dengan suffix info
-                    CustomTextField(
-                      controller: _usernameController,
-                      label: 'Username',
-                      hint: 'Buat username unik',
-                      icon: Icons.alternate_email_rounded,
-                      validator: Validators.validateUsername,
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _showUsernameHint
-                              ? Icons.info_outlined
-                              : Icons.info_outline,
-                          color: AppThemes.primaryColor.withOpacity(0.7),
-                          size: 18,
-                        ),
-                        onPressed: () => setState(
-                            () => _showUsernameHint = !_showUsernameHint),
-                      ),
+                  _buildSectionHeader('Informasi Pribadi',
+                      subtitle: 'Data diri lengkap Anda'),
+                  CustomTextField(
+                    controller: _namaController,
+                    label: 'Nama Lengkap',
+                    hint: 'Nama lengkap sesuai KTP',
+                    icon: Icons.person_rounded,
+                    validator: Validators.validateName,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: _usernameController,
+                    label: 'Username',
+                    hint: 'Username unik',
+                    icon: Icons.alternate_email_rounded,
+                    validator: Validators.validateUsername,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                          _showUsernameHint ? Icons.info : Icons.info_outline,
+                          size: 20,
+                          color: AppThemes.primaryColor),
+                      onPressed: () => setState(
+                          () => _showUsernameHint = !_showUsernameHint),
                     ),
-                    if (_showUsernameHint)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          Validators.getUsernameHint(),
+                  ),
+                  if (_showUsernameHint)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, left: 4),
+                      child: Text(Validators.getUsernameHint(),
                           style: TextStyle(
                               fontSize: 11,
                               color: isDark
                                   ? AppThemes.darkTextTertiary
-                                  : AppThemes.hintColor),
-                        ),
-                      ),
-                    const SizedBox(height: 12),
+                                  : AppThemes.hintColor)),
+                    ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: _nomorHpController,
+                    label: 'Nomor HP',
+                    hint: 'Contoh: 08123456789',
+                    icon: Icons.phone_rounded,
+                    validator: Validators.validatePhoneNumber,
+                    keyboardType: TextInputType.phone,
+                  ),
 
-                    CustomTextField(
-                      controller: _nomorHpController,
-                      label: 'Nomor HP',
-                      hint: 'Masukkan nomor handphone',
-                      icon: Icons.phone_rounded,
-                      validator: Validators.validatePhoneNumber,
-                      keyboardType: TextInputType.phone,
-                    ),
+                  const SizedBox(height: 24),
+                  _buildSectionHeader('Informasi Magang',
+                      subtitle: 'Detail penempatan Anda'),
+                  CustomTextField(
+                    controller: _divisiController,
+                    label: 'Divisi',
+                    hint: 'Contoh: IT Support',
+                    icon: Icons.business_center_rounded,
+                    validator: (v) =>
+                        (v?.isEmpty ?? true) ? 'Wajib diisi' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: _instansiController,
+                    label: 'Instansi / Kampus',
+                    hint: 'Asal Universitas/Sekolah',
+                    icon: Icons.school_rounded,
+                    validator: (v) =>
+                        (v?.isEmpty ?? true) ? 'Wajib diisi' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: _tanggalMulaiController,
+                    label: 'Tanggal Mulai',
+                    hint: 'Pilih tanggal',
+                    icon: Icons.calendar_today_rounded,
+                    readOnly: true,
+                    onTap: _selectStartDate,
+                    validator: Validators.validateDate,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildDurationSelection(),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: _tanggalSelesaiController,
+                    label: 'Tanggal Selesai',
+                    hint: 'Terisi otomatis',
+                    icon: Icons.event_available_rounded,
+                    readOnly: true,
+                  ),
 
-                    const SizedBox(height: 20),
-                    _buildSectionHeader(
-                      'Informasi Institusi',
-                      subtitle: 'Data magang dan institusi pendidikan',
-                    ),
-                    CustomTextField(
-                      controller: _divisiController,
-                      label: 'Divisi',
-                      hint: 'Masukkan divisi magang',
-                      icon: Icons.business_center_rounded,
-                      validator: (value) => (value == null || value.isEmpty)
-                          ? 'Divisi harus diisi'
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    CustomTextField(
-                      controller: _instansiController,
-                      label: 'Instansi',
-                      hint: 'Masukkan nama instansi/universitas',
-                      icon: Icons.school_rounded,
-                      validator: (value) => (value == null || value.isEmpty)
-                          ? 'Instansi harus diisi'
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    CustomTextField(
-                      controller: _tanggalMulaiController,
-                      label: 'Tanggal Mulai',
-                      hint: 'Pilih tanggal mulai',
-                      icon: Icons.calendar_today_rounded,
-                      readOnly: true,
-                      onTap: _selectStartDate,
-                      validator: Validators.validateDate,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildDurationSelection(),
-                    const SizedBox(height: 12),
-                    CustomTextField(
-                      controller: _tanggalSelesaiController,
-                      label: 'Tanggal Selesai',
-                      hint: 'Dihitung otomatis',
-                      icon: Icons.event_available_rounded,
-                      readOnly: true,
-                    ),
-
-                    const SizedBox(height: 20),
-                    _buildSectionHeader(
-                      'Keamanan Akun',
-                      subtitle: 'Buat password yang kuat untuk akun Anda',
-                    ),
-                    CustomTextField(
-                      controller: _passwordController,
-                      label: 'Password',
-                      hint: 'Buat password',
-                      icon: Icons.lock_outline_rounded,
-                      validator: Validators.validatePassword,
-                      isPassword: true,
-                    ),
-                    if (_passwordController.text.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: LinearProgressIndicator(
-                                value: _passwordStrength.value / 4,
-                                backgroundColor: isDark
-                                    ? AppThemes.darkOutline
-                                    : Colors.grey.shade300,
-                                color: _getPasswordStrengthColor(),
-                                borderRadius: BorderRadius.circular(2),
-                                minHeight: 4,
-                              ),
+                  const SizedBox(height: 24),
+                  _buildSectionHeader('Keamanan',
+                      subtitle: 'Lindungi akun Anda'),
+                  CustomTextField(
+                    controller: _passwordController,
+                    label: 'Password',
+                    hint: 'Minimal 8 karakter',
+                    icon: Icons.lock_outline_rounded,
+                    validator: Validators.validatePassword,
+                    isPassword: true,
+                  ),
+                  // Password Strength indicator (Simplified for brevity, logic exists in previous code)
+                  if (_passwordController.text.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: LinearProgressIndicator(
+                              value: _passwordStrength.value / 4,
+                              backgroundColor: isDark
+                                  ? AppThemes.darkOutline
+                                  : Colors.grey.shade300,
+                              color: _getPasswordStrengthColor(),
+                              borderRadius: BorderRadius.circular(2),
+                              minHeight: 4,
                             ),
-                            const SizedBox(width: 6),
-                            Text(
-                              _getPasswordStrengthText(),
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: _getPasswordStrengthColor(),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 12),
-                    CustomTextField(
-                      controller: _confirmPasswordController,
-                      label: 'Konfirmasi Password',
-                      hint: 'Konfirmasi password',
-                      icon: Icons.lock_reset_outlined,
-                      validator: _validateConfirmPassword,
-                      isPassword: true,
-                    ),
-
-                    const SizedBox(height: 16),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: Checkbox(
-                            value: _acceptedTerms,
-                            onChanged: (value) =>
-                                setState(() => _acceptedTerms = value ?? false),
-                            activeColor: AppThemes.primaryColor,
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Saya setuju dengan Syarat & Ketentuan dan Kebijakan Privasi',
+                          const SizedBox(width: 6),
+                          Text(
+                            _getPasswordStrengthText(),
                             style: TextStyle(
+                              fontSize: 10,
+                              color: _getPasswordStrengthColor(),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: _confirmPasswordController,
+                    label: 'Konfirmasi Password',
+                    hint: 'Ulangi password',
+                    icon: Icons.lock_reset_outlined,
+                    validator: _validateConfirmPassword,
+                    isPassword: true,
+                  ),
+
+                  const SizedBox(height: 24),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Checkbox(
+                          value: _acceptedTerms,
+                          onChanged: (v) =>
+                              setState(() => _acceptedTerms = v ?? false),
+                          activeColor: AppThemes.primaryColor,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Saya menyetujui Syarat & Ketentuan serta Kebijakan Privasi yang berlaku.',
+                          style: TextStyle(
                               fontSize: 12,
                               color: isDark
                                   ? AppThemes.darkTextSecondary
-                                  : AppThemes.hintColor,
-                            ),
-                          ),
+                                  : AppThemes.hintColor),
                         ),
-                      ],
-                    ),
-
-                    if (authProvider.error != null) ...[
-                      const SizedBox(height: 12),
-                      CustomErrorWidget(
-                        message: authProvider.error!,
-                        onDismiss: () => authProvider.clearError(),
                       ),
                     ],
+                  ),
 
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 44,
-                      child: authProvider.isLoading
-                          ? const Center(child: LoadingIndicator())
-                          : ElevatedButton(
-                              onPressed: _register,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _acceptedTerms
-                                    ? AppThemes.primaryColor
-                                    : Colors.grey,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                elevation: 2,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.person_add_outlined,
-                                      size: 18),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Buat Akun',
-                                    style: theme.textTheme.titleSmall?.copyWith(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: authProvider.isLoading
+                        ? const Center(child: LoadingIndicator())
+                        : ElevatedButton(
+                            onPressed: _register,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _acceptedTerms
+                                  ? AppThemes.primaryColor
+                                  : Colors.grey,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
                             ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: Divider(
-                        color: isDark
-                            ? AppThemes.darkOutline
-                            : Colors.grey.shade300),
+                            child: const Text('Buat Akun',
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.w600)),
+                          ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Text('atau',
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: isDark
-                                ? AppThemes.darkTextTertiary
-                                : AppThemes.hintColor)),
+
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text("Sudah punya akun? ",
+                          style: TextStyle(
+                              color: isDark
+                                  ? AppThemes.darkTextSecondary
+                                  : AppThemes.hintColor)),
+                      GestureDetector(
+                        onTap: () => Navigator.pushReplacementNamed(
+                            context, RouteNames.login),
+                        child: Text("Masuk",
+                            style: TextStyle(
+                                color: AppThemes.primaryColor,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: Divider(
-                        color: isDark
-                            ? AppThemes.darkOutline
-                            : Colors.grey.shade300),
-                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text("Sudah punya akun?",
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppThemes.darkTextSecondary
-                              : AppThemes.hintColor)),
-                  const SizedBox(width: 6),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushReplacementNamed(context, RouteNames.login);
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppThemes.primaryColor,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      minimumSize: Size.zero,
-                    ),
-                    child: Text('Masuk',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppThemes.primaryColor)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

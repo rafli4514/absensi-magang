@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../themes/app_themes.dart';
+import '../../utils/ui_utils.dart'; // Tambahkan import ini
 import '../../utils/validators.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_text_field.dart';
@@ -31,7 +32,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _tanggalMulaiController = TextEditingController();
   final _tanggalSelesaiController = TextEditingController();
 
-  final ImagePicker _imagePicker = ImagePicker();
+  // FIX: Hapus _imagePicker yang tidak dipakai
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
 
   bool _isLoading = false;
@@ -166,30 +167,35 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Profile updated successfully!'),
-              backgroundColor: AppThemes.successColor,
-              behavior: SnackBarBehavior.floating,
-            ),
+          // NOTIFIKASI BARU: SUKSES
+          GlobalSnackBar.show(
+            'Profil berhasil diperbarui',
+            title: 'Update Berhasil',
+            isSuccess: true,
           );
           Navigator.pop(context);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(authProvider.error ?? 'Failed to update profile'),
-              backgroundColor: AppThemes.errorColor,
-              behavior: SnackBarBehavior.floating,
-            ),
+          // NOTIFIKASI BARU: ERROR
+          GlobalSnackBar.show(
+            authProvider.error ?? 'Gagal memperbarui profil',
+            title: 'Update Gagal',
+            isError: true,
           );
         }
       }
     }
   }
 
-  void _showImageSourceDialog() {}
-  Future<void> _pickImageFromGallery() async {}
-  Future<void> _takePhotoFromCamera() async {}
+  void _showImageSourceDialog() {
+    // Implementasi Image Picker nanti
+    GlobalSnackBar.show(
+      'Fitur ganti foto akan segera tersedia',
+      title: 'Info',
+      isInfo: true,
+    );
+  }
+
+  // FIX: Hapus method unused _pickImageFromGallery dan _takePhotoFromCamera
 
   Widget _buildProfilePicture(bool isDarkMode) {
     if (_selectedImage != null) {
