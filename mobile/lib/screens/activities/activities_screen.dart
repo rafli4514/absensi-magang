@@ -3,8 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/activity.dart';
-import '../../models/enum/activity_status.dart';
-import '../../models/enum/activity_type.dart';
 import '../../models/logbook.dart';
 import '../../models/timeline_activity.dart';
 import '../../navigation/route_names.dart';
@@ -12,6 +10,7 @@ import '../../providers/theme_provider.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/navigation_helper.dart';
 import '../../utils/responsive_layout.dart';
+import '../../utils/ui_utils.dart'; // Import UI Utils Baru
 import '../../widgets/activities_header.dart';
 import '../../widgets/activities_statistics.dart';
 import '../../widgets/activities_timeline.dart';
@@ -19,6 +18,7 @@ import '../../widgets/activity_card.dart';
 import '../../widgets/activity_form_dialog.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
+import '../../widgets/error_widget.dart';
 import '../../widgets/floating_bottom_nav.dart';
 import '../../widgets/logbook_card.dart';
 import '../../widgets/logbook_form_dialog.dart';
@@ -31,13 +31,13 @@ class ActivitiesScreen extends StatefulWidget {
 }
 
 class _ActivitiesScreenState extends State<ActivitiesScreen> {
-  // --- STATE VARIABLES ---
-  int _selectedTabIndex = 0; // 0 = Activity, 1 = LogBook
+  String? _errorMessage;
+  int _selectedTabIndex = 0;
 
   // LOGIKA FILTER MINGGU
-  int _selectedWeekIndex = 0; // 0 artinya Minggu ke-1
-  late DateTime _startDateMagang; // Simulasi tanggal mulai magang
-  final int _totalWeeksDuration = 12; // Simulasi durasi 3 bulan (12 minggu)
+  int _selectedWeekIndex = 0;
+  late DateTime _startDateMagang;
+  final int _totalWeeksDuration = 12;
 
   // Dummy Data LogBook
   final List<LogBook> _allLogBooks = [
@@ -47,57 +47,13 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       content: 'Membantu teknisi senior memasang jalur baru.',
       location: 'Perumahan Griya Indah',
       mentorName: 'Pak Budi',
-      // Set tanggal agar masuk di Minggu ke-1 (Hari ke-2 magang)
       createdAt: DateTime.now().subtract(const Duration(days: 20)),
     ),
-    LogBook(
-      id: '2',
-      title: 'Konfigurasi Router (Minggu 3)',
-      content: 'Belajar setting Mikrotik dasar.',
-      location: 'Lab Jaringan',
-      mentorName: 'Pak Dedi',
-      // Set tanggal agar masuk di Minggu ke-3 (Hari ke-15 magang)
-      createdAt: DateTime.now().subtract(const Duration(days: 5)),
-    ),
-    LogBook(
-      id: '3',
-      title: 'Maintenance Server (Hari Ini)',
-      content: 'Cek suhu dan update OS server.',
-      location: 'Ruang Server',
-      mentorName: 'Pak Budi',
-      createdAt: DateTime.now(), // Masuk di minggu saat ini
-    ),
+    // ... data dummy lainnya
   ];
 
-  // List yang akan ditampilkan setelah difilter
   List<LogBook> _filteredLogBooks = [];
-
-  // Dummy Data Activities
-  final List<Activity> _activities = [
-    Activity(
-      id: '1',
-      pesertaMagangId: '1',
-      tanggal: '2024-01-15',
-      kegiatan: 'Team Meeting',
-      deskripsi: 'Weekly team sync meeting',
-      type: ActivityType.meeting,
-      status: ActivityStatus.completed,
-      createdAt: DateTime(2024, 1, 15),
-      updatedAt: DateTime(2024, 1, 15),
-    ),
-    Activity(
-      id: '2',
-      pesertaMagangId: '1',
-      tanggal: '2024-01-20',
-      kegiatan: 'Project Deadline',
-      deskripsi: 'Submit Q1 project report',
-      type: ActivityType.deadline,
-      status: ActivityStatus.pending,
-      createdAt: DateTime(2024, 1, 20),
-      updatedAt: DateTime(2024, 1, 20),
-    ),
-  ];
-
+  final List<Activity> _activities = [];
   final List<TimelineActivity> _timelineActivities = [
     TimelineActivity(
       time: '08:15',
@@ -105,37 +61,18 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       status: 'Selesai',
       location: 'Kantor PLN UID',
     ),
-    TimelineActivity(
-      time: '09:00',
-      activity: 'Briefing morning',
-      status: 'Selesai',
-      location: 'Ruang Meeting Lt. 2',
-    ),
-    TimelineActivity(
-      time: '12:00',
-      activity: 'Istirahat siang',
-      status: 'Menunggu',
-      location: 'Kantin',
-    ),
+    // ... timeline dummy
   ];
 
   @override
   void initState() {
     super.initState();
-    // SIMULASI: Anggap user mulai magang 3 minggu lalu dari hari ini
-    // Nanti ganti ini dengan data dari AuthProvider: authProvider.user.startDate
     _startDateMagang = DateTime.now().subtract(const Duration(days: 21));
-
-    // Set default selected week ke minggu saat ini (atau minggu terakhir yg ada log)
-    _selectedWeekIndex = 3; // Misal kita set default ke Minggu 4
-
+    _selectedWeekIndex = 3;
     _filterLogBooks();
   }
 
   void _filterLogBooks() {
-    // Hitung tanggal mulai dan akhir untuk minggu yang dipilih
-    // Minggu 1: hari 0 s/d hari 6
-    // Minggu 2: hari 7 s/d hari 13
     final weekStartDate = _startDateMagang.add(
       Duration(days: _selectedWeekIndex * 7),
     );
@@ -159,16 +96,22 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     final isDark = themeProvider.isDarkMode;
 
     return Scaffold(
-      backgroundColor: isDark
-          ? AppThemes.darkBackground
-          : AppThemes.backgroundColor,
+      backgroundColor:
+          isDark ? AppThemes.darkBackground : AppThemes.backgroundColor,
       appBar: CustomAppBar(
         title: 'Activities',
         showBackButton: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list_rounded),
-            onPressed: () => {},
+            onPressed: () {
+              // Contoh Notifikasi Filter (Info)
+              GlobalSnackBar.show(
+                'Filter fitur akan segera tersedia',
+                title: 'Info',
+                isInfo: true,
+              );
+            },
           ),
         ],
       ),
@@ -186,6 +129,16 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
         CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
+            if (_errorMessage != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: CustomErrorWidget(
+                    message: _errorMessage!,
+                    onDismiss: () => setState(() => _errorMessage = null),
+                  ),
+                ),
+              ),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -216,11 +169,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                     setState(() => _selectedTabIndex = index),
               ),
             ),
-
-            // WIDGET FILTER MINGGU (Hanya muncul jika Tab Logbook aktif)
             if (_selectedTabIndex == 1)
               SliverToBoxAdapter(child: _buildWeekFilter(isDark)),
-
             _buildListContent(isDark),
             const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
           ],
@@ -252,6 +202,14 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
+                  if (_errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: CustomErrorWidget(
+                        message: _errorMessage!,
+                        onDismiss: () => setState(() => _errorMessage = null),
+                      ),
+                    ),
                   ActivitiesHeader(
                     onAddActivity: () => _showActivityForm(context, null),
                     onAddLogbook: () => _showLogBookForm(context, null),
@@ -297,13 +255,11 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                       ],
                     ),
                   ),
-                  // Filter Minggu untuk Tablet
                   if (_selectedTabIndex == 1)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _buildWeekFilter(isDark),
                     ),
-
                   const Divider(height: 1),
                   Expanded(
                     child: CustomScrollView(
@@ -319,7 +275,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     );
   }
 
-  // WIDGET FILTER MINGGU
   Widget _buildWeekFilter(bool isDark) {
     return Container(
       height: 50,
@@ -327,7 +282,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
-        itemCount: _totalWeeksDuration, // Misal 12 minggu
+        itemCount: _totalWeeksDuration,
         separatorBuilder: (context, index) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final isSelected = index == _selectedWeekIndex;
@@ -367,8 +322,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                       color: isSelected
                           ? Colors.white
                           : (isDark
-                                ? AppThemes.darkTextPrimary
-                                : AppThemes.onSurfaceColor),
+                              ? AppThemes.darkTextPrimary
+                              : AppThemes.onSurfaceColor),
                     ),
                   ),
                   Text(
@@ -378,8 +333,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                       color: isSelected
                           ? Colors.white.withOpacity(0.9)
                           : (isDark
-                                ? AppThemes.darkTextSecondary
-                                : AppThemes.hintColor),
+                              ? AppThemes.darkTextSecondary
+                              : AppThemes.hintColor),
                     ),
                   ),
                 ],
@@ -393,7 +348,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
 
   Widget _buildListContent(bool isDark) {
     if (_selectedTabIndex == 0) {
-      // --- TAB ACTIVITY ---
       return _activities.isEmpty
           ? _buildEmptyState(isDark, 'No activities found')
           : SliverList(
@@ -416,7 +370,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               ),
             );
     } else {
-      // --- TAB LOG BOOK (Filtered) ---
       return _filteredLogBooks.isEmpty
           ? _buildEmptyState(isDark, 'Belum ada Log Book di Minggu ini')
           : SliverList(
@@ -439,8 +392,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
             );
     }
   }
-
-  // === CRUD LOGIC ===
 
   void _showLogBookForm(BuildContext context, LogBook? existingLog) {
     showDialog(
@@ -470,20 +421,21 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                   location: location,
                   mentorName: mentor,
                   content: content,
-                  createdAt: DateTime.now(), // Akan masuk ke minggu saat ini
+                  createdAt: DateTime.now(),
                 ),
               );
-              // Pindah ke tab LogBook dan pilih minggu sesuai tanggal created
               _selectedTabIndex = 1;
-              // Opsional: hitung logic untuk auto-select minggu jika perlu
             }
-            _filterLogBooks(); // Refresh filter
+            _filterLogBooks();
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Data berhasil disimpan'),
-              backgroundColor: AppThemes.successColor,
-            ),
+
+          // NOTIFIKASI BARU: SUKSES
+          GlobalSnackBar.show(
+            existingLog == null
+                ? 'Logbook berhasil ditambahkan'
+                : 'Logbook berhasil diperbarui',
+            title: 'Berhasil',
+            isSuccess: true,
           );
         },
       ),
@@ -532,15 +484,14 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               _selectedTabIndex = 0;
             }
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                existingActivity == null
-                    ? 'Berhasil tambah'
-                    : 'Berhasil update',
-              ),
-              backgroundColor: AppThemes.successColor,
-            ),
+
+          // NOTIFIKASI BARU: SUKSES
+          GlobalSnackBar.show(
+            existingActivity == null
+                ? 'Aktivitas berhasil ditambahkan'
+                : 'Aktivitas berhasil diperbarui',
+            title: 'Berhasil',
+            isSuccess: true,
           );
         },
       ),
@@ -554,9 +505,9 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
         title: 'Hapus Log?',
         content: 'Data yang dihapus tidak dapat dikembalikan.',
         primaryButtonText: 'Hapus',
+        primaryButtonColor: AppThemes.errorColor,
         secondaryButtonText: 'Batal',
         onPrimaryButtonPressed: () {
-          // Cari item yg mau dihapus di list utama
           final itemToDelete = _filteredLogBooks[index];
           setState(() {
             _allLogBooks.removeWhere(
@@ -565,6 +516,13 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
             _filterLogBooks();
           });
           Navigator.pop(context);
+
+          // NOTIFIKASI BARU: DELETE SUKSES
+          GlobalSnackBar.show(
+            'Logbook berhasil dihapus',
+            title: 'Dihapus',
+            isSuccess: true,
+          );
         },
       ),
     );
@@ -586,9 +544,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
             Text(
               message,
               style: TextStyle(
-                color: isDark
-                    ? AppThemes.darkTextSecondary
-                    : AppThemes.hintColor,
+                color:
+                    isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
               ),
             ),
           ],
@@ -598,7 +555,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
   }
 }
 
-// Helper Class Sticky Header (Sama seperti sebelumnya)
 class _StickyTabDelegate extends SliverPersistentHeaderDelegate {
   final bool isDark;
   final int selectedIndex;

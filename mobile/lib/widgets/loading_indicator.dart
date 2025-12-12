@@ -6,7 +6,6 @@ import '../themes/app_themes.dart';
 
 class LoadingIndicator extends StatefulWidget {
   final String? message;
-
   const LoadingIndicator({super.key, this.message});
 
   @override
@@ -34,37 +33,36 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildDot(0, isDark),
-                const SizedBox(width: 8),
-                _buildDot(1, isDark),
-                const SizedBox(width: 8),
-                _buildDot(2, isDark),
-              ],
-            );
-          },
-        ),
-        if (widget.message != null) ...[
-          const SizedBox(height: 16),
-          Text(
-            widget.message!,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
-            ),
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(3, (index) {
+                  return _buildDot(index, isDark);
+                }),
+              );
+            },
           ),
+          if (widget.message != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              widget.message!,
+              style: TextStyle(
+                color:
+                    isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
+                fontSize: 12,
+              ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
@@ -73,14 +71,17 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
     final double offset = (animationValue * 2 * pi + (index * 2 * pi / 3));
     final double scale = 0.5 + (sin(offset) + 1) / 4;
 
-    return Transform.scale(
-      scale: scale,
-      child: Container(
-        width: 12,
-        height: 12,
-        decoration: BoxDecoration(
-          color: isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor,
-          shape: BoxShape.circle,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Transform.scale(
+        scale: scale,
+        child: Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor,
+            shape: BoxShape.circle,
+          ),
         ),
       ),
     );

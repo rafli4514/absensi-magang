@@ -67,18 +67,16 @@ class PerformanceCard extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        (isDark
-                                ? AppThemes.darkAccentBlue
-                                : AppThemes.primaryColor)
-                            .withOpacity(0.1),
+                    color: (isDark
+                            ? AppThemes.darkAccentBlue
+                            : AppThemes.primaryColor)
+                        .withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color:
-                          (isDark
-                                  ? AppThemes.darkAccentBlue
-                                  : AppThemes.primaryColor)
-                              .withOpacity(0.3),
+                      color: (isDark
+                              ? AppThemes.darkAccentBlue
+                              : AppThemes.primaryColor)
+                          .withOpacity(0.3),
                       width: 1,
                     ),
                   ),
@@ -206,8 +204,7 @@ class PerformanceCard extends StatelessWidget {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Container(
-                      width:
-                          (percentage / 100) *
+                      width: (percentage / 100) *
                           (MediaQuery.of(context).size.width - 80),
                       height: 8,
                       decoration: BoxDecoration(
@@ -248,8 +245,8 @@ class PerformanceCard extends StatelessWidget {
                           color: targetAchieved
                               ? AppThemes.successColor
                               : (isDark
-                                    ? AppThemes.darkTextTertiary
-                                    : AppThemes.hintColor.withOpacity(0.4)),
+                                  ? AppThemes.darkTextTertiary
+                                  : AppThemes.hintColor.withOpacity(0.4)),
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -260,8 +257,8 @@ class PerformanceCard extends StatelessWidget {
                             color: targetAchieved
                                 ? AppThemes.successColor
                                 : (isDark
-                                      ? AppThemes.darkTextSecondary
-                                      : AppThemes.hintColor),
+                                    ? AppThemes.darkTextSecondary
+                                    : AppThemes.hintColor),
                           ),
                         ),
                       ],

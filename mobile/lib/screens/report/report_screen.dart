@@ -15,6 +15,7 @@ import '../../services/storage_service.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/constants.dart';
 import '../../utils/navigation_helper.dart';
+import '../../utils/ui_utils.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/floating_bottom_nav.dart';
 
@@ -303,7 +304,15 @@ class _ReportScreenState extends State<ReportScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.isDarkMode;
+    final isDark = themeProvider.isDarkMode;
+
+    // Definisikan warna primary yang konsisten
+    final primaryColor =
+        isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor;
+    final onSurfaceColor =
+        isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor;
+    final hintColor =
+        isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor;
 
     final validCount = _attendanceRecords
         .where((r) => r.status == AttendanceStatus.valid)
@@ -319,26 +328,6 @@ class _ReportScreenState extends State<ReportScreen> {
       appBar: CustomAppBar(
         title: 'Attendance Report',
         showBackButton: false,
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.calendar_today_outlined,
-              color: isDarkMode
-                  ? AppThemes.darkTextPrimary
-                  : theme.iconTheme.color,
-            ),
-            onPressed: _selectDate,
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.download_rounded,
-              color: isDarkMode
-                  ? AppThemes.darkTextPrimary
-                  : theme.iconTheme.color,
-            ),
-            onPressed: _exportReport,
-          ),
-        ],
       ),
       body: Stack(
         children: [
@@ -364,7 +353,7 @@ class _ReportScreenState extends State<ReportScreen> {
                         validCount.toString(),
                         AppThemes.successColor,
                         Icons.check_circle_rounded,
-                        isDarkMode,
+                        isDark,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -374,7 +363,7 @@ class _ReportScreenState extends State<ReportScreen> {
                         terlambatCount.toString(),
                         AppThemes.warningColor,
                         Icons.schedule_rounded,
-                        isDarkMode,
+                        isDark,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -384,30 +373,30 @@ class _ReportScreenState extends State<ReportScreen> {
                         invalidCount.toString(),
                         AppThemes.errorColor,
                         Icons.cancel_rounded,
-                        isDarkMode,
+                        isDark,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 24),
 
-                // Date Filter - Modern Style
+                // 2. Filter & Action Section (PROFESIONAL CONTROL PANEL)
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: isDarkMode
-                        ? AppThemes.darkSurface
-                        : AppThemes.surfaceColor,
+                    color:
+                        isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isDarkMode
+                      color: isDark
                           ? AppThemes.darkOutline
                           : Colors.grey.withOpacity(0.2),
                     ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(
-                          isDarkMode ? 0.2 : 0.05,
+                          isDark ? 0.2 : 0.05,
                         ),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
@@ -416,36 +405,37 @@ class _ReportScreenState extends State<ReportScreen> {
                   ),
                   child: Row(
                     children: [
+                      // Icon Calendar Stylish
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color:
-                              (isDarkMode
-                                      ? AppThemes.darkAccentBlue
-                                      : AppThemes.primaryColor)
-                                  .withOpacity(0.1),
+                          color: primaryColor.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          Icons.calendar_today_outlined,
+                          Icons.calendar_month_rounded,
                           size: 20,
-                          color: isDarkMode
-                              ? AppThemes.darkAccentBlue
-                              : AppThemes.primaryColor,
+                          color: primaryColor,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 16),
+
+                      // Date Selector (Clickable Area)
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Selected Date',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: isDarkMode
-                                    ? AppThemes.darkTextSecondary
-                                    : theme.hintColor,
-                                fontWeight: FontWeight.w500,
+                        child: InkWell(
+                          onTap: _selectDate,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Selected Period',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: hintColor,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 11,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -457,26 +447,37 @@ class _ReportScreenState extends State<ReportScreen> {
                                     ? AppThemes.darkTextPrimary
                                     : theme.textTheme.bodyMedium?.color,
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
+
+                      // Divider Vertical
+                      Container(
+                        height: 32,
+                        width: 1,
+                        color: isDark
+                            ? AppThemes.darkOutline
+                            : Colors.grey.shade300,
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+
+                      // Download Button (Warna sudah diperbaiki)
                       IconButton(
                         icon: Icon(
-                          Icons.arrow_drop_down_rounded,
-                          color: isDarkMode
-                              ? AppThemes.darkTextPrimary
-                              : theme.iconTheme.color,
-                          size: 24,
+                          Icons.download_rounded,
+                          color: primaryColor, // Menggunakan warna Primary
                         ),
-                        onPressed: _selectDate,
+                        tooltip: 'Download Report',
+                        onPressed: _exportReport,
                       ),
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 28),
 
-                // Attendance List Header
+                // 3. List Header
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: Row(
@@ -486,9 +487,7 @@ class _ReportScreenState extends State<ReportScreen> {
                         'Attendance History',
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: isDarkMode
-                              ? AppThemes.darkTextPrimary
-                              : theme.textTheme.titleLarge?.color,
+                          color: onSurfaceColor,
                         ),
                       ),
                       Container(
@@ -497,19 +496,13 @@ class _ReportScreenState extends State<ReportScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color:
-                              (isDarkMode
-                                      ? AppThemes.darkAccentBlue
-                                      : AppThemes.primaryColor)
-                                  .withOpacity(0.1),
+                          color: primaryColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           '${_attendanceRecords.length} Records',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: isDarkMode
-                                ? AppThemes.darkAccentBlue
-                                : AppThemes.primaryColor,
+                            color: primaryColor,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -519,9 +512,9 @@ class _ReportScreenState extends State<ReportScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Attendance List - Modern Cards
+                // 4. Attendance List Cards
                 ..._attendanceRecords.map(
-                  (record) => _buildModernAttendanceItem(record, isDarkMode),
+                  (record) => _buildModernAttendanceItem(record, isDark),
                 ),
                 const SizedBox(height: 100),
                 ],
@@ -545,6 +538,8 @@ class _ReportScreenState extends State<ReportScreen> {
       ),
     );
   }
+
+  // --- HELPER WIDGETS ---
 
   Widget _buildSimpleSummaryCard(
     String title,
@@ -590,6 +585,8 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Widget _buildModernAttendanceItem(AttendanceRecord record, bool isDarkMode) {
     final theme = Theme.of(context);
+    final primaryColor =
+        isDarkMode ? AppThemes.darkAccentBlue : AppThemes.primaryColor;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -617,11 +614,7 @@ class _ReportScreenState extends State<ReportScreen> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color:
-                  (isDarkMode
-                          ? AppThemes.darkAccentBlue
-                          : AppThemes.primaryColor)
-                      .withOpacity(0.1),
+              color: primaryColor.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Column(
@@ -631,17 +624,13 @@ class _ReportScreenState extends State<ReportScreen> {
                   record.date.day.toString(),
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: isDarkMode
-                        ? AppThemes.darkAccentBlue
-                        : AppThemes.primaryColor,
+                    color: primaryColor,
                   ),
                 ),
                 Text(
                   _getMonthAbbreviation(record.date.month),
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: isDarkMode
-                        ? AppThemes.darkAccentBlue
-                        : AppThemes.primaryColor,
+                    color: primaryColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -662,7 +651,7 @@ class _ReportScreenState extends State<ReportScreen> {
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: isDarkMode
                             ? AppThemes.darkTextSecondary
-                            : theme.hintColor,
+                            : AppThemes.hintColor,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -787,7 +776,7 @@ class _ReportScreenState extends State<ReportScreen> {
       'SEP',
       'OCT',
       'NOV',
-      'DEC',
+      'DEC'
     ];
     return months[month - 1];
   }
@@ -830,18 +819,16 @@ class _ReportScreenState extends State<ReportScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
-              primary: isDark
-                  ? AppThemes.darkAccentBlue
-                  : AppThemes.primaryColor,
+              primary:
+                  isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor,
               onPrimary: Colors.white,
               surface: isDark ? AppThemes.darkSurface : theme.cardColor,
               onSurface: isDark
                   ? AppThemes.darkTextPrimary
                   : theme.textTheme.bodyLarge?.color ?? Colors.black,
             ),
-            dialogBackgroundColor: isDark
-                ? AppThemes.darkSurface
-                : theme.cardColor,
+            dialogBackgroundColor:
+                isDark ? AppThemes.darkSurface : theme.cardColor,
           ),
           child: child!,
         );
@@ -878,13 +865,12 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   void _exportReport() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Report exported successfully!'),
-        backgroundColor: AppThemes.successColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
+    // Simulasi export report
+    // NOTIFIKASI BARU: SUKSES
+    GlobalSnackBar.show(
+      'Laporan berhasil diexport ke PDF',
+      title: 'Export Berhasil',
+      isSuccess: true,
     );
   }
 }

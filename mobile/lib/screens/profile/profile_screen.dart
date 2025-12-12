@@ -1,11 +1,11 @@
 // screens/profile/profile_screen.dart
 import 'package:flutter/material.dart';
-import 'package:myinternplus/screens/profile/profile_logic.dart';
 import 'package:provider/provider.dart';
 
 import '../../navigation/route_names.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../screens/profile/profile_logic.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/navigation_helper.dart';
 import '../../widgets/custom_app_bar.dart';
