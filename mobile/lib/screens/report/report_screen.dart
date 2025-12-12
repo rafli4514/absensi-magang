@@ -1,11 +1,19 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
 import '../../models/enum/attendance_record.dart';
 import '../../models/enum/attendance_status.dart';
 import '../../navigation/route_names.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/attendance_service.dart';
+import '../../services/storage_service.dart';
 import '../../themes/app_themes.dart';
+import '../../utils/constants.dart';
 import '../../utils/navigation_helper.dart';
 import '../../utils/ui_utils.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -19,64 +27,279 @@ class ReportScreen extends StatefulWidget {
 }
 
 class _ReportScreenState extends State<ReportScreen> {
-  DateTime _selectedDate = DateTime.now();
+  DateTime _selectedMonth = DateTime.now();
+  
+  // State to hold the data for the UI
+  List<AttendanceRecord> _attendanceRecords = [];
+  bool _isLoading = true;
 
-  // Dummy Data
-  final List<AttendanceRecord> _attendanceRecords = [
-    AttendanceRecord(
-      id: '1',
-      userId: '1',
-      pesertaMagangId: '1',
-      tipe: 'CHECK_IN',
-      date: DateTime(2024, 1, 15),
-      timestamp: DateTime(2024, 1, 15, 8, 30),
-      checkIn: DateTime(2024, 1, 15, 8, 30),
-      checkOut: DateTime(2024, 1, 15, 17, 15),
-      status: AttendanceStatus.valid,
-      createdAt: DateTime(2024, 1, 15),
-      updatedAt: DateTime(2024, 1, 15),
-    ),
-    AttendanceRecord(
-      id: '2',
-      userId: '1',
-      pesertaMagangId: '1',
-      tipe: 'CHECK_IN',
-      date: DateTime(2024, 1, 14),
-      timestamp: DateTime(2024, 1, 14, 9, 15),
-      checkIn: DateTime(2024, 1, 14, 9, 15),
-      checkOut: DateTime(2024, 1, 14, 17, 0),
-      status: AttendanceStatus.terlambat,
-      createdAt: DateTime(2024, 1, 14),
-      updatedAt: DateTime(2024, 1, 14),
-    ),
-    AttendanceRecord(
-      id: '3',
-      userId: '1',
-      pesertaMagangId: '1',
-      tipe: 'CHECK_IN',
-      date: DateTime(2024, 1, 13),
-      timestamp: DateTime(2024, 1, 13, 8, 45),
-      checkIn: DateTime(2024, 1, 13, 8, 45),
-      checkOut: DateTime(2024, 1, 13, 16, 45),
-      status: AttendanceStatus.valid,
-      createdAt: DateTime(2024, 1, 13),
-      updatedAt: DateTime(2024, 1, 13),
-    ),
-    AttendanceRecord(
-      id: '4',
-      userId: '1',
-      pesertaMagangId: '1',
-      tipe: 'CHECK_IN',
-      date: DateTime(2024, 1, 12),
-      timestamp: DateTime(2024, 1, 12),
-      checkIn: null,
-      checkOut: null,
-      status: AttendanceStatus.invalid,
-      createdAt: DateTime(2024, 1, 12),
-      updatedAt: DateTime(2024, 1, 12),
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
 
+  // Method to fetch data from service and map it to UI model
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+
+    // 1. Calculate Start and End Date for the selected month
+    final start = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
+    final end = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0, 23, 59, 59);
+
+    try {
+      // 2. Get current user's pesertaMagangId from auth provider
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final user = authProvider.user;
+
+      if (user == null) {
+        _showError('User data not found. Please login again.');
+        return;
+      }
+
+      // Get pesertaMagangId from multiple sources
+      String? pesertaMagangId;
+      
+      try {
+        // Method 1: Try from stored user data (pesertaMagang.id)
+        final userDataStr = await StorageService.getString(AppConstants.userDataKey);
+        if (userDataStr != null) {
+          final userData = jsonDecode(userDataStr);
+          pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
+          if (kDebugMode && pesertaMagangId != null) {
+            debugPrint('✅ Got pesertaMagangId from stored data: $pesertaMagangId');
+          }
+        }
+        
+        // Method 2: If not found, refresh profile from API (most reliable)
+        if ((pesertaMagangId == null || pesertaMagangId.isEmpty) && mounted) {
+          if (kDebugMode) {
+            debugPrint('🔄 Refreshing profile to get pesertaMagangId...');
+          }
+          await authProvider.refreshProfile();
+          final refreshedUserDataStr = await StorageService.getString(AppConstants.userDataKey);
+          if (refreshedUserDataStr != null) {
+            final refreshedUserData = jsonDecode(refreshedUserDataStr);
+            pesertaMagangId = refreshedUserData['pesertaMagang']?['id']?.toString();
+            if (kDebugMode && pesertaMagangId != null) {
+              debugPrint('✅ Got pesertaMagangId from refreshed profile: $pesertaMagangId');
+            }
+          }
+        }
+        
+        // Method 3: If still not found, try to get from API using userId endpoint
+        if ((pesertaMagangId == null || pesertaMagangId.isEmpty) && user.id.isNotEmpty) {
+          try {
+            if (kDebugMode) {
+              debugPrint('🔄 Trying to get pesertaMagangId from API endpoint...');
+            }
+            final token = await StorageService.getString(AppConstants.tokenKey);
+            if (token != null) {
+              final headers = {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $token',
+              };
+              
+              final response = await http.get(
+                Uri.parse('${AppConstants.baseUrl}/peserta-magang/user/${user.id}'),
+                headers: headers,
+              ).timeout(const Duration(seconds: 10));
+              
+              if (response.statusCode == 200) {
+                final responseData = jsonDecode(response.body);
+                if (responseData['success'] == true && responseData['data'] != null) {
+                  pesertaMagangId = responseData['data']['id']?.toString();
+                  if (kDebugMode && pesertaMagangId != null) {
+                    debugPrint('✅ Got pesertaMagangId from API endpoint: $pesertaMagangId');
+                  }
+                }
+              } else if (kDebugMode) {
+                debugPrint('⚠️ API returned status ${response.statusCode}: ${response.body}');
+              }
+            }
+          } catch (apiError) {
+            if (kDebugMode) {
+              debugPrint('⚠️ Error fetching pesertaMagangId from API: $apiError');
+            }
+          }
+        }
+        
+        // Method 4: Last resort - try to get from first attendance record
+        if ((pesertaMagangId == null || pesertaMagangId.isEmpty)) {
+          if (kDebugMode) {
+            debugPrint('🔄 Trying to get pesertaMagangId from attendance records...');
+          }
+          final tempResponse = await AttendanceService.getAllAttendance(
+            limit: 1,
+          );
+          
+          if (tempResponse.success && 
+              tempResponse.data != null && 
+              tempResponse.data!.isNotEmpty) {
+            pesertaMagangId = tempResponse.data!.first.pesertaMagangId;
+            if (kDebugMode && pesertaMagangId != null) {
+              debugPrint('✅ Got pesertaMagangId from attendance: $pesertaMagangId');
+            }
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('❌ Error getting pesertaMagangId: $e');
+        }
+      }
+
+      if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
+        if (mounted) {
+          _showError('Peserta magang ID not found. Please ensure you are logged in as a student and have completed registration. If the issue persists, please contact support.');
+          if (kDebugMode) {
+            debugPrint('❌ Final check: pesertaMagangId is still null or empty');
+            debugPrint('User ID: ${user.id}');
+            debugPrint('User Role: ${user.role}');
+          }
+        }
+        return;
+      }
+
+      // 3. Fetch all attendance records for the user
+      final response = await AttendanceService.getAllAttendance(
+        pesertaMagangId: pesertaMagangId,
+        limit: 500, // Fetch enough records to cover the month
+      );
+
+      if (response.success && response.data != null) {
+        // 4. Filter by date range (client-side since backend doesn't support it)
+        final filteredData = response.data!.where((item) {
+          final itemDate = item.timestamp;
+          return itemDate.isAfter(start.subtract(const Duration(days: 1))) &&
+                 itemDate.isBefore(end.add(const Duration(days: 1)));
+        }).toList();
+
+        // 5. Group attendance by date and combine MASUK/KELUAR
+        final Map<String, AttendanceRecord> recordsByDate = {};
+
+        for (final item in filteredData) {
+          final dateKey = '${item.timestamp.year}-${item.timestamp.month.toString().padLeft(2, '0')}-${item.timestamp.day.toString().padLeft(2, '0')}';
+          
+          if (!recordsByDate.containsKey(dateKey)) {
+            // Create new record for this date
+            final dateOnly = DateTime(item.timestamp.year, item.timestamp.month, item.timestamp.day);
+            recordsByDate[dateKey] = AttendanceRecord(
+              id: item.id,
+              userId: user?.id ?? '',
+              pesertaMagangId: item.pesertaMagangId,
+              tipe: item.tipe,
+              date: dateOnly,
+              timestamp: item.timestamp,
+              checkIn: null,
+              checkOut: null,
+              status: _mapStatus(item.status),
+              catatan: item.catatan,
+              lokasi: item.lokasi,
+              selfieUrl: item.selfieUrl,
+              qrCodeData: item.qrCodeData,
+              ipAddress: item.ipAddress,
+              device: item.device,
+              createdAt: item.createdAt,
+              updatedAt: item.updatedAt,
+              pesertaMagang: item.pesertaMagang,
+            );
+          }
+
+          final record = recordsByDate[dateKey]!;
+          
+          // Set check-in or check-out based on tipe
+          if (item.tipe.toUpperCase() == 'MASUK') {
+            recordsByDate[dateKey] = AttendanceRecord(
+              id: record.id,
+              userId: record.userId,
+              pesertaMagangId: record.pesertaMagangId,
+              tipe: record.tipe,
+              date: record.date,
+              timestamp: record.timestamp,
+              checkIn: item.timestamp,
+              checkOut: record.checkOut,
+              status: _mapStatus(item.status), // Use status from MASUK record
+              catatan: record.catatan,
+              lokasi: record.lokasi,
+              selfieUrl: record.selfieUrl,
+              qrCodeData: record.qrCodeData,
+              ipAddress: record.ipAddress,
+              device: record.device,
+              createdAt: record.createdAt,
+              updatedAt: record.updatedAt,
+              pesertaMagang: record.pesertaMagang,
+            );
+          } else if (item.tipe.toUpperCase() == 'KELUAR') {
+            recordsByDate[dateKey] = AttendanceRecord(
+              id: record.id,
+              userId: record.userId,
+              pesertaMagangId: record.pesertaMagangId,
+              tipe: record.tipe,
+              date: record.date,
+              timestamp: record.timestamp,
+              checkIn: record.checkIn,
+              checkOut: item.timestamp,
+              status: record.status, // Keep status from MASUK
+              catatan: record.catatan,
+              lokasi: record.lokasi,
+              selfieUrl: record.selfieUrl,
+              qrCodeData: record.qrCodeData,
+              ipAddress: record.ipAddress,
+              device: record.device,
+              createdAt: record.createdAt,
+              updatedAt: record.updatedAt,
+              pesertaMagang: record.pesertaMagang,
+            );
+          }
+        }
+
+        // 6. Convert map to sorted list
+        final mappedRecords = recordsByDate.values.toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
+
+        setState(() {
+          _attendanceRecords = mappedRecords;
+        });
+      } else {
+        _showError(response.message ?? 'Failed to load data');
+      }
+    } catch (e) {
+      _showError('Error loading attendance: ${e.toString()}');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  AttendanceStatus _mapStatus(String status) {
+    final upperStatus = status.toUpperCase();
+    switch (upperStatus) {
+      case 'VALID':
+        return AttendanceStatus.valid;
+      case 'TERLAMBAT':
+        return AttendanceStatus.terlambat;
+      case 'INVALID':
+        return AttendanceStatus.invalid;
+      default:
+        return AttendanceStatus.pending;
+    }
+  }
+
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppThemes.errorColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
+    }
+  }
+  
+  
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -108,11 +331,20 @@ class _ReportScreenState extends State<ReportScreen> {
       ),
       body: Stack(
         children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                // 1. Summary Cards Section
+          if (_isLoading)
+            Center(
+              child: CircularProgressIndicator(
+                color: isDarkMode
+                    ? AppThemes.darkAccentBlue
+                    : AppThemes.primaryColor,
+              ),
+            )
+          else
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                // Summary Cards - Modern Style
                 Row(
                   children: [
                     Expanded(
@@ -205,24 +437,15 @@ class _ReportScreenState extends State<ReportScreen> {
                                   fontSize: 11,
                                 ),
                               ),
-                              const SizedBox(height: 2),
-                              Row(
-                                children: [
-                                  Text(
-                                    _formatDate(_selectedDate),
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 15,
-                                      color: onSurfaceColor,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Icon(
-                                    Icons.keyboard_arrow_down_rounded,
-                                    size: 18,
-                                    color: primaryColor,
-                                  )
-                                ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _formatMonth(_selectedMonth),
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: isDarkMode
+                                    ? AppThemes.darkTextPrimary
+                                    : theme.textTheme.bodyMedium?.color,
                               ),
                             ],
                           ),
@@ -294,11 +517,9 @@ class _ReportScreenState extends State<ReportScreen> {
                   (record) => _buildModernAttendanceItem(record, isDark),
                 ),
                 const SizedBox(height: 100),
-              ],
+                ],
+              ),
             ),
-          ),
-
-          // Floating Nav
           Positioned(
             left: 0,
             right: 0,
@@ -574,11 +795,23 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   Future<void> _selectDate() async {
+    final DateTime now = DateTime.now();
+    final DateTime maxDate = DateTime(now.year + 1, 12, 31);
+    final DateTime minDate = DateTime(2023, 1, 1);
+    
+    // Ensure initialDate is within valid range
+    DateTime initialDate = _selectedMonth;
+    if (initialDate.isAfter(maxDate)) {
+      initialDate = maxDate;
+    } else if (initialDate.isBefore(minDate)) {
+      initialDate = minDate;
+    }
+    
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2023),
-      lastDate: DateTime(2025),
+      initialDate: initialDate,
+      firstDate: minDate,
+      lastDate: maxDate, // Allow up to next year
       builder: (context, child) {
         final theme = Theme.of(context);
         final isDark = theme.brightness == Brightness.dark;
@@ -601,12 +834,34 @@ class _ReportScreenState extends State<ReportScreen> {
         );
       },
     );
-
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
+    if (picked != null) {
+      final newMonth = DateTime(picked.year, picked.month);
+      if (newMonth.year != _selectedMonth.year || 
+          newMonth.month != _selectedMonth.month) {
+        setState(() {
+          _selectedMonth = newMonth;
+        });
+        _loadData(); // Reload data for the new month
+      }
     }
+  }
+
+  String _formatMonth(DateTime date) {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return '${months[date.month - 1]} ${date.year}';
   }
 
   void _exportReport() {
