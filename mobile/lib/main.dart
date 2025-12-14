@@ -1,32 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:myinternplus/providers/auth_provider.dart';
-import 'package:myinternplus/utils/constants.dart';
 import 'package:provider/provider.dart';
 
-import '../navigation/app_router.dart';
-import '../navigation/route_names.dart';
-import '../providers/attendance_provider.dart';
-import '../providers/onboard_provider.dart';
-import '../providers/theme_provider.dart';
-import '../services/storage_service.dart';
-import '../themes/app_themes.dart';
-
-void testApiConnection() async {
-  try {
-    final response = await http.get(
-      Uri.parse('${AppConstants.baseUrl}/auth/test'),
-    );
-    print('🔵 API Connection Test: ${response.statusCode}');
-    print('🔵 API Response: ${response.body}');
-  } catch (e) {
-    print('❌ API Connection Failed: $e');
-  }
-}
+import 'navigation/app_router.dart';
+import 'navigation/route_names.dart';
+import 'providers/attendance_provider.dart';
+import 'providers/auth_provider.dart';
+import 'providers/onboard_provider.dart';
+import 'providers/theme_provider.dart';
+import 'services/notification_service.dart';
+// import 'services/storage_service.dart'; // Tidak perlu import jika tidak dipanggil langsung di main
+import 'themes/app_themes.dart';
+import 'utils/global_context.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await StorageService.init();
+
+  // HAPUS ATAU KOMENTAR BARIS INI:
+  // await StorageService.init();
+
+  try {
+    final notificationService = NotificationService();
+    await notificationService.initialize();
+    await notificationService.scheduleDailyReminders();
+  } catch (e) {
+    debugPrint('❌ Failed to initialize notifications: $e');
+  }
+
   runApp(const MyApp());
 }
 
@@ -40,9 +39,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => OnboardProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(
-          create: (_) => AttendanceProvider(),
-        ), // TAMBAH INI
+        ChangeNotifierProvider(create: (_) => AttendanceProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
@@ -52,6 +49,11 @@ class MyApp extends StatelessWidget {
             darkTheme: AppThemes.darkTheme,
             themeMode: themeProvider.themeMode,
             debugShowCheckedModeBanner: false,
+
+            // --- INTEGRASI GLOBAL KEYS ---
+            navigatorKey: GlobalContext.navigatorKey,
+            scaffoldMessengerKey: GlobalContext.scaffoldMessengerKey,
+
             initialRoute: RouteNames.splash,
             onGenerateRoute: AppRouter.generateRoute,
           );

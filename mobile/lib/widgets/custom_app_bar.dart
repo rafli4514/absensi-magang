@@ -27,11 +27,16 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return AppBar(
-      title: Image.asset(
-        'assets/images/InternLogoExpand.png',
-        height: 40, // Adjust height as needed
-        fit: BoxFit.contain,
-      ),
+      // title: Text(
+      //   title,
+      //   style: theme.textTheme.titleLarge?.copyWith(
+      //     fontWeight: FontWeight.w700,
+      //     color: isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
+      //   ),
+      // ),
+      // Jika Anda menggunakan Logo sebagai title, gunakan ini:
+      title: Image.asset('assets/images/InternLogoExpand.png', height: 40),
+
       leading: showBackButton
           ? IconButton(
               icon: Icon(
@@ -40,20 +45,23 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                     ? AppThemes.darkTextPrimary
                     : AppThemes.onSurfaceColor,
               ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(context).pop(),
             )
           : null,
       actions: actions,
-      elevation: elevation ?? (isDark ? 2 : 0),
-      backgroundColor:
-          backgroundColor ??
+      elevation: elevation ?? (isDark ? 0 : 0.5),
+      backgroundColor: backgroundColor ??
           (isDark ? AppThemes.darkSurfaceVariant : AppThemes.surfaceColor),
       surfaceTintColor:
-          backgroundColor ??
-          (isDark ? AppThemes.darkSurfaceVariant : AppThemes.surfaceColor),
-      centerTitle: false, // Ensure logo is aligned to the left
+          isDark ? AppThemes.darkSurfaceVariant : AppThemes.surfaceColor,
+      centerTitle: true,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(
+          color: isDark ? AppThemes.darkOutline : Colors.grey.withOpacity(0.2),
+          height: 1,
+        ),
+      ),
     );
   }
 }

@@ -14,46 +14,40 @@ class CustomErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark
-            ? AppThemes.errorDark.withOpacity(0.2)
+            ? AppThemes.errorColor.withOpacity(0.1)
             : AppThemes.errorLight,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isDark
-              ? AppThemes.errorDark.withOpacity(0.4)
-              : AppThemes.errorColor.withOpacity(0.3),
+          color: AppThemes.errorColor.withOpacity(0.3),
         ),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.error_outline_rounded,
-            color: isDark ? AppThemes.errorLight : AppThemes.errorColor,
-          ),
+          const Icon(Icons.error_outline_rounded,
+              color: AppThemes.errorColor, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               message,
               style: TextStyle(
-                color: isDark ? AppThemes.errorLight : AppThemes.errorColor,
+                color: isDark ? AppThemes.errorColor : AppThemes.errorDark,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ),
           IconButton(
-            icon: Icon(
-              Icons.close_rounded,
-              color: isDark ? AppThemes.errorLight : AppThemes.errorColor,
-              size: 20,
-            ),
+            icon:
+                const Icon(Icons.close, size: 18, color: AppThemes.errorColor),
             onPressed: onDismiss,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
           ),
         ],
       ),

@@ -1,4 +1,6 @@
 // auth_service.dart
+import "package:flutter/foundation.dart";
+
 import '../../models/api_response.dart';
 import '../../models/login_response.dart';
 import '../../models/user.dart';
@@ -9,20 +11,24 @@ import '../../utils/constants.dart';
 class AuthService {
   static final ApiService _apiService = ApiService();
 
-  // Login untuk admin/staff (menggunakan username)
   static Future<ApiResponse<LoginResponse>> login(
     String username,
     String password,
   ) async {
-    print('鳩 [AUTH SERVICE] Attempting login with username: $username');
+    if (kDebugMode) {
+      print('🔵 [AUTH SERVICE] Attempting login with username: $username');
+    }
 
-    final response = await _apiService.post(AppConstants.loginEndpoint, {
-      'username': username,
-      'password': password,
-    }, (data) => LoginResponse.fromJson(data));
+    final response = await _apiService.post(
+        AppConstants.loginEndpoint,
+        {
+          'username': username,
+          'password': password,
+        },
+        (data) => LoginResponse.fromJson(data));
 
     print(
-      '鳩 [AUTH SERVICE] Login response: ${response.success} - ${response.message}',
+      '🔵 [AUTH SERVICE] Login response: ${response.success} - ${response.message}',
     );
     return response;
   }
@@ -36,10 +42,13 @@ class AuthService {
       '鳩 [AUTH SERVICE] Attempting peserta login with username: $username',
     );
 
-    final response = await _apiService.post(AppConstants.loginPesertaEndpoint, {
-      'username': username,
-      'password': password,
-    }, (data) => LoginResponse.fromJson(data));
+    final response = await _apiService.post(
+        AppConstants.loginPesertaEndpoint,
+        {
+          'username': username,
+          'password': password,
+        },
+        (data) => LoginResponse.fromJson(data));
 
     print(
       '鳩 [AUTH SERVICE] Peserta login response: ${response.success} - ${response.message}',
@@ -61,7 +70,9 @@ class AuthService {
     String? idInstansi,
     String? status,
   }) async {
-    print('🐛 [AUTH SERVICE] Attempting register peserta magang with username: $username');
+    print(
+      '🐛 [AUTH SERVICE] Attempting register peserta magang with username: $username',
+    );
 
     // Prepare data sesuai dengan endpoint /auth/register-peserta-magang
     final data = {
@@ -74,7 +85,8 @@ class AuthService {
       'tanggalSelesai': tanggalSelesai,
       if (idPesertaMagang != null && idPesertaMagang.isNotEmpty) 'id_peserta_magang': idPesertaMagang,
       if (instansi != null && instansi.isNotEmpty) 'instansi': instansi,
-      if (idInstansi != null && idInstansi.isNotEmpty) 'id_instansi': idInstansi,
+      if (idInstansi != null && idInstansi.isNotEmpty)
+        'id_instansi': idInstansi,
       if (status != null && status.isNotEmpty) 'status': status,
     };
 
@@ -118,6 +130,77 @@ class AuthService {
     return response;
   }
 
+  // Register peserta magang dengan endpoint baru /auth/register-peserta-magang
+  static Future<ApiResponse<LoginResponse>> registerPesertaMagangEndpoint({
+    required String nama,
+    required String username,
+    required String password,
+    required String divisi,
+    required String nomorHp,
+    required String tanggalMulai,
+    required String tanggalSelesai,
+    String? instansi,
+    String? idInstansi,
+    String? status,
+  }) async {
+    print(
+      '🔵 [AUTH SERVICE] Attempting register peserta magang with username: $username',
+    );
+
+    // Prepare data sesuai dengan endpoint /auth/register-peserta-magang
+    final data = {
+      'nama': nama,
+      'username': username,
+      'password': password,
+      'divisi': divisi,
+      'nomorHp': nomorHp,
+      'tanggalMulai': tanggalMulai,
+      'tanggalSelesai': tanggalSelesai,
+      if (instansi != null && instansi.isNotEmpty) 'instansi': instansi,
+      if (idInstansi != null && idInstansi.isNotEmpty)
+        'id_instansi': idInstansi,
+      if (status != null && status.isNotEmpty) 'status': status,
+    };
+
+    print('[AUTH SERVICE] Registration data: $data');
+
+    final response = await _apiService.post(
+      AppConstants.registerPesertaMagangEndpoint,
+      data,
+      (data) {
+        // Backend mengembalikan { user, pesertaMagang, token, expiresIn }
+        // Gabungkan data pesertaMagang ke user agar UI mendapatkan nama/divisi/instansi/dates.
+        final userMap = <String, dynamic>{
+          ...(data['user'] ?? {}),
+          // mapping kolom peserta magang ke user
+          if (data['pesertaMagang'] != null) ...{
+            'nama': data['pesertaMagang']['nama'],
+            'divisi': data['pesertaMagang']['divisi'],
+            'instansi': data['pesertaMagang']['instansi'],
+            'nomorHp': data['pesertaMagang']['nomorHp'],
+            'tanggalMulai': data['pesertaMagang']['tanggalMulai'],
+            'tanggalSelesai': data['pesertaMagang']['tanggalSelesai'],
+            'avatar': data['pesertaMagang']['avatar'],
+          },
+          // pastikan role terisi
+          if (!(data['user'] ?? {}).containsKey('role'))
+            'role': 'PESERTA_MAGANG',
+        };
+
+        return LoginResponse(
+          user: User.fromJson(userMap),
+          token: data['token'] ?? '',
+          expiresIn: data['expiresIn'] ?? '24h',
+        );
+      },
+    );
+
+    print(
+      '🔵[AUTH SERVICE] Register peserta magang response: ${response.success} - ${response.message}',
+    );
+    return response;
+  }
+
   // Register dengan semua field untuk peserta magang
   static Future<ApiResponse<LoginResponse>> register({
     required String username,
@@ -130,7 +213,7 @@ class AuthService {
     String? tanggalSelesai,
     String? role = "user", // Default sesuai backend
   }) async {
-    print('鳩 [AUTH SERVICE] Attempting register with username: $username');
+    print('🔵 [AUTH SERVICE] Attempting register with username: $username');
 
     // Prepare data sesuai dengan yang diharapkan backend
     final data = {
@@ -156,7 +239,7 @@ class AuthService {
     );
 
     print(
-      '[AUTH SERVICE] Register response: ${response.success} - ${response.message}',
+      '🔵 [AUTH SERVICE] Register response: ${response.success} - ${response.message}',
     );
     return response;
   }

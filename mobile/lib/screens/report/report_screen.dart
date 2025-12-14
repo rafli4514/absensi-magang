@@ -15,6 +15,7 @@ import '../../services/storage_service.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/constants.dart';
 import '../../utils/navigation_helper.dart';
+import '../../utils/ui_utils.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/floating_bottom_nav.dart';
 
@@ -303,7 +304,15 @@ class _ReportScreenState extends State<ReportScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.isDarkMode;
+    final isDark = themeProvider.isDarkMode;
+
+    // Definisikan warna primary yang konsisten
+    final primaryColor =
+        isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor;
+    final onSurfaceColor =
+        isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor;
+    final hintColor =
+        isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor;
 
     final validCount = _attendanceRecords
         .where((r) => r.status == AttendanceStatus.valid)
@@ -319,26 +328,6 @@ class _ReportScreenState extends State<ReportScreen> {
       appBar: CustomAppBar(
         title: 'Attendance Report',
         showBackButton: false,
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.calendar_today_outlined,
-              color: isDarkMode
-                  ? AppThemes.darkTextPrimary
-                  : theme.iconTheme.color,
-            ),
-            onPressed: _selectDate,
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.download_rounded,
-              color: isDarkMode
-                  ? AppThemes.darkTextPrimary
-                  : theme.iconTheme.color,
-            ),
-            onPressed: _exportReport,
-          ),
-        ],
       ),
       body: SafeArea(
         child: Column(
@@ -545,6 +534,8 @@ class _ReportScreenState extends State<ReportScreen> {
     );
   }
 
+  // --- HELPER WIDGETS ---
+
   Widget _buildSimpleSummaryCard(
     String title,
     String value,
@@ -589,6 +580,8 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Widget _buildModernAttendanceItem(AttendanceRecord record, bool isDarkMode) {
     final theme = Theme.of(context);
+    final primaryColor =
+        isDarkMode ? AppThemes.darkAccentBlue : AppThemes.primaryColor;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -616,11 +609,7 @@ class _ReportScreenState extends State<ReportScreen> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color:
-                  (isDarkMode
-                          ? AppThemes.darkAccentBlue
-                          : AppThemes.primaryColor)
-                      .withOpacity(0.1),
+              color: primaryColor.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Column(
@@ -630,17 +619,13 @@ class _ReportScreenState extends State<ReportScreen> {
                   record.date.day.toString(),
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: isDarkMode
-                        ? AppThemes.darkAccentBlue
-                        : AppThemes.primaryColor,
+                    color: primaryColor,
                   ),
                 ),
                 Text(
                   _getMonthAbbreviation(record.date.month),
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: isDarkMode
-                        ? AppThemes.darkAccentBlue
-                        : AppThemes.primaryColor,
+                    color: primaryColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -661,7 +646,7 @@ class _ReportScreenState extends State<ReportScreen> {
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: isDarkMode
                             ? AppThemes.darkTextSecondary
-                            : theme.hintColor,
+                            : AppThemes.hintColor,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -786,7 +771,7 @@ class _ReportScreenState extends State<ReportScreen> {
       'SEP',
       'OCT',
       'NOV',
-      'DEC',
+      'DEC'
     ];
     return months[month - 1];
   }
@@ -829,18 +814,16 @@ class _ReportScreenState extends State<ReportScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
-              primary: isDark
-                  ? AppThemes.darkAccentBlue
-                  : AppThemes.primaryColor,
+              primary:
+                  isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor,
               onPrimary: Colors.white,
               surface: isDark ? AppThemes.darkSurface : theme.cardColor,
               onSurface: isDark
                   ? AppThemes.darkTextPrimary
                   : theme.textTheme.bodyLarge?.color ?? Colors.black,
             ),
-            dialogBackgroundColor: isDark
-                ? AppThemes.darkSurface
-                : theme.cardColor,
+            dialogBackgroundColor:
+                isDark ? AppThemes.darkSurface : theme.cardColor,
           ),
           child: child!,
         );
@@ -877,13 +860,12 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   void _exportReport() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Report exported successfully!'),
-        backgroundColor: AppThemes.successColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
+    // Simulasi export report
+    // NOTIFIKASI BARU: SUKSES
+    GlobalSnackBar.show(
+      'Laporan berhasil diexport ke PDF',
+      title: 'Export Berhasil',
+      isSuccess: true,
     );
   }
 }

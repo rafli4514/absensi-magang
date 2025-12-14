@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../models/timeline_activity.dart'; // Pastikan model ini ada
+import '../../../models/timeline_activity.dart';
 import '../../../themes/app_themes.dart';
 
 class ActivitiesTimeline extends StatelessWidget {
@@ -18,6 +18,7 @@ class ActivitiesTimeline extends StatelessWidget {
         color: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
+          // Integrasi Theme: Border
           color: isDark ? AppThemes.darkOutline : Colors.grey.shade200,
         ),
       ),
@@ -29,9 +30,8 @@ class ActivitiesTimeline extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
-              color: isDark
-                  ? AppThemes.darkTextPrimary
-                  : AppThemes.onSurfaceColor,
+              color:
+                  isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
             ),
           ),
           const SizedBox(height: 20),
@@ -58,7 +58,8 @@ class ActivitiesTimeline extends StatelessWidget {
                               shape: BoxShape.circle,
                               border: Border.all(
                                 color: isDark
-                                    ? AppThemes.darkSurface
+                                    ? AppThemes
+                                        .darkSurface // Border match background
                                     : Colors.white,
                                 width: 2,
                               ),
@@ -68,6 +69,7 @@ class ActivitiesTimeline extends StatelessWidget {
                             Expanded(
                               child: Container(
                                 width: 2,
+                                // Integrasi Theme: Garis penghubung
                                 color: isDark
                                     ? AppThemes.darkOutline
                                     : Colors.grey.shade200,
@@ -137,14 +139,18 @@ class ActivitiesTimeline extends StatelessWidget {
                                   Icon(
                                     Icons.location_on_outlined,
                                     size: 12,
-                                    color: AppThemes.hintColor,
+                                    color: isDark
+                                        ? AppThemes.darkTextTertiary
+                                        : AppThemes.hintColor,
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
                                     item.location,
                                     style: TextStyle(
                                       fontSize: 11,
-                                      color: AppThemes.hintColor,
+                                      color: isDark
+                                          ? AppThemes.darkTextTertiary
+                                          : AppThemes.hintColor,
                                     ),
                                   ),
                                 ],

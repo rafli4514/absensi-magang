@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../models/onboard_model.dart'; // Pastikan import model ada
 import '../../navigation/route_names.dart';
 import '../../themes/app_themes.dart';
 import '../../widgets/onboard/onboard_button.dart';
 import '../../widgets/onboard/onboard_indicator.dart';
-import 'onboard_page1.dart';
-import 'onboard_page2.dart';
-import 'onboard_page3.dart';
+import '../../widgets/onboard/onboard_page_widget.dart'; // Gunakan widget generic
 
 class OnboardScreen extends StatefulWidget {
   const OnboardScreen({super.key});
@@ -19,20 +18,42 @@ class _OnboardScreenState extends State<OnboardScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<Widget> _onboardPages = [
-    const OnboardPage1(),
-    const OnboardPage2(),
-    const OnboardPage3(),
+  // Data Onboarding didefinisikan di sini (atau bisa dari Service)
+  // Tidak perlu lagi file widget terpisah untuk setiap halaman
+  final List<OnboardPage> _pages = [
+    OnboardPage(
+      id: '1',
+      title: 'Selamat Datang di MyInternPlus!',
+      description:
+          'Bikin magang jadi lebih mudah dan terorganisir! Kelola absensi, pantau aktivitas, dan catat progress belajarmu dalam satu aplikasi',
+      imageUrl: 'assets/images/Mascot1.png',
+      order: 1,
+    ),
+    OnboardPage(
+      id: '2',
+      title: 'Absensi Cuma Sekali Scan!',
+      description:
+          'Tinggal scan QR Code, langsung absen dalam hitungan detik! Cepat, akurat, dan anti ribet.',
+      imageUrl: 'assets/images/Mascot2.png',
+      order: 2,
+    ),
+    OnboardPage(
+      id: '3',
+      title: 'Pantau Progress Magangmu!',
+      description:
+          'Lihat riwayat absensi, aktivitas harian, dan perkembangan skill-mu secara real-time.',
+      imageUrl: 'assets/images/Mascot3.png',
+      order: 3,
+    ),
   ];
 
   void _onNext() {
-    if (_currentPage < _onboardPages.length - 1) {
+    if (_currentPage < _pages.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
     } else {
-      // Last page - navigate to welcome screen
       Navigator.pushReplacementNamed(context, RouteNames.onboardWelcome);
     }
   }
@@ -47,51 +68,69 @@ class _OnboardScreenState extends State<OnboardScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark
-          ? AppThemes.darkBackground
-          : AppThemes
-                .backgroundColor, // Changed to backgroundColor for consistency
+      backgroundColor:
+          isDark ? AppThemes.darkBackground : AppThemes.backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            // KEEP Skip Button (top right) - ADDED BACK
-            if (_currentPage < _onboardPages.length - 1)
+            // Skip Button
+            if (_currentPage < _pages.length - 1)
               Align(
                 alignment: Alignment.topRight,
-                child: Padding(padding: const EdgeInsets.all(16.0)),
-              ),
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16, top: 16),
+                  child: TextButton(
+                    onPressed: _onSkip,
+                    child: Text(
+                      'Skip',
+                      style: TextStyle(
+                        color: isDark
+                            ? AppThemes.darkTextSecondary
+                            : AppThemes.hintColor,
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              const SizedBox(height: 64), // Spacer agar layout konsisten
 
-            // Page View
+            // Page View dengan Builder
             Expanded(
-              child: PageView(
+              child: PageView.builder(
                 controller: _pageController,
+                itemCount: _pages.length,
                 onPageChanged: (int page) {
                   setState(() {
                     _currentPage = page;
                   });
                 },
-                children: _onboardPages,
+                itemBuilder: (context, index) {
+                  return OnboardPageWidget(page: _pages[index]);
+                },
               ),
             ),
 
-            // Indicators menggunakan komponen terpisah
+            // Indicators
             OnboardIndicator(
               currentPage: _currentPage,
-              pageCount: _onboardPages.length,
+              pageCount: _pages.length,
             ),
 
-            // Next Button menggunakan komponen terpisah - CENTERED
+            const SizedBox(height: 24),
+
+            // Next Button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: OnboardButton(
                 currentPage: _currentPage,
-                pageCount: _onboardPages.length,
+                pageCount: _pages.length,
                 onNext: _onNext,
                 onSkip: _onSkip,
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 32),
           ],
         ),
       ),

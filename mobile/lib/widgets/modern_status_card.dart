@@ -22,35 +22,20 @@ class ModernStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color successColor = AppThemes.successColor;
-    final Color warningColor = AppThemes.warningColor;
-
-    final Color cardColor = isCompleted
-        ? (isDark
-              ? AppThemes.successDark.withOpacity(0.2)
-              : AppThemes.successLight)
-        : (isDark
-              ? AppThemes.warningDark.withOpacity(0.2)
-              : AppThemes.warningLight);
-
-    final Color iconColor = isCompleted ? successColor : warningColor;
-    final Color badgeColor = isCompleted ? successColor : warningColor;
+    final activeColor =
+        isCompleted ? AppThemes.successColor : AppThemes.warningColor;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.1 : 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: isDark
-            ? Border.all(color: AppThemes.darkOutline.withOpacity(0.3))
-            : null,
+        color: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isCompleted
+              ? activeColor.withOpacity(isDark ? 0.3 : 0.5)
+              : (isDark ? AppThemes.darkOutline : Colors.grey.shade200),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,35 +43,19 @@ class ModernStatusCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppThemes.darkSurface
-                      : AppThemes.surfaceColor.withOpacity(0.8),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(isDark ? 0.1 : 0.05),
-                      blurRadius: 2,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: Icon(icon, size: 20, color: iconColor),
-              ),
+              Icon(icon, color: activeColor, size: 20),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: badgeColor.withOpacity(isDark ? 0.3 : 0.2),
+                  color: activeColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   status,
                   style: TextStyle(
+                    color: activeColor,
                     fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: badgeColor,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
@@ -96,8 +65,7 @@ class ModernStatusCard extends StatelessWidget {
           Text(
             title,
             style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+              fontSize: 12,
               color: isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
             ),
           ),
@@ -105,31 +73,11 @@ class ModernStatusCard extends StatelessWidget {
           Text(
             time,
             style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: isDark
-                  ? AppThemes.darkTextPrimary
-                  : AppThemes.onSurfaceColor,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color:
+                  isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
             ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(
-                isCompleted ? Icons.check_circle : Icons.schedule,
-                size: 12,
-                color: isCompleted ? successColor : warningColor,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                isCompleted ? 'On time' : 'Not checked',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: isCompleted ? successColor : warningColor,
-                ),
-              ),
-            ],
           ),
         ],
       ),

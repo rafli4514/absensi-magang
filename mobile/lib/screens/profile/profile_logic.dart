@@ -30,8 +30,7 @@ class ProfileLogic {
     String displayStartDate,
     String displayEndDate,
     bool hasValidInternshipDates,
-  })
-  parseUserDates(User? user) {
+  }) parseUserDates(User? user) {
     String joinDate = '-';
     String? endDate;
     DateTime? startDate;
@@ -59,7 +58,8 @@ class ProfileLogic {
       endDateTime = DateTime.tryParse(user!.tanggalSelesai!);
       if (endDateTime != null) {
         endDate = DateFormat('dd MMM yyyy').format(endDateTime);
-        displayEndDate = endDate!;
+        // FIX: Hapus ! karena endDate sudah pasti String non-null di sini
+        displayEndDate = endDate;
 
         // Hitung sisa hari
         final now = DateTime.now();
@@ -91,7 +91,7 @@ class ProfileLogic {
 
   // Extract data yang sering digunakan
   static ({String displayDivisi, String displayInstansi, bool isStudent})
-  extractUserData(User? user, AuthProvider authProvider) {
+      extractUserData(User? user, AuthProvider authProvider) {
     return (
       displayDivisi: user?.divisi ?? '-',
       displayInstansi: user?.instansi ?? '-',

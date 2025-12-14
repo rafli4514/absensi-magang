@@ -70,7 +70,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
     return Dialog(
       backgroundColor: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: isDark ? AppThemes.darkOutline : Colors.transparent,
         ),
@@ -78,20 +78,71 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.existingLog != null
-                    ? 'Edit Log Book'
-                    : 'Tambah Log Book',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: isDark
-                      ? AppThemes.darkTextPrimary
-                      : AppThemes.onSurfaceColor,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.existingLog != null
+                      ? 'Edit Log Book'
+                      : 'Tambah Log Book',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? AppThemes.darkTextPrimary
+                        : AppThemes.onSurfaceColor,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // 1. Judul Kegiatan
+                CustomTextField(
+                  controller: _titleController,
+                  label: 'Judul Kegiatan',
+                  hint: 'Contoh: Instalasi Jaringan',
+                  icon: Icons.title_rounded,
+                  validator: (val) => val == null || val.isEmpty
+                      ? 'Judul tidak boleh kosong'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+
+                // 2. Lokasi
+                CustomTextField(
+                  controller: _locationController,
+                  label: 'Lokasi',
+                  hint: 'Contoh: Ruang Server Lt. 2',
+                  icon: Icons.location_on_rounded,
+                  validator: (val) =>
+                      val == null || val.isEmpty ? 'Lokasi wajib diisi' : null,
+                ),
+                const SizedBox(height: 16),
+
+                // 3. Mentor
+                CustomTextField(
+                  controller: _mentorController,
+                  label: 'Mentor Pendamping',
+                  hint: 'Nama mentor',
+                  icon: Icons.supervisor_account_rounded,
+                  validator: (val) => val == null || val.isEmpty
+                      ? 'Nama mentor wajib diisi'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+
+                // 4. Detail Keterangan (Multiline)
+                CustomTextField(
+                  controller: _contentController,
+                  label: 'Detail Keterangan',
+                  hint: 'Deskripsikan kegiatan yang dilakukan...',
+                  icon: Icons.notes_rounded,
+                  maxLines: 4,
+                  validator: (val) => val == null || val.isEmpty
+                      ? 'Keterangan tidak boleh kosong'
+                      : null,
                 ),
               ),
               const SizedBox(height: 24),
@@ -219,6 +270,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                             ? AppThemes.darkTextSecondary
                             : AppThemes.hintColor,
                       ),
+                      child: const Text('Batal'),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -250,6 +302,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                         horizontal: 24,
                         vertical: 12,
                       ),
+                      child: const Text('Simpan'),
                     ),
                     child: const Text('Simpan'),
                   ),
@@ -378,7 +431,7 @@ class _StyledTextField extends StatelessWidget {
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 }

@@ -24,9 +24,11 @@ class LogBookCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
+        // Integrasi Theme: Background Card
         color: isDark ? AppThemes.darkSurfaceElevated : AppThemes.surfaceColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
+          // Integrasi Theme: Border
           color: isDark ? AppThemes.darkOutline : Colors.grey.shade200,
         ),
         boxShadow: isDark
@@ -67,6 +69,7 @@ class LogBookCard extends StatelessWidget {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
+                        // Integrasi Theme
                         color: isDark
                             ? AppThemes.darkTextPrimary
                             : AppThemes.onSurfaceColor,
@@ -77,6 +80,7 @@ class LogBookCard extends StatelessWidget {
                       log.tanggal,
                       style: TextStyle(
                         fontSize: 12,
+                        // Integrasi Theme
                         color: isDark
                             ? AppThemes.darkTextSecondary
                             : AppThemes.hintColor,
@@ -146,20 +150,30 @@ class LogBookCard extends StatelessWidget {
                 ),
               ],
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert, color: AppThemes.hintColor),
+                // Integrasi Theme: Icon Color
+                icon: Icon(Icons.more_vert,
+                    color: isDark
+                        ? AppThemes.darkTextSecondary
+                        : AppThemes.hintColor),
+                // Integrasi Theme: Popup Background
                 color: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
                 onSelected: (value) {
                   if (value == 'edit') onEdit();
                   if (value == 'delete') onDelete();
                 },
                 itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                  const PopupMenuItem<String>(
+                  PopupMenuItem<String>(
                     value: 'edit',
                     child: Row(
                       children: [
-                        Icon(Icons.edit, size: 18),
-                        SizedBox(width: 8),
-                        Text('Edit'),
+                        Icon(Icons.edit,
+                            size: 18,
+                            color: isDark ? AppThemes.darkTextPrimary : null),
+                        const SizedBox(width: 8),
+                        Text('Edit',
+                            style: TextStyle(
+                                color:
+                                    isDark ? AppThemes.darkTextPrimary : null)),
                       ],
                     ),
                   ),
@@ -167,9 +181,11 @@ class LogBookCard extends StatelessWidget {
                     value: 'delete',
                     child: Row(
                       children: [
-                        Icon(Icons.delete, size: 18, color: Colors.red),
+                        Icon(Icons.delete,
+                            size: 18, color: AppThemes.errorColor),
                         SizedBox(width: 8),
-                        Text('Delete', style: TextStyle(color: Colors.red)),
+                        Text('Delete',
+                            style: TextStyle(color: AppThemes.errorColor)),
                       ],
                     ),
                   ),
@@ -181,6 +197,7 @@ class LogBookCard extends StatelessWidget {
           Text(
             log.deskripsi,
             style: TextStyle(
+              // Integrasi Theme
               color: isDark
                   ? AppThemes.darkTextSecondary
                   : AppThemes.onSurfaceColor.withOpacity(0.8),
@@ -212,7 +229,8 @@ class _InfoBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isDark ? AppThemes.darkBackground : Colors.grey.shade100,
+        // Integrasi Theme: Badge Background
+        color: isDark ? AppThemes.darkSurfaceVariant : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
           color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
@@ -221,13 +239,18 @@ class _InfoBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: AppThemes.hintColor),
+          Icon(icon,
+              size: 12,
+              // Integrasi Theme: Icon Color
+              color:
+                  isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor),
           const SizedBox(width: 4),
           Text(
             text,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,
+              // Integrasi Theme: Text Color
               color: isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
             ),
           ),
