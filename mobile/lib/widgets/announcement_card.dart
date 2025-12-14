@@ -23,29 +23,7 @@ class AnnouncementCard extends StatelessWidget {
 
   const AnnouncementCard({
     super.key,
-    this.items = const [
-      AnnouncementData(
-        title: 'Pedoman Magang',
-        body:
-            'Download pedoman lengkap magang untuk panduan selama periode magang.',
-        timeAgo: '1 hari yang lalu',
-        downloadUrl: 'https://example.com/pedoman-magang.pdf',
-      ),
-      AnnouncementData(
-        title: 'Berkas K3 (Keselamatan dan Kesehatan Kerja)',
-        body:
-            'Dokumen prosedur keselamatan dan kesehatan kerja di lingkungan perusahaan.',
-        timeAgo: '2 hari yang lalu',
-        downloadUrl: 'https://example.com/berkas-k3.pdf',
-      ),
-      AnnouncementData(
-        title: 'Standard Operasional Prosedur (SOP)',
-        body:
-            'Aturan standar operasional prosedur untuk semua aktivitas kerja.',
-        timeAgo: '3 hari yang lalu',
-        downloadUrl: 'https://example.com/sop-perusahaan.pdf',
-      ),
-    ],
+    this.items = const [],
     this.onDownload,
     this.onViewDetail,
   });
@@ -95,33 +73,62 @@ class AnnouncementCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // List semua announcement dalam 1 card
-            ...List.generate(items.length, (index) {
-              final item = items[index];
-              final isLast = index == items.length - 1;
-
-              return Column(
-                children: [
-                  _AnnouncementItem(
-                    item: item,
-                    onDownload: onDownload,
-                    onViewDetail: onViewDetail,
-                    isDark: isDark,
+            // Empty state atau List semua announcement dalam 1 card
+            if (items.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.announcement_outlined,
+                        size: 48,
+                        color: isDark
+                            ? AppThemes.darkTextSecondary.withOpacity(0.5)
+                            : AppThemes.hintColor.withOpacity(0.5),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Tidak ada pengumuman',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark
+                              ? AppThemes.darkTextSecondary
+                              : AppThemes.hintColor,
+                        ),
+                      ),
+                    ],
                   ),
-                  if (!isLast) ...[
-                    const SizedBox(height: 12),
-                    Divider(
-                      color: isDark
-                          ? AppThemes.darkOutline
-                          : AppThemes.hintColor.withOpacity(0.3),
-                      height: 1,
-                      thickness: 1,
+                ),
+              )
+            else
+              ...List.generate(items.length, (index) {
+                final item = items[index];
+                final isLast = index == items.length - 1;
+
+                return Column(
+                  children: [
+                    _AnnouncementItem(
+                      item: item,
+                      onDownload: onDownload,
+                      onViewDetail: onViewDetail,
+                      isDark: isDark,
                     ),
-                    const SizedBox(height: 12),
+                    if (!isLast) ...[
+                      const SizedBox(height: 12),
+                      Divider(
+                        color: isDark
+                            ? AppThemes.darkOutline
+                            : AppThemes.hintColor.withOpacity(0.3),
+                        height: 1,
+                        thickness: 1,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                   ],
-                ],
-              );
-            }),
+                );
+              }),
           ],
         ),
       ),

@@ -192,9 +192,19 @@ export const createAbsensi = async (req: Request, res: Response) => {
     const workStart = appSettings?.schedule?.workStartTime ?? '08:00';
     const workEnd = appSettings?.schedule?.workEndTime ?? '17:00';
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const tipeUpper = (tipe || '').toUpperCase();
     
-    if (currentTime < workStart || currentTime > workEnd) {
-      return sendError(res, `Di luar jam operasional (${workStart} - ${workEnd}). Waktu saat ini: ${currentTime}`, 400, 'OUTSIDE_WORK_HOURS');
+    // Untuk MASUK: hanya boleh antara workStart dan workEnd
+    // Untuk KELUAR: boleh setelah workStart (tidak ada batasan maksimal)
+    if (tipeUpper === 'MASUK') {
+      if (currentTime < workStart || currentTime > workEnd) {
+        return sendError(res, `Absen masuk hanya tersedia antara ${workStart} - ${workEnd}. Waktu saat ini: ${currentTime}`, 400, 'OUTSIDE_WORK_HOURS');
+      }
+    } else if (tipeUpper === 'KELUAR') {
+      // KELUAR harus setelah jam mulai kerja
+      if (currentTime < workStart) {
+        return sendError(res, `Absen keluar hanya tersedia setelah ${workStart}. Waktu saat ini: ${currentTime}`, 400, 'OUTSIDE_WORK_HOURS');
+      }
     }
 
     // Penentuan status keterlambatan

@@ -12,6 +12,7 @@
     "db:studio": "prisma studio",
     "db:push": "prisma db push",
     "db:seed": "ts-node src/database/seed.ts",
+    "seed": "ts-node src/database/seed.ts",
     "db:reset": "ts-node -e \"import('./src/database/migrations').then(m => m.default.resetDatabase())\"",
     "db:backup": "ts-node -e \"import('./src/database/migrations').then(m => m.default.backupDatabase())\"",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -46,5 +47,8 @@
     "prisma": "^6.16.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   }
 }

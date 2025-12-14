@@ -340,198 +340,197 @@ class _ReportScreenState extends State<ReportScreen> {
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          if (_isLoading)
-            Center(
-              child: CircularProgressIndicator(
-                color: isDarkMode
-                    ? AppThemes.darkAccentBlue
-                    : AppThemes.primaryColor,
-              ),
-            )
-          else
-            SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                // Summary Cards - Modern Style
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSimpleSummaryCard(
-                        'Valid',
-                        validCount.toString(),
-                        AppThemes.successColor,
-                        Icons.check_circle_rounded,
-                        isDarkMode,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: _isLoading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: isDarkMode
+                            ? AppThemes.darkAccentBlue
+                            : AppThemes.primaryColor,
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildSimpleSummaryCard(
-                        'Terlambat',
-                        terlambatCount.toString(),
-                        AppThemes.warningColor,
-                        Icons.schedule_rounded,
-                        isDarkMode,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildSimpleSummaryCard(
-                        'Invalid',
-                        invalidCount.toString(),
-                        AppThemes.errorColor,
-                        Icons.cancel_rounded,
-                        isDarkMode,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Date Filter - Modern Style
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: isDarkMode
-                        ? AppThemes.darkSurface
-                        : AppThemes.surfaceColor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isDarkMode
-                          ? AppThemes.darkOutline
-                          : Colors.grey.withOpacity(0.2),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(
-                          isDarkMode ? 0.2 : 0.05,
-                        ),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color:
-                              (isDarkMode
-                                      ? AppThemes.darkAccentBlue
-                                      : AppThemes.primaryColor)
-                                  .withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.calendar_today_outlined,
-                          size: 20,
-                          color: isDarkMode
-                              ? AppThemes.darkAccentBlue
-                              : AppThemes.primaryColor,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Selected Date',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: isDarkMode
-                                    ? AppThemes.darkTextSecondary
-                                    : theme.hintColor,
-                                fontWeight: FontWeight.w500,
+                    )
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          // Summary Cards - Modern Style
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildSimpleSummaryCard(
+                                  'Valid',
+                                  validCount.toString(),
+                                  AppThemes.successColor,
+                                  Icons.check_circle_rounded,
+                                  isDarkMode,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _formatMonth(_selectedMonth),
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: isDarkMode
-                                    ? AppThemes.darkTextPrimary
-                                    : theme.textTheme.bodyMedium?.color,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildSimpleSummaryCard(
+                                  'Terlambat',
+                                  terlambatCount.toString(),
+                                  AppThemes.warningColor,
+                                  Icons.schedule_rounded,
+                                  isDarkMode,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.arrow_drop_down_rounded,
-                          color: isDarkMode
-                              ? AppThemes.darkTextPrimary
-                              : theme.iconTheme.color,
-                          size: 24,
-                        ),
-                        onPressed: _selectDate,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 28),
-
-                // Attendance List Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Attendance History',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: isDarkMode
-                              ? AppThemes.darkTextPrimary
-                              : theme.textTheme.titleLarge?.color,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              (isDarkMode
-                                      ? AppThemes.darkAccentBlue
-                                      : AppThemes.primaryColor)
-                                  .withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${_attendanceRecords.length} Records',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: isDarkMode
-                                ? AppThemes.darkAccentBlue
-                                : AppThemes.primaryColor,
-                            fontWeight: FontWeight.w600,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildSimpleSummaryCard(
+                                  'Invalid',
+                                  invalidCount.toString(),
+                                  AppThemes.errorColor,
+                                  Icons.cancel_rounded,
+                                  isDarkMode,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
+                          const SizedBox(height: 24),
 
-                // Attendance List - Modern Cards
-                ..._attendanceRecords.map(
-                  (record) => _buildModernAttendanceItem(record, isDarkMode),
-                ),
-                const SizedBox(height: 100),
-                ],
-              ),
+                          // Date Filter - Modern Style
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: isDarkMode
+                                  ? AppThemes.darkSurface
+                                  : AppThemes.surfaceColor,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isDarkMode
+                                    ? AppThemes.darkOutline
+                                    : Colors.grey.withOpacity(0.2),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(
+                                    isDarkMode ? 0.2 : 0.05,
+                                  ),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        (isDarkMode
+                                                ? AppThemes.darkAccentBlue
+                                                : AppThemes.primaryColor)
+                                            .withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.calendar_today_outlined,
+                                    size: 20,
+                                    color: isDarkMode
+                                        ? AppThemes.darkAccentBlue
+                                        : AppThemes.primaryColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Selected Date',
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: isDarkMode
+                                              ? AppThemes.darkTextSecondary
+                                              : theme.hintColor,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _formatMonth(_selectedMonth),
+                                        style: theme.textTheme.bodyMedium?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: isDarkMode
+                                              ? AppThemes.darkTextPrimary
+                                              : theme.textTheme.bodyMedium?.color,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.arrow_drop_down_rounded,
+                                    color: isDarkMode
+                                        ? AppThemes.darkTextPrimary
+                                        : theme.iconTheme.color,
+                                    size: 24,
+                                  ),
+                                  onPressed: _selectDate,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+
+                          // Attendance List Header
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Attendance History',
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: isDarkMode
+                                        ? AppThemes.darkTextPrimary
+                                        : theme.textTheme.titleLarge?.color,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        (isDarkMode
+                                                ? AppThemes.darkAccentBlue
+                                                : AppThemes.primaryColor)
+                                            .withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${_attendanceRecords.length} Records',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: isDarkMode
+                                          ? AppThemes.darkAccentBlue
+                                          : AppThemes.primaryColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Attendance List - Modern Cards
+                          ..._attendanceRecords.map(
+                            (record) => _buildModernAttendanceItem(record, isDarkMode),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                      ),
+                    ),
             ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: FloatingBottomNav(
+            // Bottom Navigation Bar
+            FloatingBottomNav(
               currentRoute: RouteNames.report,
               onQRScanTap: () {
                 NavigationHelper.navigateWithoutAnimation(
@@ -540,8 +539,8 @@ class _ReportScreenState extends State<ReportScreen> {
                 );
               },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -12,6 +12,7 @@ export interface PesertaMagang {
   id: string;
   nama: string;
   username: string;
+  id_peserta_magang?: string; // NISN/NIM
   divisi: string;
   instansi: string;
   id_instansi?: string;

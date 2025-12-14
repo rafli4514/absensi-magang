@@ -2,6 +2,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
 import '../models/api_response.dart';
 import '../models/login_response.dart';
@@ -50,10 +51,42 @@ class AuthProvider with ChangeNotifier {
   // 1. Refresh Profile (Ambil data terbaru dari server)
   Future<void> refreshProfile() async {
     try {
+      // Get raw data from API to preserve pesertaMagang structure
       final response = await AuthService.getProfile();
       if (response.success && response.data != null) {
         _user = response.data;
-        await _saveUserData(_user!); // Simpan data terbaru ke storage
+        
+        // Also fetch raw data to preserve pesertaMagang in storage
+        try {
+          final token = await StorageService.getString(AppConstants.tokenKey);
+          if (token != null) {
+            final headers = {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            };
+            
+            final httpResponse = await http.get(
+              Uri.parse('${AppConstants.baseUrl}/auth/profile'),
+              headers: headers,
+            ).timeout(const Duration(seconds: 10));
+            
+            if (httpResponse.statusCode == 200) {
+              final rawData = jsonDecode(httpResponse.body);
+              if (rawData['success'] == true && rawData['data'] != null) {
+                // Save raw data (including pesertaMagang) to storage
+                await StorageService.setString(
+                  AppConstants.userDataKey,
+                  jsonEncode(rawData['data']),
+                );
+              }
+            }
+          }
+        } catch (e) {
+          // Fallback to saving User.toJson() if raw fetch fails
+          if (kDebugMode) print('⚠️ Could not save raw profile data: $e');
+          await _saveUserData(_user!);
+        }
+        
         notifyListeners(); // Update UI
       }
     } catch (e) {
@@ -65,6 +98,7 @@ class AuthProvider with ChangeNotifier {
   Future<bool> updateUserProfile({
     String? username,
     String? nama,
+    String? idPesertaMagang, // NISN/NIM
     String? divisi,
     String? instansi,
     String? nomorHp,
@@ -79,6 +113,7 @@ class AuthProvider with ChangeNotifier {
       final response = await AuthService.updateProfile(
         username: username,
         nama: nama,
+        idPesertaMagang: idPesertaMagang,
         divisi: divisi,
         instansi: instansi,
         nomorHp: nomorHp,
@@ -180,6 +215,7 @@ class AuthProvider with ChangeNotifier {
     String username,
     String password, {
     String? nama,
+    String? idPesertaMagang,
     String? divisi,
     String? instansi,
     String? nomorHp,
@@ -207,6 +243,7 @@ class AuthProvider with ChangeNotifier {
           nama: nama,
           username: username,
           password: password,
+          idPesertaMagang: idPesertaMagang,
           divisi: divisi,
           nomorHp: nomorHp,
           tanggalMulai: tanggalMulai,

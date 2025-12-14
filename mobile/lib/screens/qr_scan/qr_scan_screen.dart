@@ -1,14 +1,21 @@
 // lib/screens/qr_scan/qr_scan_screen.dart
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:provider/provider.dart';
 
 import '../../navigation/route_names.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/attendance_service.dart';
 import '../../services/location_service.dart';
 import '../../services/permission_service.dart';
+import '../../services/storage_service.dart';
 import '../../themes/app_themes.dart';
+import '../../utils/constants.dart';
 import '../../utils/indonesian_time.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/floating_bottom_nav.dart';
@@ -309,22 +316,63 @@ class _QrScanScreenState extends State<QrScanScreen>
     setState(() => _isProcessing = true);
 
     try {
-      final qrValidation = await LocationService.validateQRCode(
-        'dummy_qr_data',
-      );
-
-      if (!qrValidation.success || !qrValidation.data!.isValid) {
-        _showLocationErrorDialog('Kode QR tidak valid atau kadaluwarsa.');
+      // Get pesertaMagangId from user data
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final user = authProvider.user;
+      
+      if (user == null) {
+        _showLocationErrorDialog('User data not found. Please login again.');
         if (mounted) setState(() => _isProcessing = false);
         return;
       }
 
-      final attendanceResponse = await LocationService.submitAttendance(
-        type: _attendanceType,
-        sessionId: qrValidation.data!.sessionId,
-        latitude: _currentLocation!['latitude'],
-        longitude: _currentLocation!['longitude'],
-        locationAddress: _currentLocation!['address'],
+      String? pesertaMagangId;
+      try {
+        final userDataStr = await StorageService.getString(AppConstants.userDataKey);
+        if (userDataStr != null) {
+          final userData = jsonDecode(userDataStr);
+          pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
+        }
+      } catch (e) {
+        if (mounted) {
+          _showLocationErrorDialog('Error getting user data: $e');
+          setState(() => _isProcessing = false);
+        }
+        return;
+      }
+
+      if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
+        // Try to refresh profile
+        await authProvider.refreshProfile();
+        final refreshedUserDataStr = await StorageService.getString(AppConstants.userDataKey);
+        if (refreshedUserDataStr != null) {
+          final refreshedUserData = jsonDecode(refreshedUserDataStr);
+          pesertaMagangId = refreshedUserData['pesertaMagang']?['id']?.toString();
+        }
+      }
+
+      if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
+        _showLocationErrorDialog('Peserta magang ID not found. Please ensure you are registered as a student.');
+        if (mounted) setState(() => _isProcessing = false);
+        return;
+      }
+
+      // Map CLOCK_IN/CLOCK_OUT to MASUK/KELUAR
+      final tipe = _attendanceType == 'CLOCK_IN' ? 'MASUK' : 'KELUAR';
+      final now = DateTime.now();
+
+      // Create attendance using AttendanceService
+      final attendanceResponse = await AttendanceService.createAttendance(
+        pesertaMagangId: pesertaMagangId,
+        tipe: tipe,
+        timestamp: now,
+        lokasi: {
+          'latitude': _currentLocation!['latitude'],
+          'longitude': _currentLocation!['longitude'],
+          'address': _currentLocation!['address'] ?? '',
+        },
+        qrCodeData: 'qr_scanned_${now.millisecondsSinceEpoch}',
+        device: 'Mobile App',
       );
 
       if (attendanceResponse.success) {

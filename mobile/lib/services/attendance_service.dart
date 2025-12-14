@@ -86,27 +86,46 @@ class AttendanceService {
   }) async {
     try {
       final headers = await _getHeaders();
+      
+      final requestBody = {
+        'pesertaMagangId': pesertaMagangId,
+        'tipe': tipe,
+        'timestamp': timestamp.toIso8601String(),
+        'lokasi': lokasi,
+        'selfieUrl': selfieUrl,
+        'qrCodeData': qrCodeData,
+        'catatan': catatan,
+        'ipAddress': ipAddress,
+        'device': device,
+      };
+      
+      print('[ATTENDANCE SERVICE] Creating attendance: $requestBody');
+      
       final response = await http
           .post(
             Uri.parse('$baseUrl/absensi'),
             headers: headers,
-            body: jsonEncode({
-              'pesertaMagangId': pesertaMagangId,
-              'tipe': tipe,
-              'timestamp': timestamp.toIso8601String(),
-              'lokasi': lokasi,
-              'selfieUrl': selfieUrl,
-              'qrCodeData': qrCodeData,
-              'catatan': catatan,
-              'ipAddress': ipAddress,
-              'device': device,
-            }),
+            body: jsonEncode(requestBody),
           )
           .timeout(timeout);
 
-      final data = jsonDecode(response.body);
+      print('[ATTENDANCE SERVICE] Response status: ${response.statusCode}');
+      print('[ATTENDANCE SERVICE] Response body: ${response.body}');
+      
+      final responseBody = response.body;
+      
+      // Handle empty response body
+      if (responseBody.isEmpty) {
+        return ApiResponse(
+          success: false,
+          message: 'Server returned empty response',
+          statusCode: response.statusCode,
+        );
+      }
+      
+      final data = jsonDecode(responseBody);
 
-      if (data['success'] == true) {
+      if (response.statusCode >= 200 && response.statusCode < 300 && data['success'] == true) {
         final attendance = Attendance.fromJson(data['data']);
         return ApiResponse(
           success: true,
@@ -114,15 +133,30 @@ class AttendanceService {
           message: data['message'],
         );
       } else {
+        // Get error message from response
+        final errorMessage = data['message'] ?? 
+            data['error'] ?? 
+            'Failed to create attendance';
         return ApiResponse(
           success: false,
-          message: data['message'] ?? 'Failed to create attendance',
+          message: errorMessage,
+          statusCode: response.statusCode,
         );
       }
+    } on http.ClientException catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Network error: ${e.message}',
+      );
+    } on FormatException catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Invalid server response: ${e.message}',
+      );
     } catch (e) {
       return ApiResponse(
         success: false,
-        message: 'Failed to create attendance: $e',
+        message: 'Failed to create attendance: ${e.toString()}',
       );
     }
   }

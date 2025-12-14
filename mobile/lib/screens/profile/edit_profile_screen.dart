@@ -26,6 +26,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   // Controllers
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
+  final _idPesertaMagangController = TextEditingController(); // NISN/NIM
   final _divisiController = TextEditingController();
   final _instansiController = TextEditingController();
   final _nomorHpController = TextEditingController();
@@ -55,6 +56,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _usernameController.dispose();
+    _idPesertaMagangController.dispose();
     _divisiController.dispose();
     _instansiController.dispose();
     _nomorHpController.dispose();
@@ -71,6 +73,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() {
         _nameController.text = user.nama ?? '';
         _usernameController.text = user.username;
+        _idPesertaMagangController.text = user.idPesertaMagang ?? '';
         _divisiController.text = user.divisi ?? '';
         _instansiController.text = user.instansi ?? '';
         _nomorHpController.text = user.nomorHp ?? '';
@@ -173,6 +176,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final success = await authProvider.updateUserProfile(
         nama: _nameController.text.trim(),
         username: _usernameController.text.trim(),
+        idPesertaMagang: _idPesertaMagangController.text.trim(),
         divisi: _divisiController.text.trim(),
         instansi: _instansiController.text.trim(),
         nomorHp: _nomorHpController.text.trim(),
@@ -351,6 +355,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 readOnly: true,
               ),
               const SizedBox(height: 20),
+              // --- ID Peserta Magang (NISN/NIM) ---
+              if (isStudent)
+                _buildModernFormField(
+                  controller: _idPesertaMagangController,
+                  label: 'ID Peserta Magang (NISN/NIM)',
+                  icon: Icons.badge_rounded,
+                  isDarkMode: isDarkMode,
+                  keyboardType: TextInputType.text,
+                ),
+              if (isStudent) const SizedBox(height: 20),
               _buildModernFormField(
                 controller: _nomorHpController,
                 label: 'Nomor HP',

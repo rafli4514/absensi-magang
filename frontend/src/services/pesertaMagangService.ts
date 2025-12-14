@@ -18,6 +18,7 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 }
 
 export interface CreatePesertaMagangRequest {
+  id_peserta_magang?: string; // NISN/NIM
   nama: string;
   username: string;
   divisi: string;

@@ -59,6 +59,7 @@ export default function PesertaMagang() {
   const [formData, setFormData] = useState({
     nama: "",
     username: "",
+    id_peserta_magang: "", // NISN/NIM
     divisi: "",
     instansi: "",
     id_instansi: "",
@@ -118,6 +119,7 @@ export default function PesertaMagang() {
         setFormData({
           nama: "",
           username: "",
+          id_peserta_magang: "",
           divisi: "",
           instansi: "",
           id_instansi: "",
@@ -178,6 +180,7 @@ export default function PesertaMagang() {
     setUpdateFormData({
       nama: item.nama,
       username: item.username,
+      id_peserta_magang: item.id_peserta_magang,
       divisi: item.divisi,
       instansi: item.instansi,
       id_instansi: item.id_instansi,
@@ -312,6 +315,24 @@ export default function PesertaMagang() {
                   }
                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
+              </div>
+
+              {/* ID Peserta Magang (NISN/NIM) */}
+              <div className="w-full">
+                <label className="block mb-2 font-semibold text-gray-700">
+                  ID Peserta Magang (NISN/NIM)
+                </label>
+                <TextField.Root
+                  placeholder="Masukkan NISN/NIM"
+                  value={formData.id_peserta_magang}
+                  onChange={(e) =>
+                    setFormData({ ...formData, id_peserta_magang: e.target.value })
+                  }
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  ID unik peserta magang (NISN untuk SMA/SMK, NIM untuk Mahasiswa)
+                </p>
               </div>
 
               {/* Third Row: Nomor HP and Status */}
@@ -672,6 +693,27 @@ export default function PesertaMagang() {
                                 }
                                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                               />
+                            </div>
+
+                            {/* ID Peserta Magang (NISN/NIM) */}
+                            <div className="w-full">
+                              <label className="block mb-2 font-semibold text-gray-700">
+                                ID Peserta Magang (NISN/NIM)
+                              </label>
+                              <TextField.Root
+                                placeholder="Masukkan NISN/NIM"
+                                value={updateFormData.id_peserta_magang || ""}
+                                onChange={(e) =>
+                                  setUpdateFormData({
+                                    ...updateFormData,
+                                    id_peserta_magang: e.target.value,
+                                  })
+                                }
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              />
+                              <p className="text-sm text-gray-500 mt-1">
+                                ID unik peserta magang (NISN untuk SMA/SMK, NIM untuk Mahasiswa)
+                              </p>
                             </div>
 
                             {/* row 3: Nomor HP and Status */}

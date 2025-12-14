@@ -455,6 +455,7 @@ class InternshipInfoCard extends StatelessWidget {
   final bool isStudent;
   final String displayInstansi;
   final String displayDivisi;
+  final String? idPesertaMagang; // NISN/NIM
   final bool hasValidInternshipDates;
   final DateTime? startDate;
   final DateTime? endDate;
@@ -468,6 +469,7 @@ class InternshipInfoCard extends StatelessWidget {
     required this.isStudent,
     required this.displayInstansi,
     required this.displayDivisi,
+    this.idPesertaMagang,
     required this.hasValidInternshipDates,
     this.startDate,
     this.endDate,
@@ -541,6 +543,15 @@ class InternshipInfoCard extends StatelessWidget {
             value: displayDivisi,
             isDarkMode: isDarkMode,
           ),
+
+          // ID Peserta Magang (NISN/NIM)
+          if (idPesertaMagang != null && idPesertaMagang!.isNotEmpty)
+            ProfileInfoRow(
+              icon: Icons.badge_rounded,
+              label: "ID Peserta Magang (NISN/NIM)",
+              value: idPesertaMagang!,
+              isDarkMode: isDarkMode,
+            ),
 
           const SizedBox(height: 16),
           Text(

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../models/logbook.dart';
-import '../../../themes/app_themes.dart';
+import '../../models/enum/activity_status.dart';
+import '../../models/enum/activity_type.dart';
+import '../../models/logbook.dart';
+import '../../themes/app_themes.dart';
 
 class LogBookCard extends StatelessWidget {
   final LogBook log;
@@ -61,7 +63,7 @@ class LogBookCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      log.title,
+                      log.kegiatan,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -72,7 +74,7 @@ class LogBookCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "${log.createdAt.day}/${log.createdAt.month}/${log.createdAt.year}",
+                      log.tanggal,
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark
@@ -80,9 +82,69 @@ class LogBookCard extends StatelessWidget {
                             : AppThemes.hintColor,
                       ),
                     ),
+                    if (log.durasi != null && log.durasi!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Durasi: ${log.durasi}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppThemes.darkTextSecondary
+                              : AppThemes.hintColor,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
+              // Type dan Status badges
+              if (log.type != null || log.status != null) ...[
+                const SizedBox(width: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    if (log.type != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Color(log.type!.color).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: Color(log.type!.color).withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          log.type!.displayName,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Color(log.type!.color),
+                          ),
+                        ),
+                      ),
+                    if (log.status != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Color(log.status!.color).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: Color(log.status!.color).withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          log.status!.displayName,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Color(log.status!.color),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
               PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert, color: AppThemes.hintColor),
                 color: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
@@ -116,20 +178,8 @@ class LogBookCard extends StatelessWidget {
             ],
           ),
           const Divider(height: 24),
-          Row(
-            children: [
-              _InfoBadge(icon: Icons.place, text: log.location, isDark: isDark),
-              const SizedBox(width: 12),
-              _InfoBadge(
-                icon: Icons.person,
-                text: log.mentorName,
-                isDark: isDark,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
           Text(
-            log.content,
+            log.deskripsi,
             style: TextStyle(
               color: isDark
                   ? AppThemes.darkTextSecondary

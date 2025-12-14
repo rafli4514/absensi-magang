@@ -6,6 +6,7 @@ import {
   validateQRCode,
   resetSettings,
   getSettingsByCategory,
+  getLocationSettings,
   exportSettings,
   importSettings,
 } from '../controllers/settingsController';
@@ -19,6 +20,7 @@ router.use(authenticateToken);
 // Routes accessible to authenticated users (including pembimbing magang for read)
 router.get('/', getSettings);
 router.get('/category/:category', getSettingsByCategory);
+router.get('/location', getLocationSettings);
 router.post('/qr/validate', validateQRCode);
 
 // QR Code generation - accessible to authenticated users

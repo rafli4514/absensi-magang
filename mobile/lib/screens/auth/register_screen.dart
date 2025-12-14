@@ -20,6 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _namaController = TextEditingController();
   final _usernameController = TextEditingController();
+  final _idPesertaMagangController = TextEditingController();
   final _divisiController = TextEditingController();
   final _instansiController = TextEditingController();
   final _nomorHpController = TextEditingController();
@@ -45,6 +46,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _namaController.dispose();
     _usernameController.dispose();
+    _idPesertaMagangController.dispose();
     _divisiController.dispose();
     _instansiController.dispose();
     _nomorHpController.dispose();
@@ -116,6 +118,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _usernameController.text.trim(),
         _passwordController.text.trim(),
         nama: _namaController.text.trim(),
+        idPesertaMagang: _idPesertaMagangController.text.trim(),
         divisi: _divisiController.text.trim(),
         instansi: _instansiController.text.trim(),
         nomorHp: _nomorHpController.text.trim(),
@@ -179,6 +182,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.initState();
     _namaController.addListener(_validateForm);
     _usernameController.addListener(_validateForm);
+    _idPesertaMagangController.addListener(_validateForm);
     _divisiController.addListener(_validateForm);
     _instansiController.addListener(_validateForm);
     _nomorHpController.addListener(_validateForm);
@@ -528,6 +532,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
           hint: 'Masukkan nama lengkap',
           icon: Icons.person_rounded,
           validator: Validators.validateName,
+        ),
+        const SizedBox(height: 12),
+
+        _buildFormField(
+          controller: _idPesertaMagangController,
+          label: 'ID Peserta Magang (NISN/NIM)',
+          hint: 'Masukkan NISN/NIM',
+          icon: Icons.badge_rounded,
+          validator: (value) {
+            // Optional field, no validation needed
+            return null;
+          },
+          keyboardType: TextInputType.number,
         ),
         const SizedBox(height: 12),
 

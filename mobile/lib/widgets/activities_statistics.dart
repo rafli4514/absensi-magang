@@ -1,12 +1,19 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
+import '../../models/logbook.dart';
 import '../../../themes/app_themes.dart';
 
 class ActivitiesStatistics extends StatelessWidget {
   final bool isMobile;
+  final List<LogBook> logbooks;
 
-  const ActivitiesStatistics({super.key, required this.isMobile});
+  const ActivitiesStatistics({
+    super.key,
+    required this.isMobile,
+    this.logbooks = const [],
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,11 +23,11 @@ class ActivitiesStatistics extends StatelessWidget {
       title: 'Daily Distribution',
       isDark: isDark,
       height: 250,
-      child: _buildPieChart(),
+      child: _buildPieChart(isDark),
     );
 
-    final monthlyChart = _ChartCard(
-      title: 'Monthly Performance',
+    final weeklyChart = _ChartCard(
+      title: 'Weekly Performance',
       isDark: isDark,
       height: 250,
       child: _buildLineChart(isDark),
@@ -28,77 +35,347 @@ class ActivitiesStatistics extends StatelessWidget {
 
     if (isMobile) {
       return Column(
-        children: [dailyChart, const SizedBox(height: 16), monthlyChart],
+        children: [dailyChart, const SizedBox(height: 16), weeklyChart],
       );
     } else {
       return Column(
-        children: [dailyChart, const SizedBox(height: 16), monthlyChart],
+        children: [dailyChart, const SizedBox(height: 16), weeklyChart],
       );
     }
   }
 
-  Widget _buildPieChart() {
+  Widget _buildPieChart(bool isDark) {
+    if (logbooks.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.pie_chart_outline,
+              size: 48,
+              color: isDark
+                  ? AppThemes.darkTextSecondary.withOpacity(0.5)
+                  : AppThemes.hintColor.withOpacity(0.5),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No data available',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark
+                    ? AppThemes.darkTextSecondary
+                    : AppThemes.hintColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Calculate distribution by type (prioritize type, fallback to status)
+    final typeDistribution = <String, int>{};
+    for (final logbook in logbooks) {
+      String? category;
+      if (logbook.type != null) {
+        category = logbook.type!.displayName;
+      } else if (logbook.status != null) {
+        category = logbook.status!.displayName;
+      } else {
+        category = 'Other';
+      }
+      
+      typeDistribution[category] = (typeDistribution[category] ?? 0) + 1;
+    }
+
+    if (typeDistribution.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.pie_chart_outline,
+              size: 48,
+              color: isDark
+                  ? AppThemes.darkTextSecondary.withOpacity(0.5)
+                  : AppThemes.hintColor.withOpacity(0.5),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No data available',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark
+                    ? AppThemes.darkTextSecondary
+                    : AppThemes.hintColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Convert to pie chart data
+    final pieChartData = typeDistribution.entries.toList();
+    final totalWithType = typeDistribution.values.reduce((a, b) => a + b);
+    final colors = [
+      AppThemes.primaryColor,
+      AppThemes.successColor,
+      AppThemes.warningColor,
+      AppThemes.errorColor,
+      Colors.purple,
+      Colors.orange,
+      Colors.teal,
+      Colors.pink,
+    ];
+
     return PieChart(
       PieChartData(
+        sections: pieChartData.asMap().entries.map((entry) {
+          final index = entry.key;
+          final entryData = entry.value;
+          final percentage = (entryData.value / totalWithType * 100);
+          return PieChartSectionData(
+            value: entryData.value.toDouble(),
+            title: '${entryData.key}\n${percentage.toStringAsFixed(0)}%',
+            color: colors[index % colors.length],
+            radius: 60,
+            titleStyle: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          );
+        }).toList(),
         sectionsSpace: 2,
-        centerSpaceRadius: 30,
-        sections: [
-          _section(35, AppThemes.primaryColor),
-          _section(25, AppThemes.successColor),
-          _section(20, AppThemes.warningColor),
-          _section(20, AppThemes.secondaryColor),
-        ],
+        centerSpaceRadius: 40,
       ),
     );
   }
 
-  PieChartSectionData _section(double val, Color color) {
-    return PieChartSectionData(
-      color: color,
-      value: val,
-      title: '${val.toInt()}%',
-      radius: 45,
-      titleStyle: const TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      ),
-    );
-  }
 
   Widget _buildLineChart(bool isDark) {
+    if (logbooks.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.show_chart_outlined,
+              size: 48,
+              color: isDark
+                  ? AppThemes.darkTextSecondary.withOpacity(0.5)
+                  : AppThemes.hintColor.withOpacity(0.5),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No data available',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark
+                    ? AppThemes.darkTextSecondary
+                    : AppThemes.hintColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Get date range from logbooks
+    DateTime? minDate;
+    DateTime? maxDate;
+    
+    for (final logbook in logbooks) {
+      try {
+        final logDate = DateTime.parse(logbook.tanggal);
+        if (minDate == null || logDate.isBefore(minDate)) {
+          minDate = logDate;
+        }
+        if (maxDate == null || logDate.isAfter(maxDate)) {
+          maxDate = logDate;
+        }
+      } catch (e) {
+        // Skip invalid dates
+      }
+    }
+
+    if (minDate == null || maxDate == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.show_chart_outlined,
+              size: 48,
+              color: isDark
+                  ? AppThemes.darkTextSecondary.withOpacity(0.5)
+                  : AppThemes.hintColor.withOpacity(0.5),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No data available',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark
+                    ? AppThemes.darkTextSecondary
+                    : AppThemes.hintColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Calculate last 8 weeks from now (backwards)
+    final now = DateTime.now();
+    final weeklyData = <String, int>{};
+    final weekRanges = <String, List<DateTime>>{};
+    
+    // Calculate 8 weeks backwards from now
+    for (int i = 7; i >= 0; i--) {
+      // Calculate the date i weeks ago
+      final weekDate = now.subtract(Duration(days: i * 7));
+      
+      // Get Monday of that week (weekday: 1 = Monday, 7 = Sunday)
+      final daysFromMonday = weekDate.weekday - 1; // 0 = Monday, 6 = Sunday
+      final weekStart = DateTime(
+        weekDate.year,
+        weekDate.month,
+        weekDate.day,
+      ).subtract(Duration(days: daysFromMonday));
+      
+      final weekEnd = weekStart.add(const Duration(days: 6));
+      
+      // Format: "dd MMM" - "dd MMM"
+      final weekKey = '${DateFormat('dd MMM').format(weekStart)} - ${DateFormat('dd MMM').format(weekEnd)}';
+      weeklyData[weekKey] = 0;
+      weekRanges[weekKey] = [
+        weekStart,
+        weekEnd,
+      ];
+    }
+
+    // Count logbooks by week
+    for (final logbook in logbooks) {
+      try {
+        final logDate = DateTime.parse(logbook.tanggal);
+        final logDateOnly = DateTime(logDate.year, logDate.month, logDate.day);
+        
+        // Find which week this logbook belongs to
+        for (final entry in weekRanges.entries) {
+          final weekStart = entry.value[0];
+          final weekEnd = entry.value[1];
+          
+          // Check if logbook date falls within this week (inclusive)
+          // weekStart is the Monday (00:00:00), weekEnd is the Sunday (23:59:59)
+          if (logDateOnly.isAfter(weekStart.subtract(const Duration(seconds: 1))) &&
+              logDateOnly.isBefore(weekEnd.add(const Duration(days: 1)))) {
+            weeklyData[entry.key] = (weeklyData[entry.key] ?? 0) + 1;
+            break; // Only count once
+          }
+        }
+      } catch (e) {
+        // Skip invalid dates
+      }
+    }
+
+    // Sort all weeks by date (include weeks with 0 entries for complete chart)
+    final weeklyEntries = weeklyData.entries.toList();
+    weeklyEntries.sort((a, b) {
+      final aStart = weekRanges[a.key]?[0] ?? DateTime.now();
+      final bStart = weekRanges[b.key]?[0] ?? DateTime.now();
+      return aStart.compareTo(bStart);
+    });
+    
+    // Check if there's any data
+    final hasData = weeklyEntries.any((entry) => entry.value > 0);
+    
+    if (!hasData || weeklyEntries.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.show_chart_outlined,
+              size: 48,
+              color: isDark
+                  ? AppThemes.darkTextSecondary.withOpacity(0.5)
+                  : AppThemes.hintColor.withOpacity(0.5),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No data available',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark
+                    ? AppThemes.darkTextSecondary
+                    : AppThemes.hintColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final maxValue = weeklyEntries.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+
     return LineChart(
       LineChartData(
         gridData: FlGridData(
           show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (value) => FlLine(
-            color: isDark ? AppThemes.darkOutline : Colors.grey.shade200,
-            strokeWidth: 1,
-          ),
+          drawVerticalLine: true,
+          verticalInterval: 1,
+          horizontalInterval: maxValue > 5 ? (maxValue / 5).ceil().toDouble() : 1,
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: isDark
+                  ? AppThemes.darkOutline.withOpacity(0.2)
+                  : Colors.grey.withOpacity(0.2),
+              strokeWidth: 1,
+            );
+          },
+          getDrawingVerticalLine: (value) {
+            return FlLine(
+              color: isDark
+                  ? AppThemes.darkOutline.withOpacity(0.1)
+                  : Colors.grey.withOpacity(0.1),
+              strokeWidth: 1,
+            );
+          },
         ),
         titlesData: FlTitlesData(
-          leftTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  value.toInt().toString(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark
+                        ? AppThemes.darkTextSecondary
+                        : AppThemes.hintColor,
+                  ),
+                );
+              },
+            ),
           ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              getTitlesWidget: (val, _) {
-                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-                if (val.toInt() >= 0 && val.toInt() < months.length) {
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                if (value.toInt() < weeklyEntries.length && value.toInt() >= 0) {
+                  final label = weeklyEntries[value.toInt()].key;
+                  // Show only first date of the week range for cleaner display
+                  final firstDate = label.split(' - ').first;
                   return Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
+                    padding: const EdgeInsets.only(top: 8),
                     child: Text(
-                      months[val.toInt()],
+                      firstDate,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 8,
                         color: isDark
                             ? AppThemes.darkTextSecondary
                             : AppThemes.hintColor,
@@ -110,26 +387,35 @@ class ActivitiesStatistics extends StatelessWidget {
               },
             ),
           ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
         ),
-        borderData: FlBorderData(show: false),
+        borderData: FlBorderData(
+          show: true,
+          border: Border.all(
+            color: isDark
+                ? AppThemes.darkOutline.withOpacity(0.3)
+                : Colors.grey.withOpacity(0.3),
+          ),
+        ),
         minX: 0,
-        maxX: 5,
+        maxX: weeklyEntries.isNotEmpty ? (weeklyEntries.length - 1).toDouble() : 1,
         minY: 0,
-        maxY: 6,
+        maxY: maxValue > 0 ? maxValue.toDouble() + 1 : 1,
         lineBarsData: [
           LineChartBarData(
-            spots: const [
-              FlSpot(0, 3),
-              FlSpot(1, 1),
-              FlSpot(2, 4),
-              FlSpot(3, 2),
-              FlSpot(4, 5),
-              FlSpot(5, 3),
-            ],
+            spots: weeklyEntries.asMap().entries.map((entry) {
+              return FlSpot(entry.key.toDouble(), entry.value.value.toDouble());
+            }).toList(),
             isCurved: true,
             color: AppThemes.primaryColor,
             barWidth: 3,
-            dotData: const FlDotData(show: false),
+            isStrokeCapRound: true,
+            dotData: const FlDotData(show: true),
             belowBarData: BarAreaData(
               show: true,
               color: AppThemes.primaryColor.withOpacity(0.1),

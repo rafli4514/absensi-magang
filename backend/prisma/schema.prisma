@@ -27,6 +27,7 @@ model PesertaMagang {
   id             String          @id @default(cuid())
   nama           String
   username       String          @unique
+  id_peserta_magang String?      @unique // NISN/NIM
   divisi         String
   instansi       String
   id_instansi    String?
@@ -89,15 +90,17 @@ model PengajuanIzin {
 }
 
 model Logbook {
-  id              String        @id @default(cuid())
+  id              String           @id @default(cuid())
   pesertaMagangId String
   tanggal         String
   kegiatan        String
   deskripsi       String
   durasi          String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  pesertaMagang   PesertaMagang @relation(fields: [pesertaMagangId], references: [id], onDelete: Cascade)
+  type            ActivityType?    @default(OTHER)
+  status          ActivityStatus?  @default(PENDING)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  pesertaMagang   PesertaMagang    @relation(fields: [pesertaMagangId], references: [id], onDelete: Cascade)
 
   @@map("logbook")
 }
@@ -149,4 +152,19 @@ enum StatusPengajuan {
   PENDING
   DISETUJUI
   DITOLAK
+}
+
+enum ActivityType {
+  MEETING
+  TRAINING
+  PRESENTATION
+  DEADLINE
+  OTHER
+}
+
+enum ActivityStatus {
+  COMPLETED
+  IN_PROGRESS
+  PENDING
+  CANCELLED
 }

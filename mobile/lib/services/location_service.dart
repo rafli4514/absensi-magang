@@ -98,6 +98,8 @@ class LocationService {
   }
 
   // PERBAIKAN: Menambahkan parameter akurasi dan detail waktu
+  // NOTE: Method ini sudah deprecated, gunakan AttendanceService.createAttendance langsung
+  @Deprecated('Use AttendanceService.createAttendance instead')
   static Future<ApiResponse<Map<String, dynamic>>> submitAttendance({
     required String type,
     required String sessionId,

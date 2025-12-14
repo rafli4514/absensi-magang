@@ -87,6 +87,7 @@ class ProfileScreen extends StatelessWidget {
                   isStudent: isStudent,
                   displayInstansi: displayInstansi,
                   displayDivisi: displayDivisi,
+                  idPesertaMagang: user?.idPesertaMagang,
                   hasValidInternshipDates: hasValidInternshipDates,
                   startDate: startDate,
                   endDate: endDateTime,

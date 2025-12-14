@@ -6,110 +6,266 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Seeding database...");
 
-  // Create admin user
-  const hashedPassword = await bcrypt.hash("admin123", 12);
+  // Hash password
+  const hashedPassword = await bcrypt.hash("password123", 10);
+  const hashedAdminPassword = await bcrypt.hash("admin123", 10);
 
+  // === CREATE ADMIN USER ===
   const admin = await prisma.user.upsert({
     where: { username: "admin" },
     update: {},
     create: {
       username: "admin",
-      password: hashedPassword,
+      password: hashedAdminPassword,
       role: "ADMIN",
       isActive: true,
     },
   });
+  console.log("✅ Admin user created:", admin.username);
 
-  console.log("✅ Admin user created:", admin);
+  // === CREATE PEMBIMBING MAGANG USER ===
+  const pembimbingUser = await prisma.user.upsert({
+    where: { username: "pembimbing" },
+    update: {},
+    create: {
+      username: "pembimbing",
+      password: hashedPassword,
+      role: "PEMBIMBING_MAGANG",
+      isActive: true,
+    },
+  });
+  console.log("✅ Pembimbing Magang user created:", pembimbingUser.username);
 
-  // Create sample peserta magang
-  const pesertaMagang1 = await prisma.pesertaMagang.upsert({
-    where: { username: "ahmad" },
+  // === CREATE PESERTA MAGANG USERS ===
+  const peserta1User = await prisma.user.upsert({
+    where: { username: "ahmad123" },
+    update: {},
+    create: {
+      username: "ahmad123",
+      password: hashedPassword,
+      role: "PESERTA_MAGANG",
+      isActive: true,
+    },
+  });
+
+  const peserta2User = await prisma.user.upsert({
+    where: { username: "siti456" },
+    update: {},
+    create: {
+      username: "siti456",
+      password: hashedPassword,
+      role: "PESERTA_MAGANG",
+      isActive: true,
+    },
+  });
+
+  const peserta3User = await prisma.user.upsert({
+    where: { username: "budi789" },
+    update: {},
+    create: {
+      username: "budi789",
+      password: hashedPassword,
+      role: "PESERTA_MAGANG",
+      isActive: true,
+    },
+  });
+
+  console.log("✅ Peserta Magang users created");
+
+  // === CREATE PESERTA MAGANG PROFILES ===
+  const peserta1 = await prisma.pesertaMagang.upsert({
+    where: { username: "ahmad123" },
     update: {},
     create: {
       nama: "Ahmad Rizki Pratama",
-      username: "ahmad",
-      divisi: "IT",
-      instansi: "Instansi Indonesia",
-      nomorHp: "08123456789",
-      tanggalMulai: "2025-01-01",
+      username: "ahmad123",
+      id_peserta_magang: "1234567890",
+      divisi: "IT Development",
+      instansi: "Universitas Indonesia",
+      id_instansi: "UI-2024-001",
+      nomorHp: "081234567890",
+      tanggalMulai: "2024-12-01",
       tanggalSelesai: "2025-06-30",
       status: "AKTIF",
+      userId: peserta1User.id,
     },
   });
 
-  const pesertaMagang2 = await prisma.pesertaMagang.upsert({
-    where: { username: "siti" },
+  const peserta2 = await prisma.pesertaMagang.upsert({
+    where: { username: "siti456" },
     update: {},
     create: {
       nama: "Siti Nurhaliza",
-      username: "siti",
-      divisi: "Marketing",
-      instansi: "Instansi Gadjah Mada",
-      nomorHp: "08123456790",
-      tanggalMulai: "2025-01-01",
+      username: "siti456",
+      id_peserta_magang: "2345678901",
+      divisi: "Marketing & Communication",
+      instansi: "Universitas Gadjah Mada",
+      id_instansi: "UGM-2024-002",
+      nomorHp: "081234567891",
+      tanggalMulai: "2024-12-01",
       tanggalSelesai: "2025-06-30",
       status: "AKTIF",
+      userId: peserta2User.id,
     },
   });
 
-  console.log("✅ Peserta magang created:", pesertaMagang1, pesertaMagang2);
+  const peserta3 = await prisma.pesertaMagang.upsert({
+    where: { username: "budi789" },
+    update: {},
+    create: {
+      nama: "Budi Santoso",
+      username: "budi789",
+      id_peserta_magang: "3456789012",
+      divisi: "Finance & Accounting",
+      instansi: "Institut Teknologi Bandung",
+      id_instansi: "ITB-2024-003",
+      nomorHp: "081234567892",
+      tanggalMulai: "2024-11-15",
+      tanggalSelesai: "2025-05-15",
+      status: "AKTIF",
+      userId: peserta3User.id,
+    },
+  });
 
-  // Create sample absensi (attendance)
+  console.log("✅ Peserta Magang profiles created");
+
+  // === CREATE ABSENSI RECORDS ===
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const lastWeek = new Date(today);
+  lastWeek.setDate(lastWeek.getDate() - 7);
+
+  // Absensi untuk peserta 1
   await prisma.absensi.createMany({
     data: [
       {
-        pesertaMagangId: pesertaMagang1.id,
+        pesertaMagangId: peserta1.id,
         tipe: "MASUK",
-        timestamp: new Date().toISOString(),
+        timestamp: yesterday.toISOString(),
+        lokasi: {
+          latitude: -6.2088,
+          longitude: 106.8456,
+          address: "PT PLN Icon Plus, Jakarta",
+        },
+        qrCodeData: "QR_SAMPLE_001",
         status: "VALID",
-        qrCodeData: "sample-qr-code-1",
+        ipAddress: "192.168.1.100",
+        device: "Mobile App - Android",
       },
       {
-        pesertaMagangId: pesertaMagang2.id,
+        pesertaMagangId: peserta1.id,
+        tipe: "KELUAR",
+        timestamp: new Date(
+          yesterday.getTime() + 8 * 60 * 60 * 1000
+        ).toISOString(),
+        lokasi: {
+          latitude: -6.2088,
+          longitude: 106.8456,
+          address: "PT PLN Icon Plus, Jakarta",
+        },
+        qrCodeData: "QR_SAMPLE_002",
+        status: "VALID",
+        ipAddress: "192.168.1.100",
+        device: "Mobile App - Android",
+      },
+      {
+        pesertaMagangId: peserta1.id,
         tipe: "MASUK",
-        timestamp: new Date().toISOString(),
-        status: "TERLAMBAT",
-        qrCodeData: "sample-qr-code-2",
+        timestamp: today.toISOString(),
+        lokasi: {
+          latitude: -6.2088,
+          longitude: 106.8456,
+          address: "PT PLN Icon Plus, Jakarta",
+        },
+        qrCodeData: "QR_SAMPLE_003",
+        status: "VALID",
+        ipAddress: "192.168.1.101",
+        device: "Mobile App - Android",
       },
     ],
+    skipDuplicates: true,
   });
 
-  console.log("✅ Sample absensi created");
+  console.log("✅ Absensi records created");
 
-  // Create sample pengajuan izin (leave requests)
+  // === CREATE PENGAJUAN IZIN ===
   await prisma.pengajuanIzin.createMany({
     data: [
       {
-        pesertaMagangId: pesertaMagang1.id,
+        pesertaMagangId: peserta1.id,
         tipe: "SAKIT",
-        tanggalMulai: "2025-01-15",
-        tanggalSelesai: "2025-01-16",
-        alasan: "Demam tinggi dan perlu istirahat",
+        tanggalMulai: "2024-12-10",
+        tanggalSelesai: "2024-12-10",
+        alasan: "Demam tinggi dan perlu istirahat untuk pemulihan",
         status: "PENDING",
-        dokumenPendukung: "surat-dokter.pdf",
+        dokumenPendukung: "surat-keterangan-dokter.pdf",
       },
       {
-        pesertaMagangId: pesertaMagang2.id,
+        pesertaMagangId: peserta2.id,
         tipe: "IZIN",
-        tanggalMulai: "2025-01-20",
-        tanggalSelesai: "2025-01-20",
-        alasan: "Menghadiri acara keluarga",
+        tanggalMulai: "2024-12-15",
+        tanggalSelesai: "2024-12-15",
+        alasan: "Menghadiri acara keluarga penting",
         status: "DISETUJUI",
-        disetujuiOleh: "Admin",
+        disetujuiOleh: admin.id,
         disetujuiPada: new Date().toISOString(),
-        catatan: "Izin disetujui. Pastikan untuk catch up pekerjaan.",
+        catatan: "Izin disetujui. Pastikan untuk catch up pekerjaan yang tertunda.",
       },
     ],
+    skipDuplicates: true,
   });
 
-  console.log("✅ Sample pengajuan izin created");
+  console.log("✅ Pengajuan izin records created");
+
+  // === CREATE LOGBOOK RECORDS ===
+  await prisma.logbook.createMany({
+    data: [
+      {
+        pesertaMagangId: peserta1.id,
+        tanggal: today.toISOString().split("T")[0],
+        kegiatan: "Meeting Sprint Planning",
+        deskripsi: "Membahas rencana sprint untuk 2 minggu ke depan bersama tim development",
+        durasi: "2 jam",
+        type: "MEETING",
+        status: "COMPLETED",
+      },
+      {
+        pesertaMagangId: peserta1.id,
+        tanggal: yesterday.toISOString().split("T")[0],
+        kegiatan: "Training React Native",
+        deskripsi: "Mengikuti training React Native untuk memahami dasar-dasar mobile development",
+        durasi: "4 jam",
+        type: "TRAINING",
+        status: "COMPLETED",
+      },
+      {
+        pesertaMagangId: peserta2.id,
+        tanggal: today.toISOString().split("T")[0],
+        kegiatan: "Content Planning",
+        deskripsi: "Membuat konten untuk media sosial perusahaan",
+        durasi: "5 jam",
+        type: "OTHER",
+        status: "IN_PROGRESS",
+      },
+    ],
+    skipDuplicates: true,
+  });
+
+  console.log("✅ Logbook records created");
+
+  console.log("🎉 Seeding completed successfully!");
+  console.log("\n📝 Test Credentials:");
+  console.log("Admin - Username: admin, Password: admin123");
+  console.log("Pembimbing - Username: pembimbing, Password: password123");
+  console.log("Peserta 1 - Username: ahmad123, Password: password123");
+  console.log("Peserta 2 - Username: siti456, Password: password123");
+  console.log("Peserta 3 - Username: budi789, Password: password123");
 }
 
 main()
   .then(async () => {
     await prisma.$disconnect();
-    console.log("🎉 Seeding completed successfully!");
   })
   .catch(async (e) => {
     console.error("❌ Seeding failed:", e);
