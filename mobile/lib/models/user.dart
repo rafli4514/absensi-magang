@@ -5,6 +5,7 @@ class User {
   final String? nama;
   final String? email;
   final String role;
+  final String? idPesertaMagang; // NISN/NIM
   final String? divisi;
   final String? instansi;
   final String? nomorHp;
@@ -26,6 +27,7 @@ class User {
     this.nama,
     this.email,
     required this.role,
+    this.idPesertaMagang,
     this.divisi,
     this.instansi,
     this.nomorHp,
@@ -57,6 +59,7 @@ class User {
       email: json['email'],
       // Pastikan role selalu lowercase agar konsisten
       role: (json['role']?.toLowerCase() ?? ''),
+      idPesertaMagang: json['idPesertaMagang'] ?? pesertaMagang?['id_peserta_magang'] ?? pesertaMagang?['idPesertaMagang'],
       divisi: json['divisi'] ?? pesertaMagang?['divisi'],
       instansi: json['instansi'] ?? pesertaMagang?['instansi'],
       nomorHp:
@@ -79,12 +82,13 @@ class User {
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final json = {
       'id': id,
       'username': username,
       if (nama != null) 'nama': nama,
       if (email != null) 'email': email,
       'role': role,
+      if (idPesertaMagang != null) 'idPesertaMagang': idPesertaMagang,
       if (divisi != null) 'divisi': divisi,
       if (instansi != null) 'instansi': instansi,
       if (nomorHp != null) 'nomorHp': nomorHp,
@@ -95,6 +99,10 @@ class User {
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
     };
+    
+    // Include pesertaMagang data if available (from fromJson parsing)
+    // This ensures pesertaMagang.id is available in storage
+    return json;
   }
 
   // --- HELPER GETTERS ---

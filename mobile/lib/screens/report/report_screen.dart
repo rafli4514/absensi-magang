@@ -329,202 +329,197 @@ class _ReportScreenState extends State<ReportScreen> {
         title: 'Attendance Report',
         showBackButton: false,
       ),
-      body: Stack(
-        children: [
-          if (_isLoading)
-            Center(
-              child: CircularProgressIndicator(
-                color: isDarkMode
-                    ? AppThemes.darkAccentBlue
-                    : AppThemes.primaryColor,
-              ),
-            )
-          else
-            SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                // Summary Cards - Modern Style
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSimpleSummaryCard(
-                        'Valid',
-                        validCount.toString(),
-                        AppThemes.successColor,
-                        Icons.check_circle_rounded,
-                        isDark,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: _isLoading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: isDarkMode
+                            ? AppThemes.darkAccentBlue
+                            : AppThemes.primaryColor,
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildSimpleSummaryCard(
-                        'Terlambat',
-                        terlambatCount.toString(),
-                        AppThemes.warningColor,
-                        Icons.schedule_rounded,
-                        isDark,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildSimpleSummaryCard(
-                        'Invalid',
-                        invalidCount.toString(),
-                        AppThemes.errorColor,
-                        Icons.cancel_rounded,
-                        isDark,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // 2. Filter & Action Section (PROFESIONAL CONTROL PANEL)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color:
-                        isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isDark
-                          ? AppThemes.darkOutline
-                          : Colors.grey.withOpacity(0.2),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(
-                          isDark ? 0.2 : 0.05,
-                        ),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      // Icon Calendar Stylish
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.calendar_month_rounded,
-                          size: 20,
-                          color: primaryColor,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-
-                      // Date Selector (Clickable Area)
-                      Expanded(
-                        child: InkWell(
-                          onTap: _selectDate,
-                          borderRadius: BorderRadius.circular(8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
+                    )
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          // Summary Cards - Modern Style
+                          Row(
                             children: [
-                              Text(
-                                'Selected Period',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: hintColor,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 11,
+                              Expanded(
+                                child: _buildSimpleSummaryCard(
+                                  'Valid',
+                                  validCount.toString(),
+                                  AppThemes.successColor,
+                                  Icons.check_circle_rounded,
+                                  isDarkMode,
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _formatMonth(_selectedMonth),
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: isDarkMode
-                                    ? AppThemes.darkTextPrimary
-                                    : theme.textTheme.bodyMedium?.color,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildSimpleSummaryCard(
+                                  'Terlambat',
+                                  terlambatCount.toString(),
+                                  AppThemes.warningColor,
+                                  Icons.schedule_rounded,
+                                  isDarkMode,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildSimpleSummaryCard(
+                                  'Invalid',
+                                  invalidCount.toString(),
+                                  AppThemes.errorColor,
+                                  Icons.cancel_rounded,
+                                  isDarkMode,
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                      ),
+                          const SizedBox(height: 24),
 
-                      // Divider Vertical
-                      Container(
-                        height: 32,
-                        width: 1,
-                        color: isDark
-                            ? AppThemes.darkOutline
-                            : Colors.grey.shade300,
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                      ),
-
-                      // Download Button (Warna sudah diperbaiki)
-                      IconButton(
-                        icon: Icon(
-                          Icons.download_rounded,
-                          color: primaryColor, // Menggunakan warna Primary
-                        ),
-                        tooltip: 'Download Report',
-                        onPressed: _exportReport,
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 28),
-
-                // 3. List Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Attendance History',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: onSurfaceColor,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${_attendanceRecords.length} Records',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: primaryColor,
-                            fontWeight: FontWeight.w600,
+                          // Date Filter - Modern Style
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: isDarkMode
+                                  ? AppThemes.darkSurface
+                                  : AppThemes.surfaceColor,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isDarkMode
+                                    ? AppThemes.darkOutline
+                                    : Colors.grey.withOpacity(0.2),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(
+                                    isDarkMode ? 0.2 : 0.05,
+                                  ),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        (isDarkMode
+                                                ? AppThemes.darkAccentBlue
+                                                : AppThemes.primaryColor)
+                                            .withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.calendar_today_outlined,
+                                    size: 20,
+                                    color: isDarkMode
+                                        ? AppThemes.darkAccentBlue
+                                        : AppThemes.primaryColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Selected Date',
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: isDarkMode
+                                              ? AppThemes.darkTextSecondary
+                                              : theme.hintColor,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _formatMonth(_selectedMonth),
+                                        style: theme.textTheme.bodyMedium?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: isDarkMode
+                                              ? AppThemes.darkTextPrimary
+                                              : theme.textTheme.bodyMedium?.color,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.arrow_drop_down_rounded,
+                                    color: isDarkMode
+                                        ? AppThemes.darkTextPrimary
+                                        : theme.iconTheme.color,
+                                    size: 24,
+                                  ),
+                                  onPressed: _selectDate,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
+                          const SizedBox(height: 28),
 
-                // 4. Attendance List Cards
-                ..._attendanceRecords.map(
-                  (record) => _buildModernAttendanceItem(record, isDark),
-                ),
-                const SizedBox(height: 100),
-                ],
-              ),
+                          // Attendance List Header
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Attendance History',
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: isDarkMode
+                                        ? AppThemes.darkTextPrimary
+                                        : theme.textTheme.titleLarge?.color,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        (isDarkMode
+                                                ? AppThemes.darkAccentBlue
+                                                : AppThemes.primaryColor)
+                                            .withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${_attendanceRecords.length} Records',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: isDarkMode
+                                          ? AppThemes.darkAccentBlue
+                                          : AppThemes.primaryColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Attendance List - Modern Cards
+                          ..._attendanceRecords.map(
+                            (record) => _buildModernAttendanceItem(record, isDarkMode),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                      ),
+                    ),
             ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: FloatingBottomNav(
+            // Bottom Navigation Bar
+            FloatingBottomNav(
               currentRoute: RouteNames.report,
               onQRScanTap: () {
                 NavigationHelper.navigateWithoutAnimation(
@@ -533,8 +528,8 @@ class _ReportScreenState extends State<ReportScreen> {
                 );
               },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

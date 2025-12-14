@@ -22,6 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // ... (Controller tetap sama) ...
   final _namaController = TextEditingController();
   final _usernameController = TextEditingController();
+  final _idPesertaMagangController = TextEditingController();
   final _divisiController = TextEditingController();
   final _instansiController = TextEditingController();
   final _nomorHpController = TextEditingController();
@@ -43,6 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _namaController.dispose();
     _usernameController.dispose();
+    _idPesertaMagangController.dispose();
     _divisiController.dispose();
     _instansiController.dispose();
     _nomorHpController.dispose();
@@ -119,6 +121,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _usernameController.text.trim(),
         _passwordController.text.trim(),
         nama: _namaController.text.trim(),
+        idPesertaMagang: _idPesertaMagangController.text.trim(),
         divisi: _divisiController.text.trim(),
         instansi: _instansiController.text.trim(),
         nomorHp: _nomorHpController.text.trim(),
@@ -169,6 +172,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _namaController.addListener(_validateForm);
+    _usernameController.addListener(_validateForm);
+    _idPesertaMagangController.addListener(_validateForm);
+    _divisiController.addListener(_validateForm);
+    _instansiController.addListener(_validateForm);
+    _nomorHpController.addListener(_validateForm);
+    _tanggalMulaiController.addListener(_validateForm);
+    _tanggalSelesaiController.addListener(_validateForm);
+    _passwordController.addListener(_validateForm);
+    _confirmPasswordController.addListener(_validateForm);
+    _passwordController.addListener(() {
+      _checkPasswordStrength(_passwordController.text);
+    });
+  }
+
+  // Widget untuk section header - lebih compact
   Widget _buildSectionHeader(String title, {String? subtitle}) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -289,25 +311,122 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      // LAYOUT BUILDER ADALAH KUNCI FIX KEYBOARD
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-                  Hero(
-                    tag: 'app_logo',
-                    child: Image.asset(
-                      'assets/images/InternLogoExpand.png',
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.contain,
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        hintText: hint,
+        hintStyle: const TextStyle(fontSize: 13),
+        prefixIcon: Icon(icon, color: AppThemes.primaryColor, size: 18),
+        suffixIcon: isPassword && onToggleObscure != null
+            ? IconButton(
+                icon: Icon(
+                  obscureText!
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: AppThemes.primaryColor,
+                  size: 18,
+                ),
+                onPressed: onToggleObscure,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(maxWidth: 36),
+              )
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(
+            color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
+            width: 1.5,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(
+            color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: AppThemes.primaryColor, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
+        isDense: true,
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+      ),
+      obscureText: obscureText ?? false,
+      validator: validator,
+      keyboardType: keyboardType,
+      style: TextStyle(
+        fontSize: 13,
+        color: isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
+      ),
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+    );
+  }
+
+  // Build personal information section - lebih compact
+  Widget _buildPersonalInfoSection() {
+    return Column(
+      children: [
+        _buildSectionHeader(
+          'Informasi Pribadi',
+          subtitle: 'Data diri lengkap untuk profil Anda',
+        ),
+        _buildFormField(
+          controller: _namaController,
+          label: 'Nama Lengkap',
+          hint: 'Masukkan nama lengkap',
+          icon: Icons.person_rounded,
+          validator: Validators.validateName,
+        ),
+        const SizedBox(height: 12),
+
+        _buildFormField(
+          controller: _idPesertaMagangController,
+          label: 'ID Peserta Magang (NISN/NIM)',
+          hint: 'Masukkan NISN/NIM',
+          icon: Icons.badge_rounded,
+          validator: (value) {
+            // Optional field, no validation needed
+            return null;
+          },
+          keyboardType: TextInputType.number,
+        ),
+        const SizedBox(height: 12),
+
+        // Username Field dengan Hint yang lebih compact
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextFormField(
+              controller: _usernameController,
+              decoration: InputDecoration(
+                labelText: 'Username',
+                labelStyle: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                hintText: 'Buat username unik',
+                hintStyle: const TextStyle(fontSize: 13),
+                prefixIcon: Icon(
+                  Icons.alternate_email_rounded,
+                  color: AppThemes.primaryColor,
+                  size: 18,
+                ),
+                suffixIcon: Container(
+                  width: 36, // Lebar tetap untuk icon info
+                  child: IconButton(
+                    icon: Icon(
+                      _showUsernameHint
+                          ? Icons.info_outlined
+                          : Icons.info_outline,
+                      color: AppThemes.primaryColor.withOpacity(0.7),
+                      size: 18,
                     ),
                   ),
                   const SizedBox(height: 16),

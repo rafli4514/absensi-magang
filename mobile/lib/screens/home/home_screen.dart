@@ -1,10 +1,17 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/performance_stats.dart';
 import '../../navigation/route_names.dart';
 import '../../providers/attendance_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/dashboard_service.dart';
+import '../../services/storage_service.dart';
 import '../../themes/app_themes.dart';
+import '../../utils/constants.dart';
 import '../../utils/navigation_helper.dart';
 import '../../utils/ui_utils.dart';
 import '../../widgets/announcement_card.dart';
@@ -23,12 +30,90 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+class _HomeScreenState extends State<HomeScreen> {
+  PerformanceStats? _performanceStats;
+  bool _isLoadingPerformance = false;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
+    _loadPerformanceData();
   }
+
+  Future<void> _loadPerformanceData() async {
+    if (!mounted) return;
+    
+    setState(() => _isLoadingPerformance = true);
+    
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final user = authProvider.user;
+      
+      if (user == null) {
+        setState(() => _isLoadingPerformance = false);
+        return;
+      }
+
+      // Get pesertaMagangId
+      String? pesertaMagangId;
+      try {
+        final userDataStr = await StorageService.getString(AppConstants.userDataKey);
+        if (userDataStr != null) {
+          final userData = jsonDecode(userDataStr);
+          pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
+        }
+      } catch (e) {
+        if (kDebugMode) print('Error getting pesertaMagangId: $e');
+      }
+
+      if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
+        // Try to refresh profile
+        await authProvider.refreshProfile();
+        final refreshedUserDataStr = await StorageService.getString(AppConstants.userDataKey);
+        if (refreshedUserDataStr != null) {
+          final refreshedUserData = jsonDecode(refreshedUserDataStr);
+          pesertaMagangId = refreshedUserData['pesertaMagang']?['id']?.toString();
+        }
+      }
+
+      if (pesertaMagangId != null && pesertaMagangId.isNotEmpty) {
+        final response = await DashboardService.getCurrentMonthPerformance(
+          pesertaMagangId: pesertaMagangId,
+        );
+
+        if (mounted && response.success && response.data != null) {
+          setState(() {
+            _performanceStats = response.data;
+            _isLoadingPerformance = false;
+          });
+        } else {
+          setState(() {
+            _performanceStats = PerformanceStats.empty();
+            _isLoadingPerformance = false;
+          });
+        }
+      } else {
+        setState(() {
+          _performanceStats = PerformanceStats.empty();
+          _isLoadingPerformance = false;
+        });
+      }
+    } catch (e) {
+      if (kDebugMode) print('Error loading performance: $e');
+      if (mounted) {
+        setState(() {
+          _performanceStats = PerformanceStats.empty();
+          _isLoadingPerformance = false;
+        });
+      }
+    }
+  }
+  // Method untuk handle attendance result - PERBAIKI TYPE CASTING
+  Future<void> _handleAttendanceResult(BuildContext context, dynamic result) async {
+    if (result != null && result is Map<String, dynamic> && mounted) {
+      if (kDebugMode) {
+        print('🏠 HOME: Received result from QR: $result');
+      }
 
   @override
   void dispose() {
@@ -66,17 +151,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       if (attendanceType == 'CLOCK_IN') {
         attendanceProvider.clockIn(time);
-        GlobalSnackBar.show(
-          'Anda berhasil Clock In pada $time',
-          title: 'Presensi Berhasil',
-          isSuccess: true,
-        );
+        // Refresh today attendance after clock in
+        await attendanceProvider.refreshTodayAttendance();
       } else if (attendanceType == 'CLOCK_OUT') {
         attendanceProvider.clockOut(time);
-        GlobalSnackBar.show(
-          'Anda berhasil Clock Out pada $time',
-          title: 'Presensi Berhasil',
-          isSuccess: true,
+        // Refresh today attendance after clock out
+        await attendanceProvider.refreshTodayAttendance();
+      }
+
+      if (kDebugMode) {
+        print(
+          '🏠 HOME: After - isClockedIn: ${attendanceProvider.isClockedIn}, clockInTime: ${attendanceProvider.clockInTime}',
         );
       }
     }
@@ -156,7 +241,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const PerformanceCard(presentDays: 18, totalDays: 22),
+                    // Performance Card - data dari API
+                    _isLoadingPerformance
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(32.0),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        : PerformanceCard(
+                            presentDays: _performanceStats?.presentDays ?? 0,
+                            totalDays: _performanceStats?.totalDays ?? 0,
+                          ),
                     const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

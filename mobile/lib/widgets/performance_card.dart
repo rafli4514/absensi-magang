@@ -17,6 +17,75 @@ class PerformanceCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    // Handle empty state
+    if (totalDays == 0) {
+      return Card(
+        elevation: isDark ? 4 : 2,
+        color: isDark ? AppThemes.darkSurface : theme.cardTheme.color,
+        shadowColor: Colors.black.withOpacity(isDark ? 0.4 : 0.1),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: isDark
+              ? const BorderSide(color: AppThemes.darkOutline, width: 0.5)
+              : BorderSide.none,
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Performa Bulanan',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: isDark
+                          ? AppThemes.darkTextPrimary
+                          : AppThemes.onSurfaceColor,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.trending_up_rounded,
+                    size: 20,
+                    color: isDark
+                        ? AppThemes.darkAccentBlue
+                        : AppThemes.primaryColor,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.bar_chart_outlined,
+                      size: 48,
+                      color: isDark
+                          ? AppThemes.darkTextSecondary.withOpacity(0.5)
+                          : AppThemes.hintColor.withOpacity(0.5),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Belum ada data performa',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark
+                            ? AppThemes.darkTextSecondary
+                            : AppThemes.hintColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     double percentage = (presentDays / totalDays * 100);
     bool targetAchieved = percentage >= 85;
 

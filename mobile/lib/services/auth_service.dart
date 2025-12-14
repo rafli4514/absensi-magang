@@ -61,6 +61,7 @@ class AuthService {
     required String nama,
     required String username,
     required String password,
+    String? idPesertaMagang, // NISN/NIM
     required String divisi,
     required String nomorHp,
     required String tanggalMulai,
@@ -82,6 +83,7 @@ class AuthService {
       'nomorHp': nomorHp,
       'tanggalMulai': tanggalMulai,
       'tanggalSelesai': tanggalSelesai,
+      if (idPesertaMagang != null && idPesertaMagang.isNotEmpty) 'id_peserta_magang': idPesertaMagang,
       if (instansi != null && instansi.isNotEmpty) 'instansi': instansi,
       if (idInstansi != null && idInstansi.isNotEmpty)
         'id_instansi': idInstansi,
@@ -101,6 +103,7 @@ class AuthService {
           // mapping kolom peserta magang ke user
           if (data['pesertaMagang'] != null) ...{
             'nama': data['pesertaMagang']['nama'],
+            'idPesertaMagang': data['pesertaMagang']['id_peserta_magang'],
             'divisi': data['pesertaMagang']['divisi'],
             'instansi': data['pesertaMagang']['instansi'],
             'nomorHp': data['pesertaMagang']['nomorHp'],
@@ -253,6 +256,7 @@ class AuthService {
   static Future<ApiResponse<User>> updateProfile({
     String? username,
     String? nama,
+    String? idPesertaMagang, // NISN/NIM
     String? divisi,
     String? instansi,
     String? nomorHp,
@@ -265,6 +269,7 @@ class AuthService {
     final body = <String, dynamic>{};
     if (username != null) body['username'] = username;
     if (nama != null) body['nama'] = nama;
+    if (idPesertaMagang != null) body['id_peserta_magang'] = idPesertaMagang;
     if (divisi != null) body['divisi'] = divisi;
     if (instansi != null) body['instansi'] = instansi;
     if (nomorHp != null) body['nomorHp'] = nomorHp;

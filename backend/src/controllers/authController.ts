@@ -223,6 +223,7 @@ export const registerPesertaMagang = async (req: Request, res: Response) => {
       nama,
       username,
       password,
+      id_peserta_magang, // NISN/NIM
       divisi,
       instansi = "Universitas/Instansi Tidak Diketahui",
       id_instansi,
@@ -271,6 +272,17 @@ export const registerPesertaMagang = async (req: Request, res: Response) => {
       return sendError(res, "Username already exists in peserta magang", 400);
     }
 
+    // Check if id_peserta_magang already exists (if provided)
+    if (id_peserta_magang) {
+      const existingIdPeserta = await prisma.pesertaMagang.findFirst({
+        where: { id_peserta_magang },
+      });
+
+      if (existingIdPeserta) {
+        return sendError(res, "ID Peserta Magang (NISN/NIM) already exists", 400);
+      }
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -301,6 +313,7 @@ export const registerPesertaMagang = async (req: Request, res: Response) => {
         data: {
           nama,
           username,
+          id_peserta_magang: id_peserta_magang || null,
           divisi,
           instansi,
           id_instansi: id_instansi || null,
@@ -315,6 +328,7 @@ export const registerPesertaMagang = async (req: Request, res: Response) => {
           id: true,
           nama: true,
           username: true,
+          id_peserta_magang: true,
           divisi: true,
           instansi: true,
           id_instansi: true,
@@ -459,6 +473,7 @@ export const updateProfile = async (req: Request, res: Response) => {
       currentPassword,
       newPassword,
       nama,
+      id_peserta_magang, // NISN/NIM
       divisi,
       instansi,
       nomorHp,
@@ -533,6 +548,24 @@ export const updateProfile = async (req: Request, res: Response) => {
     // Update peserta magang profile if exists and payload contains fields
     const pesertaUpdate: any = {};
     if (nama) pesertaUpdate.nama = nama;
+    if (id_peserta_magang !== undefined) {
+      // Check if id_peserta_magang already exists (excluding current user)
+      if (id_peserta_magang) {
+        const existingIdPeserta = await prisma.pesertaMagang.findFirst({
+          where: {
+            AND: [
+              { userId: { not: userId } },
+              { id_peserta_magang: id_peserta_magang },
+            ],
+          },
+        });
+
+        if (existingIdPeserta) {
+          return sendError(res, "ID Peserta Magang (NISN/NIM) already exists", 400);
+        }
+      }
+      pesertaUpdate.id_peserta_magang = id_peserta_magang || null;
+    }
     if (divisi) pesertaUpdate.divisi = divisi;
     if (instansi) pesertaUpdate.instansi = instansi;
     if (nomorHp) pesertaUpdate.nomorHp = nomorHp;
@@ -552,6 +585,7 @@ export const updateProfile = async (req: Request, res: Response) => {
             id: true,
             nama: true,
             username: true,
+            id_peserta_magang: true,
             divisi: true,
             instansi: true,
             nomorHp: true,

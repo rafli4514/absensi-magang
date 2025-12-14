@@ -120,7 +120,7 @@ export const getLogbookById = async (req: Request, res: Response) => {
 
 export const createLogbook = async (req: Request, res: Response) => {
   try {
-    const { pesertaMagangId, tanggal, kegiatan, deskripsi, durasi } = req.body;
+    const { pesertaMagangId, tanggal, kegiatan, deskripsi, durasi, type, status } = req.body;
 
     if (!pesertaMagangId || !tanggal || !kegiatan || !deskripsi) {
       return sendError(res, "Missing required fields", 400);
@@ -163,6 +163,8 @@ export const createLogbook = async (req: Request, res: Response) => {
         kegiatan,
         deskripsi,
         durasi: durasi || null,
+        type: type ? (type.toUpperCase() as any) : null,
+        status: status ? (status.toUpperCase().replace(/-/g, '_') as any) : null,
       },
       include: {
         pesertaMagang: {
@@ -186,7 +188,7 @@ export const createLogbook = async (req: Request, res: Response) => {
 export const updateLogbook = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { tanggal, kegiatan, deskripsi, durasi } = req.body;
+    const { tanggal, kegiatan, deskripsi, durasi, type, status } = req.body;
 
     // Check if logbook exists
     const existingLogbook = await prisma.logbook.findUnique({
@@ -219,6 +221,8 @@ export const updateLogbook = async (req: Request, res: Response) => {
     if (kegiatan) updateData.kegiatan = kegiatan;
     if (deskripsi) updateData.deskripsi = deskripsi;
     if (durasi !== undefined) updateData.durasi = durasi || null;
+    if (type !== undefined) updateData.type = type ? (type.toUpperCase() as any) : null;
+    if (status !== undefined) updateData.status = status ? (status.toUpperCase().replace(/-/g, '_') as any) : null;
 
     const updatedLogbook = await prisma.logbook.update({
       where: { id },

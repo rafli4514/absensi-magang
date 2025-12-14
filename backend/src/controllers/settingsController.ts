@@ -399,6 +399,40 @@ export const getSettingsByCategory = async (req: Request, res: Response) => {
   }
 };
 
+export const getLocationSettings = async (req: Request, res: Response) => {
+  try {
+    // Get location settings from database
+    const settingsRecords = await prisma.settings.findMany({
+      where: {
+        key: {
+          startsWith: 'location.'
+        }
+      }
+    });
+
+    // If no location settings exist, return default location settings
+    if (settingsRecords.length === 0) {
+      return sendSuccess(res, 'Default location settings loaded', DEFAULT_SETTINGS.location);
+    }
+
+    // Build location settings object
+    const locationSettings: any = { ...DEFAULT_SETTINGS.location };
+    
+    settingsRecords.forEach(record => {
+      const keys = record.key.split('.');
+      // keys will be ['location', 'officeAddress'] for example
+      if (keys.length === 2 && keys[0] === 'location') {
+        locationSettings[keys[1]] = record.value;
+      }
+    });
+
+    sendSuccess(res, 'Location settings retrieved successfully', locationSettings);
+  } catch (error) {
+    console.error('Get location settings error:', error);
+    sendError(res, 'Failed to retrieve location settings', 500);
+  }
+};
+
 export const exportSettings = async (req: Request, res: Response) => {
   try {
     const settingsRecords = await prisma.settings.findMany();
