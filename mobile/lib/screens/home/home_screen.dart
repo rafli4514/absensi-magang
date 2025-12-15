@@ -108,42 +108,14 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
   }
-  // Method untuk handle attendance result - PERBAIKI TYPE CASTING
+
+  // Method untuk handle attendance result
   Future<void> _handleAttendanceResult(BuildContext context, dynamic result) async {
     if (result != null && result is Map<String, dynamic> && mounted) {
       if (kDebugMode) {
         print('🏠 HOME: Received result from QR: $result');
       }
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _showWelcomeBackNotification();
-    }
-  }
-
-  void _showWelcomeBackNotification() {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final user = authProvider.user;
-
-    if (user != null) {
-      final name = user.nama ?? user.username;
-      GlobalSnackBar.show(
-        'Halo $name, siap melanjutkan aktivitas?',
-        title: 'Selamat Datang Kembali 👋',
-        isInfo: true,
-      );
-    }
-  }
-
-  void _handleAttendanceResult(BuildContext context, dynamic result) {
-    if (result != null && result is Map<String, dynamic> && mounted) {
       final attendanceProvider =
           Provider.of<AttendanceProvider>(context, listen: false);
       final attendanceType = result['type'] as String;

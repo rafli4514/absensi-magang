@@ -305,6 +305,7 @@ class _ReportScreenState extends State<ReportScreen> {
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
+    final isDarkMode = isDark;
 
     // Definisikan warna primary yang konsisten
     final primaryColor =

@@ -97,218 +97,161 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // 1. Judul Kegiatan
-                CustomTextField(
-                  controller: _titleController,
-                  label: 'Judul Kegiatan',
-                  hint: 'Contoh: Instalasi Jaringan',
-                  icon: Icons.title_rounded,
-                  validator: (val) => val == null || val.isEmpty
-                      ? 'Judul tidak boleh kosong'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-
-                // 2. Lokasi
-                CustomTextField(
-                  controller: _locationController,
-                  label: 'Lokasi',
-                  hint: 'Contoh: Ruang Server Lt. 2',
-                  icon: Icons.location_on_rounded,
-                  validator: (val) =>
-                      val == null || val.isEmpty ? 'Lokasi wajib diisi' : null,
-                ),
-                const SizedBox(height: 16),
-
-                // 3. Mentor
-                CustomTextField(
-                  controller: _mentorController,
-                  label: 'Mentor Pendamping',
-                  hint: 'Nama mentor',
-                  icon: Icons.supervisor_account_rounded,
-                  validator: (val) => val == null || val.isEmpty
-                      ? 'Nama mentor wajib diisi'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-
-                // 4. Detail Keterangan (Multiline)
-                CustomTextField(
-                  controller: _contentController,
-                  label: 'Detail Keterangan',
-                  hint: 'Deskripsikan kegiatan yang dilakukan...',
-                  icon: Icons.notes_rounded,
-                  maxLines: 4,
-                  validator: (val) => val == null || val.isEmpty
-                      ? 'Keterangan tidak boleh kosong'
-                      : null,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Form(
-                key: _formKey,
-                child: Column(
+                // Tanggal Picker
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Tanggal Picker
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Tanggal',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? AppThemes.darkTextSecondary
-                                : AppThemes.hintColor,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        InkWell(
-                          onTap: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate: _selectedDate,
-                              firstDate: DateTime(2023),
-                              lastDate: DateTime(2030),
-                            );
-                            if (picked != null) {
-                              setState(() => _selectedDate = picked);
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? AppThemes.darkSurfaceElevated
-                                  : Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isDark
-                                    ? AppThemes.darkOutline
-                                    : Colors.grey.shade300,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  DateFormat('yyyy-MM-dd').format(_selectedDate),
-                                  style: TextStyle(
-                                    color: isDark
-                                        ? AppThemes.darkTextPrimary
-                                        : AppThemes.onSurfaceColor,
-                                  ),
-                                ),
-                                Icon(
-                                  Icons.calendar_today,
-                                  size: 20,
-                                  color: AppThemes.primaryColor,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _StyledTextField(
-                      label: 'Kegiatan',
-                      icon: Icons.event_note,
-                      isDark: isDark,
-                      controller: _kegiatanController,
-                    ),
-                    const SizedBox(height: 16),
-                    _StyledTextField(
-                      label: 'Deskripsi',
-                      icon: Icons.description,
-                      isDark: isDark,
-                      maxLines: 4,
-                      controller: _deskripsiController,
-                    ),
-                    const SizedBox(height: 16),
-                    _StyledTextField(
-                      label: 'Durasi (opsional, contoh: 2 jam)',
-                      icon: Icons.access_time,
-                      isDark: isDark,
-                      controller: _durasiController,
-                    ),
-                    const SizedBox(height: 16),
-                    // Type Dropdown
-                    _buildDropdown<ActivityType>(
-                      label: 'Tipe Aktivitas',
-                      value: _selectedType,
-                      items: ActivityType.values,
-                      onChanged: (val) => setState(() => _selectedType = val),
-                      isDark: isDark,
-                      itemLabel: (e) => e.displayName,
-                    ),
-                    const SizedBox(height: 16),
-                    // Status Dropdown
-                    _buildDropdown<ActivityStatus>(
-                      label: 'Status',
-                      value: _selectedStatus,
-                      items: ActivityStatus.values,
-                      onChanged: (val) => setState(() => _selectedStatus = val),
-                      isDark: isDark,
-                      itemLabel: (e) => e.displayName,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      'Batal',
+                    Text(
+                      'Tanggal',
                       style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                         color: isDark
                             ? AppThemes.darkTextSecondary
                             : AppThemes.hintColor,
                       ),
-                      child: const Text('Batal'),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        if (_kegiatanController.text.isNotEmpty &&
-                            _deskripsiController.text.isNotEmpty) {
-                          widget.onSave(
-                            DateFormat('yyyy-MM-dd').format(_selectedDate),
-                            _kegiatanController.text,
-                            _deskripsiController.text,
-                            _durasiController.text.isNotEmpty
-                                ? _durasiController.text
-                                : null,
-                            _selectedType,
-                            _selectedStatus,
-                          );
-                          Navigator.pop(context);
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _selectedDate,
+                          firstDate: DateTime(2023),
+                          lastDate: DateTime(2030),
+                        );
+                        if (picked != null) {
+                          setState(() => _selectedDate = picked);
                         }
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppThemes.primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppThemes.darkSurfaceElevated
+                              : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isDark
+                                ? AppThemes.darkOutline
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              DateFormat('yyyy-MM-dd').format(_selectedDate),
+                              style: TextStyle(
+                                color: isDark
+                                    ? AppThemes.darkTextPrimary
+                                    : AppThemes.onSurfaceColor,
+                              ),
+                            ),
+                            Icon(
+                              Icons.calendar_today,
+                              size: 20,
+                              color: AppThemes.primaryColor,
+                            ),
+                          ],
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _StyledTextField(
+                  label: 'Kegiatan',
+                  icon: Icons.event_note,
+                  isDark: isDark,
+                  controller: _kegiatanController,
+                ),
+                const SizedBox(height: 16),
+                _StyledTextField(
+                  label: 'Deskripsi',
+                  icon: Icons.description,
+                  isDark: isDark,
+                  maxLines: 4,
+                  controller: _deskripsiController,
+                ),
+                const SizedBox(height: 16),
+                _StyledTextField(
+                  label: 'Durasi (opsional, contoh: 2 jam)',
+                  icon: Icons.access_time,
+                  isDark: isDark,
+                  controller: _durasiController,
+                ),
+                const SizedBox(height: 16),
+                // Type Dropdown
+                _buildDropdown<ActivityType>(
+                  label: 'Tipe Aktivitas',
+                  value: _selectedType,
+                  items: ActivityType.values,
+                  onChanged: (val) => setState(() => _selectedType = val),
+                  isDark: isDark,
+                  itemLabel: (e) => e.displayName,
+                ),
+                const SizedBox(height: 16),
+                // Status Dropdown
+                _buildDropdown<ActivityStatus>(
+                  label: 'Status',
+                  value: _selectedStatus,
+                  items: ActivityStatus.values,
+                  onChanged: (val) => setState(() => _selectedStatus = val),
+                  isDark: isDark,
+                  itemLabel: (e) => e.displayName,
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Batal',
+                        style: TextStyle(
+                          color: isDark
+                              ? AppThemes.darkTextSecondary
+                              : AppThemes.hintColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (_formKey.currentState!.validate()) {
+                          if (_kegiatanController.text.isNotEmpty &&
+                              _deskripsiController.text.isNotEmpty) {
+                            widget.onSave(
+                              DateFormat('yyyy-MM-dd').format(_selectedDate),
+                              _kegiatanController.text,
+                              _deskripsiController.text,
+                              _durasiController.text.isNotEmpty
+                                  ? _durasiController.text
+                                  : null,
+                              _selectedType,
+                              _selectedStatus,
+                            );
+                            Navigator.pop(context);
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppThemes.primaryColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                       ),
                       child: const Text('Simpan'),
                     ),
-                    child: const Text('Simpan'),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -426,12 +369,12 @@ class _StyledTextField extends StatelessWidget {
               hintStyle: TextStyle(
                 color: isDark
                     ? AppThemes.darkTextTertiary
-                    : AppThemes.hintColor.withOpacity(0.5),
+                    : AppThemes.hintColor.withValues(alpha: 0.5),
               ),
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }
