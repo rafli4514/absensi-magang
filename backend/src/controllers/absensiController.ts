@@ -361,4 +361,3 @@ export const deleteAbsensi = async (req: Request, res: Response) => {
     console.error('Delete absensi error:', error);
     sendError(res, 'Failed to delete absensi');
   }
-};

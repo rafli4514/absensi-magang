@@ -153,18 +153,3 @@ enum StatusPengajuan {
   DISETUJUI
   DITOLAK
 }
-
-enum ActivityType {
-  MEETING
-  TRAINING
-  PRESENTATION
-  DEADLINE
-  OTHER
-}
-
-enum ActivityStatus {
-  COMPLETED
-  IN_PROGRESS
-  PENDING
-  CANCELLED
-}

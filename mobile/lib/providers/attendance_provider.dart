@@ -40,7 +40,8 @@ class AttendanceProvider with ChangeNotifier {
   }
 
   /// Load today's attendance status from API
-  Future<void> _loadTodayAttendance() async {
+  /// [preserveLocalState] - if true, only update state if API has records, don't reset if empty
+  Future<void> _loadTodayAttendance({bool preserveLocalState = false}) async {
     try {
       // Get pesertaMagangId
       String? pesertaMagangId;
@@ -86,15 +87,21 @@ class AttendanceProvider with ChangeNotifier {
           }
         }
 
+        // Only update if we found records, or if not preserving local state
         if (masukTime != null) {
           _clockInTime = IndonesianTime.formatTime(masukTime);
           _isClockedIn = true;
           _lastClockIn = masukTime;
+        } else if (!preserveLocalState) {
+          // Only reset if not preserving local state and no record found
+          // This preserves the local state set by clockIn() if API doesn't have it yet
         }
 
         if (keluarTime != null) {
           _clockOutTime = IndonesianTime.formatTime(keluarTime);
           _isClockedOut = true;
+        } else if (!preserveLocalState) {
+          // Only reset if not preserving local state
         }
 
         notifyListeners();

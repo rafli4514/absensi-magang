@@ -20,8 +20,8 @@ class AuthService {
     }
 
     final response = await _apiService.post(
-        AppConstants.loginEndpoint,
-        {
+      AppConstants.loginEndpoint,
+      {
           'username': username,
           'password': password,
         },
@@ -151,7 +151,7 @@ class AuthService {
     final data = {
       'nama': nama,
       'username': username,
-      'password': password,
+        'password': password,
       'divisi': divisi,
       'nomorHp': nomorHp,
       'tanggalMulai': tanggalMulai,
