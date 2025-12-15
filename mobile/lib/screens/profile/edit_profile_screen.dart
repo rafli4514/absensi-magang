@@ -321,15 +321,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 20),
               // --- ID Peserta Magang (NISN/NIM) ---
               if (isStudent)
-                _buildModernFormField(
+                CustomTextField(
                   controller: _idPesertaMagangController,
                   label: 'ID Peserta Magang (NISN/NIM)',
+                  hint: 'Masukkan NISN/NIM',
                   icon: Icons.badge_rounded,
-                  isDarkMode: isDarkMode,
                   keyboardType: TextInputType.text,
                 ),
               if (isStudent) const SizedBox(height: 20),
-              _buildModernFormField(
+              CustomTextField(
                 controller: _nomorHpController,
                 label: 'Nomor HP',
                 hint: 'Masukkan nomor HP',
