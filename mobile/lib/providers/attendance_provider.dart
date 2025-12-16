@@ -40,7 +40,8 @@ class AttendanceProvider with ChangeNotifier {
   }
 
   /// Load today's attendance status from API
-  Future<void> _loadTodayAttendance() async {
+  /// [preserveLocalState] - if true, only update state if API has records, don't reset if empty
+  Future<void> _loadTodayAttendance({bool preserveLocalState = false}) async {
     try {
       // Get pesertaMagangId
       String? pesertaMagangId;
@@ -58,8 +59,8 @@ class AttendanceProvider with ChangeNotifier {
         return;
       }
 
-      // Get today's attendance
-      final today = DateTime.now();
+      // Get today's attendance (using Indonesian time)
+      final today = IndonesianTime.now;
       final startOfDay = DateTime(today.year, today.month, today.day);
       final endOfDay = startOfDay.add(const Duration(days: 1));
 
@@ -71,30 +72,72 @@ class AttendanceProvider with ChangeNotifier {
       if (response.success && response.data != null) {
         final todayAttendances = response.data!.where((attendance) {
           final timestamp = attendance.timestamp;
-          return timestamp.isAfter(startOfDay) && timestamp.isBefore(endOfDay);
+          // Ensure timestamp is a DateTime
+          if (timestamp is DateTime) {
+            return timestamp.isAfter(startOfDay) && timestamp.isBefore(endOfDay);
+          } else {
+            // If timestamp is a string, parse it first
+            try {
+              final parsedTimestamp = DateTime.parse(timestamp.toString());
+              return parsedTimestamp.isAfter(startOfDay) && parsedTimestamp.isBefore(endOfDay);
+            } catch (e) {
+              if (kDebugMode) print('Error parsing timestamp: $e');
+              return false;
+            }
+          }
         }).toList();
+        
+        if (kDebugMode) {
+          print('📥 PROVIDER: Found ${todayAttendances.length} attendance records for today');
+        }
 
-        // Find MASUK and KELUAR
+        // Find MASUK and KELUAR (ambil yang terakhir untuk mendukung multiple clock in)
         DateTime? masukTime;
         DateTime? keluarTime;
 
-        for (final attendance in todayAttendances) {
+        // Sort by timestamp descending to get the latest
+        final sortedAttendances = todayAttendances.toList()
+          ..sort((a, b) {
+            final aTime = a.timestamp is DateTime ? a.timestamp as DateTime : DateTime.parse(a.timestamp.toString());
+            final bTime = b.timestamp is DateTime ? b.timestamp as DateTime : DateTime.parse(b.timestamp.toString());
+            return bTime.compareTo(aTime); // Descending
+          });
+
+        for (final attendance in sortedAttendances) {
           if (attendance.tipe.toUpperCase() == 'MASUK' && masukTime == null) {
-            masukTime = attendance.timestamp;
+            masukTime = attendance.timestamp is DateTime 
+              ? attendance.timestamp as DateTime 
+              : DateTime.parse(attendance.timestamp.toString());
           } else if (attendance.tipe.toUpperCase() == 'KELUAR' && keluarTime == null) {
-            keluarTime = attendance.timestamp;
+            keluarTime = attendance.timestamp is DateTime 
+              ? attendance.timestamp as DateTime 
+              : DateTime.parse(attendance.timestamp.toString());
           }
         }
 
+        // Only update if we found records, or if not preserving local state
         if (masukTime != null) {
           _clockInTime = IndonesianTime.formatTime(masukTime);
           _isClockedIn = true;
           _lastClockIn = masukTime;
+          
+          if (kDebugMode) {
+            print('📥 PROVIDER: Updated clock in from API - time: $_clockInTime, isClockedIn: $_isClockedIn');
+          }
+        } else if (!preserveLocalState) {
+          // Only reset if not preserving local state and no record found
+          // This preserves the local state set by clockIn() if API doesn't have it yet
+        } else {
+          if (kDebugMode) {
+            print('📥 PROVIDER: No clock in found in API, preserving local state (preserveLocalState: $preserveLocalState)');
+          }
         }
 
         if (keluarTime != null) {
           _clockOutTime = IndonesianTime.formatTime(keluarTime);
           _isClockedOut = true;
+        } else if (!preserveLocalState) {
+          // Only reset if not preserving local state
         }
 
         notifyListeners();
@@ -105,8 +148,9 @@ class AttendanceProvider with ChangeNotifier {
   }
 
   /// Refresh today's attendance status
-  Future<void> refreshTodayAttendance() async {
-    await _loadTodayAttendance();
+  /// [preserveLocalState] - if true, preserve local state if API doesn't have records yet
+  Future<void> refreshTodayAttendance({bool preserveLocalState = false}) async {
+    await _loadTodayAttendance(preserveLocalState: preserveLocalState);
   }
 
   void _updateCurrentTime() {
@@ -133,7 +177,7 @@ class AttendanceProvider with ChangeNotifier {
     _clockInTime = time;
     _isClockedIn = true;
     _isClockedOut = false;
-    _lastClockIn = DateTime.now();
+    _lastClockIn = IndonesianTime.now; // Use Indonesian time
 
     if (kDebugMode) {
       print(
@@ -150,11 +194,28 @@ class AttendanceProvider with ChangeNotifier {
   void clockOut(String time) {
     if (kDebugMode) {
       print('🔴 PROVIDER: Clock Out called with time: $time');
+      print(
+        '🔴 PROVIDER: Before - isClockedOut: $_isClockedOut, clockOutTime: $_clockOutTime',
+      );
     }
 
     _clockOutTime = time;
     _isClockedOut = true;
+    // Pastikan isClockedIn tetap true setelah check-out
+    if (!_isClockedIn) {
+      _isClockedIn = true;
+    }
+
+    if (kDebugMode) {
+      print(
+        '🔴 PROVIDER: After - isClockedIn: $_isClockedIn, isClockedOut: $_isClockedOut, clockOutTime: $_clockOutTime',
+      );
+    }
+
     notifyListeners();
+    if (kDebugMode) {
+      print('🔴 PROVIDER: notifyListeners() called');
+    }
   }
 
   void resetAttendance() {

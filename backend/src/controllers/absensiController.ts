@@ -177,33 +177,48 @@ export const createAbsensi = async (req: Request, res: Response) => {
     }
 
     // Tentukan timestamp yang dipakai
-    const now = timestamp ? new Date(timestamp) : new Date();
+    // Mobile mengirim timestamp yang sudah dalam waktu Indonesia (UTC+7)
+    // JavaScript Date akan menginterpretasikan ISO string sebagai UTC
+    // Jadi kita perlu menggunakan UTC methods untuk mendapatkan waktu Indonesia yang benar
+    let now: Date;
+    if (timestamp) {
+      // Parse timestamp dari mobile (sudah dalam waktu Indonesia)
+      now = new Date(timestamp);
+    } else {
+      // Jika tidak ada timestamp, gunakan waktu sekarang dan konversi ke waktu Indonesia (UTC+7)
+      const utcNow = new Date();
+      const indonesianOffset = 7 * 60 * 60 * 1000; // 7 jam dalam milliseconds
+      now = new Date(utcNow.getTime() + indonesianOffset);
+    }
 
-    // Validasi hari kerja
+    // Validasi hari kerja (gunakan UTC methods karena timestamp sudah di-offset)
     const workDays = appSettings?.schedule?.workDays ?? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const currentDay = dayNames[now.getDay()];
+    const currentDay = dayNames[now.getUTCDay()];
     
     if (!workDays.includes(currentDay)) {
       return sendError(res, `Hari ini (${currentDay}) bukan hari kerja. Hari kerja: ${workDays.join(', ')}`, 400, 'INVALID_WORK_DAY');
     }
 
-    // Validasi jam operasional
+    // Validasi jam operasional (menggunakan waktu Indonesia)
+    // Gunakan UTC methods karena timestamp dari mobile sudah dalam format UTC yang di-offset
     const workStart = appSettings?.schedule?.workStartTime ?? '08:00';
     const workEnd = appSettings?.schedule?.workEndTime ?? '17:00';
-    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const currentTime = `${now.getUTCHours().toString().padStart(2, '0')}:${now.getUTCMinutes().toString().padStart(2, '0')}`;
     const tipeUpper = (tipe || '').toUpperCase();
     
-    // Untuk MASUK: hanya boleh antara workStart dan workEnd
-    // Untuk KELUAR: boleh setelah workStart (tidak ada batasan maksimal)
+    // Untuk MASUK: hanya dibatasi oleh jam mulai kerja.
+    // Setelah jam mulai, aturan keterlambatan diatur oleh allowLateCheckIn & lateThreshold (di bawah).
+    // Untuk KELUAR: bisa kapan saja (tidak ada validasi waktu jam pulang di sini).
     if (tipeUpper === 'MASUK') {
-      if (currentTime < workStart || currentTime > workEnd) {
-        return sendError(res, `Absen masuk hanya tersedia antara ${workStart} - ${workEnd}. Waktu saat ini: ${currentTime}`, 400, 'OUTSIDE_WORK_HOURS');
-      }
-    } else if (tipeUpper === 'KELUAR') {
-      // KELUAR harus setelah jam mulai kerja
+      // Terlalu pagi sebelum jam mulai kerja → tolak
       if (currentTime < workStart) {
-        return sendError(res, `Absen keluar hanya tersedia setelah ${workStart}. Waktu saat ini: ${currentTime}`, 400, 'OUTSIDE_WORK_HOURS');
+        return sendError(
+          res,
+          `Absen masuk hanya tersedia setelah jam ${workStart}. Waktu saat ini: ${currentTime}`,
+          400,
+          'OUTSIDE_WORK_HOURS',
+        );
       }
     }
 
@@ -211,8 +226,9 @@ export const createAbsensi = async (req: Request, res: Response) => {
     const allowLateCheckIn = appSettings?.attendance?.allowLateCheckIn ?? true;
     const lateThreshold = appSettings?.attendance?.lateThreshold ?? 15; // minutes
     const { hours, minutes } = parseTimeHHmm(workStart);
+    // Use UTC methods to set hours since now is already in Indonesian time (offset)
     const startToday = new Date(now);
-    startToday.setHours(hours, minutes, 0, 0);
+    startToday.setUTCHours(hours, minutes, 0, 0);
 
     let computedStatus: StatusAbsensi = 'VALID';
 

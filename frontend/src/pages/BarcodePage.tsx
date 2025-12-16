@@ -23,8 +23,6 @@ import {
   RefreshCw,
   Copy,
   Check,
-  Clock,
-  MapPin,
   Calendar,
   Users,
   Maximize2,
@@ -36,7 +34,6 @@ import { Link } from "react-router-dom";
 export default function BarcodePage() {
   // ============ State Management ============
   const [currentQR, setCurrentQR] = useState("");
-  const [qrType, setQrType] = useState<"masuk" | "keluar">("masuk");
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [qrHistory, setQrHistory] = useState<Array<{id: string, type: string, timestamp: string, qrData: string, expiresAt: string}>>([]);
@@ -46,12 +43,12 @@ export default function BarcodePage() {
   const [qrExpiresAt, setQrExpiresAt] = useState("");
 
   // ============ QR Code Generation for Attendance ============
-  const generateAttendanceQR = async (type: "masuk" | "keluar") => {
+  const generateAttendanceQR = async () => {
     setLoading(true);
     setError("");
     try {
-      // Call backend API to generate QR code
-      const response = await pengaturanService.generateQRCode(type);
+      // Call backend API to generate QR code (masuk only)
+      const response = await pengaturanService.generateQRCode();
       
       if (response.success && response.data) {
         // Convert base64 to data URL for display
@@ -61,8 +58,8 @@ export default function BarcodePage() {
         
         // Add to history
         const newQR = {
-          id: `ABSEN_${type.toUpperCase()}_${Date.now()}`,
-          type: type,
+          id: `ABSEN_MASUK_${Date.now()}`,
+          type: 'masuk',
           timestamp: new Date().toISOString(),
           qrData: response.data.qrCode,
           expiresAt: response.data.expiresAt
@@ -84,13 +81,13 @@ export default function BarcodePage() {
     if (autoRefresh) {
       const interval = setInterval(() => {
         if (currentQR) {
-          generateAttendanceQR(qrType);
+          generateAttendanceQR();
         }
       }, 5 * 60 * 1000); // Refresh every 5 minutes
 
       return () => clearInterval(interval);
     }
-  }, [autoRefresh, currentQR, qrType]);
+  }, [autoRefresh, currentQR]);
 
   // ============ Copy to Clipboard ============
   const copyToClipboard = async (text: string) => {
@@ -108,7 +105,7 @@ export default function BarcodePage() {
     if (!currentQR) return;
     
     const link = document.createElement('a');
-    link.download = `qr-code-${qrType}-${new Date().toISOString().slice(0, 10)}.png`;
+    link.download = `qr-code-masuk-${new Date().toISOString().slice(0, 10)}.png`;
     link.href = currentQR;
     document.body.appendChild(link);
     link.click();
@@ -145,29 +142,6 @@ export default function BarcodePage() {
         </Card>
       )}
 
-      {/* QR Type Selection */}
-      <Card className="p-4">
-        <Flex justify="center" gap="4">
-          <Button
-            onClick={() => setQrType("masuk")}
-            variant={qrType === "masuk" ? "solid" : "outline"}
-            size="3"
-            className="flex-1 max-w-xs"
-          >
-            <Clock className="h-4 w-4" />
-           <Link to="/pengaturan/laporan">Laporan</Link>
-          </Button>
-          <Button
-            onClick={() => setQrType("keluar")}
-            variant={qrType === "keluar" ? "solid" : "outline"}
-            size="3"
-            className="flex-1 max-w-xs"
-          >
-            <MapPin className="h-4 w-4" />
-            Absen Keluar
-          </Button>
-        </Flex>
-      </Card>
 
       {/* Main QR Code Display */}
       <Grid columns={{ initial: "1", lg: "3" }} gap="6">
@@ -176,12 +150,12 @@ export default function BarcodePage() {
           <Flex direction="column" gap="4">
             <Flex align="center" gap="3" justify="between">
               <Flex align="center" gap="3">
-                <div className={`p-3 rounded-lg ${qrType === "masuk" ? "bg-green-100" : "bg-blue-100"}`}>
-                  <QrCode className={`h-6 w-6 ${qrType === "masuk" ? "text-green-600" : "text-blue-600"}`} />
+                <div className="p-3 rounded-lg bg-green-100">
+                  <QrCode className="h-6 w-6 text-green-600" />
                 </div>
                 <Flex direction="column">
                   <Text size="4" weight="bold">
-                    QR Code {qrType === "masuk" ? "Masuk" : "Keluar"}
+                    QR Code Masuk
                   </Text>
                   <Text size="2" color="gray">
                     Untuk scan di handphone peserta magang
@@ -245,7 +219,7 @@ export default function BarcodePage() {
             {/* Action Buttons */}
             <Flex gap="3">
               <Button
-                onClick={() => generateAttendanceQR(qrType)}
+                onClick={() => generateAttendanceQR()}
                 disabled={loading}
                 className="flex-1"
                 size="3"
@@ -335,7 +309,7 @@ export default function BarcodePage() {
                     QR Code Aktif
                   </Text>
                   <div className="space-y-1 text-sm text-blue-700">
-                    <div>Type: {qrType === "masuk" ? "Absen Masuk" : "Absen Keluar"}</div>
+                    <div>Type: Absen Masuk</div>
                     <div>Berlaku: 5 menit</div>
                     <div>Lokasi: ICONNET Office</div>
                   </div>
@@ -384,12 +358,8 @@ export default function BarcodePage() {
                   className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
                 >
                   <Flex justify="between" align="center" className="mb-2">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      item.type === "masuk" 
-                        ? "bg-green-100 text-green-800" 
-                        : "bg-blue-100 text-blue-800"
-                    }`}>
-                      {item.type === "masuk" ? "Masuk" : "Keluar"}
+                    <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                      Masuk
                     </span>
                     <Text size="1" color="gray">
                       {new Date(item.timestamp).toLocaleTimeString("id-ID", {
@@ -426,7 +396,7 @@ export default function BarcodePage() {
             <Flex justify="between" align="center" width="100%">
               <div>
                 <Dialog.Title className="text-xl font-bold">
-                  QR Code {qrType === "masuk" ? "Masuk" : "Keluar"}
+                  QR Code Masuk
                 </Dialog.Title>
                 <Dialog.Description className="text-gray-600">
                   Scan dengan kamera handphone untuk absensi
@@ -451,12 +421,8 @@ export default function BarcodePage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <div className={`inline-flex px-4 py-2 text-sm font-medium rounded-full ${
-                    qrType === "masuk" 
-                      ? "bg-green-100 text-green-800" 
-                      : "bg-blue-100 text-blue-800"
-                  }`}>
-                    {qrType === "masuk" ? "Absen Masuk" : "Absen Keluar"}
+                  <div className="inline-flex px-4 py-2 text-sm font-medium rounded-full bg-green-100 text-green-800">
+                    Absen Masuk
                   </div>
                   
                   {qrExpiresAt && (

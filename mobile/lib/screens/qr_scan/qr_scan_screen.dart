@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -137,7 +138,20 @@ class _QrScanScreenState extends State<QrScanScreen>
     super.didChangeDependencies();
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    _attendanceType = args?['type'] ?? '';
+    _attendanceType = args?['type'] ?? 'CLOCK_IN'; // Default to CLOCK_IN for QR scan
+    
+    if (kDebugMode) {
+      print('📱 QR SCAN: didChangeDependencies - attendanceType: $_attendanceType');
+    }
+    
+    // QR scan is only for check-in, so ensure it's CLOCK_IN
+    if (_attendanceType != 'CLOCK_IN') {
+      if (kDebugMode) {
+        print('⚠️ QR SCAN: Invalid attendance type $_attendanceType, forcing to CLOCK_IN');
+      }
+      _attendanceType = 'CLOCK_IN';
+    }
+    
     _loadLocationSettings();
   }
 
@@ -352,9 +366,29 @@ class _QrScanScreenState extends State<QrScanScreen>
         return;
       }
 
-      // Map CLOCK_IN/CLOCK_OUT to MASUK/KELUAR
-      final tipe = _attendanceType == 'CLOCK_IN' ? 'MASUK' : 'KELUAR';
-      final now = DateTime.now();
+      // QR scan is now only for check-in (CLOCK_IN -> MASUK)
+      // Validate attendance type
+      if (_attendanceType.isEmpty) {
+        if (kDebugMode) {
+          print('⚠️ QR SCAN: _attendanceType is empty, defaulting to CLOCK_IN');
+        }
+        _attendanceType = 'CLOCK_IN';
+      }
+      
+      // Only allow CLOCK_IN for QR scan (check-in only)
+      if (_attendanceType != 'CLOCK_IN') {
+        _showLocationErrorDialog('QR scan hanya untuk check-in. Silakan gunakan tombol clock out untuk checkout.');
+        if (mounted) setState(() => _isProcessing = false);
+        return;
+      }
+      
+      // Map CLOCK_IN to MASUK
+      final tipe = 'MASUK';
+      final now = IndonesianTime.now; // Use Indonesian time
+      
+      if (kDebugMode) {
+        print('📤 QR SCAN: Submitting attendance - type: $_attendanceType, tipe: $tipe, timestamp: $now');
+      }
 
       // Create attendance using AttendanceService
       final attendanceResponse = await AttendanceService.createAttendance(
@@ -371,12 +405,19 @@ class _QrScanScreenState extends State<QrScanScreen>
       );
 
       if (attendanceResponse.success) {
+        // QR scan is only for CLOCK_IN (check-in)
+        final resultType = 'CLOCK_IN';
         final result = {
           'time': IndonesianTime.formatTime(IndonesianTime.now),
-          'type': _attendanceType,
+          'type': resultType,
           'location': _currentLocation,
           'success': true,
         };
+        
+        if (kDebugMode) {
+          print('📤 QR SCAN: Sending result with type: $resultType');
+        }
+        
         _safePop(result);
       } else {
         // FIX: Hapus ?? karena message di ApiResponse tidak nullable

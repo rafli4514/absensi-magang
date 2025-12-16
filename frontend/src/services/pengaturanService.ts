@@ -78,12 +78,12 @@ class PengaturanService {
   }
 
   /**
-   * Generate new QR code with type
+   * Generate new QR code for check-in (masuk only)
    */
-  async generateQRCode(type: "masuk" | "keluar" = "masuk"): Promise<ApiResponse<{ qrCode: string; expiresAt: string; validityPeriod: number }>> {
+  async generateQRCode(): Promise<ApiResponse<{ qrCode: string; expiresAt: string; validityPeriod: number }>> {
     try {
       const response = await api.post<ApiResponse<{ qrCode: string; expiresAt: string; validityPeriod: number }>>('/settings/qr/generate', {}, {
-        params: { type }
+        params: { type: 'masuk' }
       });
       return response.data;
     } catch (error: any) {

@@ -8,10 +8,14 @@ import '../../models/performance_stats.dart';
 import '../../navigation/route_names.dart';
 import '../../providers/attendance_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/attendance_service.dart';
 import '../../services/dashboard_service.dart';
+import '../../services/location_service.dart';
+import '../../services/permission_service.dart';
 import '../../services/storage_service.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/constants.dart';
+import '../../utils/indonesian_time.dart';
 import '../../utils/navigation_helper.dart';
 import '../../utils/ui_utils.dart';
 import '../../widgets/announcement_card.dart';
@@ -118,22 +122,236 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final attendanceProvider =
           Provider.of<AttendanceProvider>(context, listen: false);
-      final attendanceType = result['type'] as String;
-      final time = result['time'] as String;
+      final attendanceType = result['type'] as String? ?? '';
+      final time = result['time'] as String? ?? '';
 
-      if (attendanceType == 'CLOCK_IN') {
+      if (kDebugMode) {
+        print('🏠 HOME: Processing attendance type: $attendanceType, time: $time');
+      }
+
+      if (attendanceType == 'CLOCK_IN' && time.isNotEmpty) {
         attendanceProvider.clockIn(time);
-        // Refresh today attendance after clock in
-        await attendanceProvider.refreshTodayAttendance();
-      } else if (attendanceType == 'CLOCK_OUT') {
-        attendanceProvider.clockOut(time);
-        // Refresh today attendance after clock out
-        await attendanceProvider.refreshTodayAttendance();
+        
+        if (kDebugMode) {
+          print('🏠 HOME: Clock in processed, waiting before refresh...');
+        }
+        
+        // Wait a bit for backend to process
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        // Refresh today attendance after clock in, preserve local state if API doesn't have it yet
+        await attendanceProvider.refreshTodayAttendance(preserveLocalState: true);
+        
+        if (kDebugMode) {
+          print('🏠 HOME: Clock in processed successfully');
+        }
+      } else if (attendanceType.isEmpty) {
+        if (kDebugMode) {
+          print('🏠 HOME: Warning - attendance type is empty in result, refreshing from API...');
+        }
+        // Wait a bit for backend to process
+        await Future.delayed(const Duration(milliseconds: 500));
+        // Try to refresh from API anyway
+        await attendanceProvider.refreshTodayAttendance(preserveLocalState: true);
       }
 
       if (kDebugMode) {
         print(
           '🏠 HOME: After - isClockedIn: ${attendanceProvider.isClockedIn}, clockInTime: ${attendanceProvider.clockInTime}',
+        );
+      }
+    }
+  }
+
+  // Method untuk handle clock out langsung tanpa scan QR
+  Future<void> _handleClockOut(BuildContext context) async {
+    if (!mounted) return;
+
+    // Tampilkan dialog konfirmasi terlebih dahulu
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => CustomDialog(
+        title: 'Konfirmasi Clock Out',
+        content: 'Apakah Anda yakin ingin melakukan clock out?',
+        primaryButtonText: 'Ya, Clock Out',
+        secondaryButtonText: 'Batal',
+        primaryButtonColor: AppThemes.warningColor,
+        onPrimaryButtonPressed: () => Navigator.pop(context, true),
+        onSecondaryButtonPressed: () => Navigator.pop(context, false),
+        icon: Icons.logout_rounded,
+      ),
+    );
+
+    // Jika user membatalkan, return tanpa melakukan apa-apa
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    // Clock out bisa dilakukan kapan saja - tidak ada validasi waktu
+
+    // Tampilkan loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      // Request location permission
+      final hasPermission = await PermissionService.requestLocationPermission();
+      if (!hasPermission) {
+        if (mounted) {
+          Navigator.pop(context); // Close loading
+          showDialog(
+            context: context,
+            builder: (context) => CustomDialog(
+              title: 'Izin Lokasi Diperlukan',
+              content: 'Harap berikan akses lokasi untuk melakukan presensi.',
+              primaryButtonText: 'OK',
+              primaryButtonColor: AppThemes.errorColor,
+              onPrimaryButtonPressed: () => Navigator.pop(context),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Get current location
+      final currentLocation = await LocationService.getCurrentLocation();
+      if (currentLocation == null) {
+        if (mounted) {
+          Navigator.pop(context); // Close loading
+          showDialog(
+            context: context,
+            builder: (context) => CustomDialog(
+              title: 'Gagal Mendeteksi Lokasi',
+              content: 'Tidak dapat mendeteksi lokasi Anda. Pastikan GPS aktif.',
+              primaryButtonText: 'OK',
+              primaryButtonColor: AppThemes.errorColor,
+              onPrimaryButtonPressed: () => Navigator.pop(context),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Get pesertaMagangId
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final user = authProvider.user;
+
+      if (user == null) {
+        if (mounted) {
+          Navigator.pop(context); // Close loading
+          showDialog(
+            context: context,
+            builder: (context) => CustomDialog(
+              title: 'Error',
+              content: 'User data not found. Please login again.',
+              primaryButtonText: 'OK',
+              primaryButtonColor: AppThemes.errorColor,
+              onPrimaryButtonPressed: () => Navigator.pop(context),
+            ),
+          );
+        }
+        return;
+      }
+
+      String? pesertaMagangId;
+      try {
+        final userDataStr = await StorageService.getString(AppConstants.userDataKey);
+        if (userDataStr != null) {
+          final userData = jsonDecode(userDataStr);
+          pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
+        }
+      } catch (e) {
+        if (kDebugMode) print('Error getting pesertaMagangId: $e');
+      }
+
+      if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
+        // Try to refresh profile
+        await authProvider.refreshProfile();
+        final refreshedUserDataStr = await StorageService.getString(AppConstants.userDataKey);
+        if (refreshedUserDataStr != null) {
+          final refreshedUserData = jsonDecode(refreshedUserDataStr);
+          pesertaMagangId = refreshedUserData['pesertaMagang']?['id']?.toString();
+        }
+      }
+
+      if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
+        if (mounted) {
+          Navigator.pop(context); // Close loading
+          showDialog(
+            context: context,
+            builder: (context) => CustomDialog(
+              title: 'Error',
+              content: 'Peserta magang ID not found. Please ensure you are registered as a student.',
+              primaryButtonText: 'OK',
+              primaryButtonColor: AppThemes.errorColor,
+              onPrimaryButtonPressed: () => Navigator.pop(context),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Submit clock out
+      final nowTime = IndonesianTime.now; // Use Indonesian time
+      final attendanceResponse = await AttendanceService.createAttendance(
+        pesertaMagangId: pesertaMagangId,
+        tipe: 'KELUAR',
+        timestamp: nowTime,
+        lokasi: {
+          'latitude': currentLocation['latitude'],
+          'longitude': currentLocation['longitude'],
+          'address': currentLocation['address'] ?? '',
+        },
+        qrCodeData: 'direct_clockout_${nowTime.millisecondsSinceEpoch}',
+        device: 'Mobile App',
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+
+        if (attendanceResponse.success) {
+          final attendanceProvider =
+              Provider.of<AttendanceProvider>(context, listen: false);
+          final time = IndonesianTime.formatTime(IndonesianTime.now);
+          attendanceProvider.clockOut(time);
+          await attendanceProvider.refreshTodayAttendance(preserveLocalState: true);
+
+          GlobalSnackBar.show(
+            'Clock out berhasil dilakukan',
+            title: 'Berhasil',
+            isSuccess: true,
+            icon: Icons.check_circle_outline_rounded,
+          );
+        } else {
+          showDialog(
+            context: context,
+            builder: (context) => CustomDialog(
+              title: 'Gagal Clock Out',
+              content: attendanceResponse.message,
+              primaryButtonText: 'OK',
+              primaryButtonColor: AppThemes.errorColor,
+              onPrimaryButtonPressed: () => Navigator.pop(context),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+        showDialog(
+          context: context,
+          builder: (context) => CustomDialog(
+            title: 'Error',
+            content: 'Terjadi kesalahan: ${e.toString()}',
+            primaryButtonText: 'OK',
+            primaryButtonColor: AppThemes.errorColor,
+            onPrimaryButtonPressed: () => Navigator.pop(context),
+          ),
         );
       }
     }
@@ -184,12 +402,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         _handleAttendanceResult(context, result);
                       },
                       onClockOut: () async {
-                        final result = await Navigator.pushNamed(
-                          context,
-                          RouteNames.qrScan,
-                          arguments: {'type': 'CLOCK_OUT'},
-                        );
-                        _handleAttendanceResult(context, result);
+                        await _handleClockOut(context);
                       },
                       isClockedIn: attendanceProvider.isClockedIn,
                       isClockedOut: attendanceProvider.isClockedOut,
