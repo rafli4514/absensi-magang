@@ -351,3 +351,75 @@ export const getDailyStats = async (req: Request, res: Response) => {
     sendError(res, 'Failed to retrieve daily dashboard stats');
   }
 };
+
+export const getCurrentMonthPerformance = async (req: Request, res: Response) => {
+  try {
+    const { pesertaMagangId } = req.query;
+
+    if (!pesertaMagangId) {
+      return sendError(res, 'pesertaMagangId is required', 400);
+    }
+
+    // Get current month date range as ISO strings (since timestamp is String in schema)
+    const today = new Date();
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+    
+    // Convert to ISO strings for string comparison
+    const startOfMonthStr = startOfMonth.toISOString();
+    const endOfMonthStr = endOfMonth.toISOString();
+
+    // Get all attendance records for this month
+    const monthlyAttendance = await prisma.absensi.findMany({
+      where: {
+        pesertaMagangId: pesertaMagangId as string,
+        tipe: 'MASUK',
+        timestamp: {
+          gte: startOfMonthStr,
+          lte: endOfMonthStr,
+        },
+      },
+    });
+
+    // Count present days (unique days with MASUK)
+    const uniqueDays = new Set<string>();
+    monthlyAttendance.forEach((attendance) => {
+      // timestamp is a string, parse it to get date
+      try {
+        const timestampDate = new Date(attendance.timestamp);
+        const dateStr = timestampDate.toISOString().split('T')[0];
+        uniqueDays.add(dateStr);
+      } catch (e) {
+        // If timestamp is not in ISO format, try to extract date string directly
+        const dateStr = attendance.timestamp.split('T')[0];
+        if (dateStr) {
+          uniqueDays.add(dateStr);
+        }
+      }
+    });
+
+    const presentDays = uniqueDays.size;
+
+    // Calculate total working days in the month (excluding weekends)
+    let totalDays = 0;
+    const currentDate = new Date(startOfMonth);
+    while (currentDate <= endOfMonth) {
+      const dayOfWeek = currentDate.getDay();
+      // Count only weekdays (Monday = 1, Friday = 5)
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        totalDays++;
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    const performanceStats = {
+      presentDays,
+      totalDays,
+    };
+
+    sendSuccess(res, 'Current month performance retrieved successfully', performanceStats);
+  } catch (error) {
+    console.error('Current month performance error:', error);
+    sendError(res, 'Failed to retrieve current month performance');
+  }
+};

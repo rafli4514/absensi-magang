@@ -1,5 +1,5 @@
 export interface QRCodeData {
-  type: "masuk" | "keluar";
+  type: "masuk" | "keluar"; // "keluar" kept for backward compatibility with existing data
   timestamp: string;
   location: string;
   validUntil: string;
@@ -65,8 +65,12 @@ export const generateQRCodeCanvas = (qrData: QRCodeData): string => {
   return canvas.toDataURL();
 };
 
+/**
+ * Create QR code data for attendance
+ * Note: Only "masuk" (check-in) is currently used. "keluar" parameter kept for backward compatibility.
+ */
 export const createAttendanceQRData = (
-  type: "masuk" | "keluar", 
+  type: "masuk" | "keluar" = "masuk", 
   validityMinutes: number = 5
 ): QRCodeData => {
   const now = new Date();

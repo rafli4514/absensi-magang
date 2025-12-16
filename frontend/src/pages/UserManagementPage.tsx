@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import type { PesertaMagang } from "../types/index";
+import { Link, useLocation } from "react-router-dom";
+import type { PesertaMagang, User } from "../types/index";
 import {
   AlertDialog,
   Box,
@@ -13,6 +13,7 @@ import {
   Table,
   Text,
   TextField,
+  Tabs,
 } from "@radix-ui/themes/components/index";
 import {
   EyeOpenIcon,
@@ -20,8 +21,12 @@ import {
   TrashIcon,
   MixerHorizontalIcon,
   ClockIcon,
+  PlusIcon,
+  CheckIcon,
+  Cross2Icon,
 } from "@radix-ui/react-icons";
 import pesertaMagangService from "../services/pesertaMagangService";
+import userService, { type CreateUserRequest, type UpdateUserRequest } from "../services/userService";
 import Avatar from "../components/Avatar";
 
 const StatusBadge = ({ status }: { status: PesertaMagang["status"] }) => {
@@ -45,7 +50,22 @@ const StatusBadge = ({ status }: { status: PesertaMagang["status"] }) => {
   );
 };
 
+import ManageUsersPage from "./ManageUsersPage";
+
 export default function PesertaMagang() {
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(
+    location.pathname === "/manage-users" ? "users" : "peserta-magang"
+  );
+
+  // Update tab when route changes
+  useEffect(() => {
+    if (location.pathname === "/manage-users") {
+      setActiveTab("users");
+    } else if (location.pathname === "/peserta-magang") {
+      setActiveTab("peserta-magang");
+    }
+  }, [location.pathname]);
   const [pesertaMagang, setPesertaMagang] = useState<PesertaMagang[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -263,19 +283,36 @@ export default function PesertaMagang() {
 
   return (
     <div className="space-y-6">
-      {/* Error message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-          {error}
-        </div>
-      )}
-
       {/* Page header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Manajemen peserta{" "}
+            Manajemen User
           </h1>
+          <p className="text-gray-600">Kelola data user dan peserta magang</p>
+        </div>
+      </div>
+
+      <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
+        <Tabs.List>
+          <Tabs.Trigger value="peserta-magang">Peserta Magang</Tabs.Trigger>
+          <Tabs.Trigger value="users">User</Tabs.Trigger>
+        </Tabs.List>
+
+        <Tabs.Content value="peserta-magang">
+      {/* Error message */}
+      {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mt-4">
+          {error}
+        </div>
+      )}
+
+          {/* Page header for Peserta Magang */}
+          <div className="flex justify-between items-center mt-4">
+        <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Manajemen Peserta Magang
+              </h2>
           <p className="text-gray-600">Kelola data peserta magang/PKL</p>
         </div>
         <Dialog.Root>
@@ -972,6 +1009,12 @@ export default function PesertaMagang() {
           )}
         </Card>
       </Box>
+        </Tabs.Content>
+
+        <Tabs.Content value="users">
+          <ManageUsersPage />
+        </Tabs.Content>
+      </Tabs.Root>
     </div>
   );
 }

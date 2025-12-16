@@ -13,11 +13,10 @@ import authService from "../services/authService";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: DashboardIcon, requiredRole: null as string | null },
-  { name: "Manajemen Peserta Magang", href: "/peserta-magang", icon: Users, requiredRole: null },
-  { name: "Manajemen User", href: "/manage-users", icon: UserCog, requiredRole: "ADMIN" },
+  { name: "Manajemen User", href: "/manage-users", icon: Users, requiredRole: null },
   { name: "Manajemen Absensi", href: "/absensi", icon: Clock, requiredRole: null },
   { name: "Manajemen Izin", href: "/izin", icon: CalendarDays, requiredRole: null },
-  { name: "QR Code & Barcode", href: "/barcode", icon: QrCode, requiredRole: "ADMIN" },
+  { name: "QR Code Check-In", href: "/barcode", icon: QrCode, requiredRole: "ADMIN" },
   { name: "Laporan Absensi", href: "/laporan", icon: FileTextIcon, requiredRole: null },
   { name: "Pengaturan", href: "/pengaturan", icon: Settings, requiredRole: "ADMIN" },
   { name: "Profil Pengguna", href: "/profil-pengguna", icon: PersonIcon, requiredRole: null },
@@ -100,7 +99,8 @@ export default function Sidebar({ isOpen, isMinimized, onClose }: SidebarProps) 
                   return false;
                 })
                 .map((item) => {
-                const isActive = location.pathname === item.href;
+                const isActive = location.pathname === item.href || 
+                  (item.href === "/manage-users" && (location.pathname === "/peserta-magang" || location.pathname === "/manage-users"));
                 return (
                   <li key={item.name}>
                     <Link

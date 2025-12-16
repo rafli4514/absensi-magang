@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import '../models/api_response.dart';
 import '../services/api_service.dart';
 import '../utils/constants.dart';
+import '../utils/indonesian_time.dart';
 
 class OfficeLocationSettings {
   final String officeAddress;
@@ -108,7 +109,7 @@ class LocationService {
     required String locationAddress,
   }) async {
     try {
-      final now = DateTime.now();
+      final now = IndonesianTime.now; // Use Indonesian time
 
       // Data yang dikirim disinkronkan agar formatnya jelas di Backend
       final Map<String, dynamic> body = {
@@ -176,11 +177,20 @@ class LocationService {
         return true;
       }
 
-      // Gunakan akurasi tinggi untuk validasi jarak kantor
-      final Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.bestForNavigation,
-        timeLimit: const Duration(seconds: 10),
-      );
+      // Gunakan akurasi tinggi untuk validasi jarak kantor, dengan batas waktu
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.bestForNavigation,
+          timeLimit: const Duration(seconds: 8),
+        );
+      } catch (e) {
+        // Jika timeout/error, coba gunakan last known position
+        position = await Geolocator.getLastKnownPosition();
+        if (position == null) {
+          rethrow;
+        }
+      }
 
       final distance = calculateDistance(
         position.latitude,
@@ -222,9 +232,20 @@ class LocationService {
       }
 
       // Gunakan 'high' accuracy untuk presensi, jangan 'best' jika hanya untuk display (hemat baterai)
-      final Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
+      Position? position;
+      try {
+        // Batasi waktu tunggu agar UI tidak lama di status "Mendeteksi lokasi..."
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 8),
+        );
+      } catch (e) {
+        // Jika timeout atau error lain, fallback ke last known position
+        position = await Geolocator.getLastKnownPosition();
+        if (position == null) {
+          rethrow;
+        }
+      }
 
       // Format alamat yang lebih rapi
       String address =
@@ -239,7 +260,7 @@ class LocationService {
         'accuracy': position.accuracy,
         'altitude': position.altitude,
         'address': address, // Bisa diganti real address jika ada geocoding
-        'timestamp': DateTime.now().toIso8601String(),
+        'timestamp': IndonesianTime.now.toIso8601String(), // Use Indonesian time
       };
     } catch (e) {
       print('❌ [LOCATION SERVICE] Error getting location: $e');

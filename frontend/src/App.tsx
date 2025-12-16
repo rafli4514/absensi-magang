@@ -30,15 +30,8 @@ function App() {
             }
           >
             <Route index element={<DashboardPage />} />
+            <Route path="/manage-users" element={<UserManagementPage />} />
             <Route path="/peserta-magang" element={<UserManagementPage />} />
-            <Route
-              path="/manage-users"
-              element={
-                <ProtectedRoute requiredRole="ADMIN">
-                  <ManageUsersPage />
-                </ProtectedRoute>
-              }
-            />
             <Route path="/absensi" element={<AbsensiPage />} />
             <Route path="/izin" element={<PengajuanIzinPage />} />
             <Route path="/laporan" element={<LaporanPage />} />

@@ -45,7 +45,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadUserData();
+    _loadUserData();
     });
   }
 
@@ -137,7 +137,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   void _calculateEndDate() {
     if (_tanggalMulaiController.text.isNotEmpty) {
-      try {
+    try {
         final startDate = DateTime.parse(_tanggalMulaiController.text);
         final endDate = DateTime(
           startDate.year,
@@ -232,9 +232,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
             title,
             style: TextStyle(
               fontSize: 18,
@@ -242,17 +242,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               color: isDarkMode
                   ? AppThemes.darkTextPrimary
                   : AppThemes.onSurfaceColor,
-            ),
+              ),
           ),
-          Container(
+              Container(
             margin: const EdgeInsets.only(top: 4),
             width: 40,
             height: 3,
-            color:
+                  color:
                 isDarkMode ? AppThemes.darkAccentBlue : AppThemes.primaryColor,
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -274,30 +274,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             children: [
               Center(
                 child: Stack(
-                  children: [
+                children: [
                     _buildProfilePicture(isDarkMode),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
                       child: GestureDetector(
                         onTap: _showImageSourceDialog,
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
                             color: AppThemes.primaryColor,
-                            shape: BoxShape.circle,
+                        shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
-                          ),
+                      ),
                           child: const Icon(
-                            Icons.camera_alt_rounded,
-                            size: 18,
-                            color: Colors.white,
-                          ),
+                          Icons.camera_alt_rounded,
+                          size: 18,
+                          color: Colors.white,
                         ),
                       ),
                     ),
-                  ],
+                  ),
+                ],
                 ),
               ),
               const SizedBox(height: 32),
