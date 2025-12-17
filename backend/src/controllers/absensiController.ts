@@ -194,10 +194,26 @@ export const createAbsensi = async (req: Request, res: Response) => {
     // Validasi hari kerja (gunakan UTC methods karena timestamp sudah di-offset)
     const workDays = appSettings?.schedule?.workDays ?? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayLabels: Record<string, string> = {
+      sunday: 'Minggu',
+      monday: 'Senin',
+      tuesday: 'Selasa',
+      wednesday: 'Rabu',
+      thursday: 'Kamis',
+      friday: 'Jumat',
+      saturday: 'Sabtu',
+    };
     const currentDay = dayNames[now.getUTCDay()];
-    
+    const currentDayLabel = dayLabels[currentDay] ?? currentDay;
+    const workDaysLabel = workDays.map((d: string) => dayLabels[d] ?? d).join(', ');
+
     if (!workDays.includes(currentDay)) {
-      return sendError(res, `Hari ini (${currentDay}) bukan hari kerja. Hari kerja: ${workDays.join(', ')}`, 400, 'INVALID_WORK_DAY');
+      return sendError(
+        res,
+        `Hari ini (${currentDayLabel}) bukan hari kerja sesuai pengaturan. Hari kerja: ${workDaysLabel}`,
+        400,
+        'INVALID_WORK_DAY',
+      );
     }
 
     // Validasi jam operasional (menggunakan waktu Indonesia)
@@ -208,14 +224,14 @@ export const createAbsensi = async (req: Request, res: Response) => {
     const tipeUpper = (tipe || '').toUpperCase();
     
     // Untuk MASUK: hanya dibatasi oleh jam mulai kerja.
-    // Setelah jam mulai, aturan keterlambatan diatur oleh allowLateCheckIn & lateThreshold (di bawah).
+    // Setelah lewat jam mulai, aturan keterlambatan diatur oleh allowLateCheckIn & lateThreshold (di bawah).
     // Untuk KELUAR: bisa kapan saja (tidak ada validasi waktu jam pulang di sini).
     if (tipeUpper === 'MASUK') {
       // Terlalu pagi sebelum jam mulai kerja → tolak
       if (currentTime < workStart) {
         return sendError(
           res,
-          `Absen masuk hanya tersedia setelah jam ${workStart}. Waktu saat ini: ${currentTime}`,
+          `Absen masuk hanya tersedia setelah jam mulai kerja (${workStart}) sesuai pengaturan. Waktu saat ini: ${currentTime}`,
           400,
           'OUTSIDE_WORK_HOURS',
         );

@@ -21,9 +21,10 @@ class AttendanceCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Logic tampilan tombol
-    // Clock in hanya tampil jika belum pernah clock in hari ini
-    // atau jika sudah clock out (boleh mulai siklus baru esok hari)
-    final showClockIn = !isClockedIn || (isClockedIn && isClockedOut);
+    // - Clock In: hanya tampil jika BELUM pernah clock in hari ini
+    // - Clock Out: tampil jika sudah clock in dan BELUM clock out hari ini
+    // Siklus baru hari berikutnya akan di-handle oleh reset di AttendanceProvider
+    final showClockIn = !isClockedIn;
     final showClockOut = isClockedIn && !isClockedOut;
 
     return Container(
