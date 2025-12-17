@@ -42,6 +42,22 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadPerformanceData();
+    // Pastikan status absensi hari ini selalu di-refresh saat masuk Home,
+    // terutama setelah login dengan akun berbeda.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final authProvider =
+            Provider.of<AuthProvider>(context, listen: false);
+        final attendanceProvider =
+            Provider.of<AttendanceProvider>(context, listen: false);
+
+        // Jika sudah login (ada user), refresh status absensi hari ini dari backend
+        // TANPA mereset paksa state lokal (biarkan backend yang menentukan).
+        if (authProvider.user != null) {
+          attendanceProvider.refreshTodayAttendance(preserveLocalState: true);
+        }
+      }
+    });
   }
 
   Future<void> _loadPerformanceData() async {
@@ -394,6 +410,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 24),
                     AttendanceCard(
                       onClockIn: () async {
+                        // Jika sudah pernah clock in hari ini, jangan izinkan scan lagi
+                        if (attendanceProvider.isClockedIn) {
+                          showDialog(
+                            context: context,
+                            builder: (context) => CustomDialog(
+                              title: 'Sudah Absen',
+                              content:
+                                  'Anda sudah melakukan absensi hari ini. Silakan absen lagi besok.',
+                              primaryButtonText: 'OK',
+                              primaryButtonColor: AppThemes.primaryColor,
+                              onPrimaryButtonPressed: () =>
+                                  Navigator.pop(context),
+                            ),
+                          );
+                          return;
+                        }
+
                         final result = await Navigator.pushNamed(
                           context,
                           RouteNames.qrScan,
@@ -519,6 +552,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: FloatingBottomNav(
                     currentRoute: RouteNames.home,
                     onQRScanTap: () {
+                      // Cegah scan langsung dari FAB jika sudah clock in hari ini
+                      if (attendanceProvider.isClockedIn) {
+                        showDialog(
+                          context: context,
+                          builder: (context) => CustomDialog(
+                            title: 'Sudah Absen',
+                            content:
+                                'Anda sudah melakukan absensi hari ini. Silakan absen lagi besok.',
+                            primaryButtonText: 'OK',
+                            primaryButtonColor: AppThemes.primaryColor,
+                            onPrimaryButtonPressed: () =>
+                                Navigator.pop(context),
+                          ),
+                        );
+                        return;
+                      }
+
                       NavigationHelper.navigateWithoutAnimation(
                         context,
                         RouteNames.qrScan,
