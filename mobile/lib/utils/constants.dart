@@ -4,7 +4,8 @@ class AppConstants {
   // Base URL
   // static const String baseUrl = 'http://10.140.254.115:3000/api'; // Android Emulator
   // static const String baseUrl = 'http://localhost:3000/api'; // iOS Simulator
-  static const String baseUrl = 'http://10.168.20.56:3000/api'; // Physical Device
+  static const String baseUrl =
+      'http://192.170.100.24:3000/api'; // Physical Device
 
   // Storage Keys
   static const String tokenKey = 'auth_token';
@@ -25,7 +26,8 @@ class AppConstants {
   // Settings & QR Endpoints
   static const String settingsEndpoint = '/settings';
   static const String qrEndpoint = '/qr';
-  static const String attendanceEndpoint = '/absensi'; // Updated to match backend route
+  static const String attendanceEndpoint =
+      '/absensi'; // Updated to match backend route
   static const String activitiesEndpoint = '/logbook';
 
   // Splash Screen

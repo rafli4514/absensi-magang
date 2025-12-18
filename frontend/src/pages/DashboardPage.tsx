@@ -297,9 +297,9 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-4">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dasbor</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Dasboard</h1>
             <p className="text-gray-600">
-              Sistem Absensi Iconnet - Data Harian
+              Sistem Absensi IconPlus - Data Harian
             </p>
           </div>
           <button
