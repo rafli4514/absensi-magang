@@ -1,5 +1,8 @@
 export interface QRCodeData {
-  type: "masuk" | "keluar"; // "keluar" kept for backward compatibility with existing data
+  // NOTE:
+  // - "masuk" digunakan untuk QR Code Check-In (aktif dipakai sekarang)
+  // - "keluar" dipertahankan HANYA untuk kompatibilitas data lama / riwayat lama (tidak lagi digenerate baru)
+  type: "masuk" | "keluar";
   timestamp: string;
   location: string;
   validUntil: string;
@@ -66,11 +69,14 @@ export const generateQRCodeCanvas = (qrData: QRCodeData): string => {
 };
 
 /**
- * Create QR code data for attendance
- * Note: Only "masuk" (check-in) is currently used. "keluar" parameter kept for backward compatibility.
+ * Create QR code data for attendance.
+ * NOTE:
+ * - Saat ini aplikasi hanya meng-generate QR Code untuk "masuk" (check-in).
+ * - Parameter "keluar" dipertahankan agar utility ini tetap bisa membaca / menampilkan
+ *   data QR lama yang mungkin masih berisi type "keluar" (backward compatibility).
  */
 export const createAttendanceQRData = (
-  type: "masuk" | "keluar" = "masuk", 
+  type: "masuk" | "keluar" = "masuk",
   validityMinutes: number = 5
 ): QRCodeData => {
   const now = new Date();
@@ -102,7 +108,9 @@ export const isQRCodeValid = (qrData: QRCodeData): boolean => {
 };
 
 export const formatQRCodeType = (type: "masuk" | "keluar"): string => {
-  return type === "masuk" ? "Absen Masuk" : "Absen Keluar";
+  // Hanya "masuk" yang aktif dipakai untuk generate baru.
+  // Jika masih ada data lama dengan "keluar", tetap ditampilkan dengan label yang jelas.
+  return type === "masuk" ? "Absen Masuk" : "Absen Keluar (lama)";
 };
 
 export const getQRCodeTypeColor = (type: "masuk" | "keluar"): string => {

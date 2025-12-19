@@ -13,9 +13,29 @@ class SettingsService {
     ),
   );
 
+  // Cache ringan untuk settings selama sesi aplikasi
+  static Map<String, dynamic>? _cachedSettings;
+  static DateTime? _cachedSettingsFetchedAt;
+
   // Get all settings
-  static Future<ApiResponse<Map<String, dynamic>>> getSettings() async {
+  static Future<ApiResponse<Map<String, dynamic>>> getSettings({
+    bool forceRefresh = false,
+  }) async {
     try {
+      // Gunakan cache jika masih fresh (misal 5 menit)
+      if (!forceRefresh &&
+          _cachedSettings != null &&
+          _cachedSettingsFetchedAt != null) {
+        final diff = DateTime.now().difference(_cachedSettingsFetchedAt!);
+        if (diff.inMinutes < 5) {
+          return ApiResponse<Map<String, dynamic>>(
+            success: true,
+            data: _cachedSettings,
+            message: 'Settings loaded from cache',
+          );
+        }
+      }
+
       final token = await StorageService.getString(AppConstants.tokenKey);
       final response = await _dio.get(
         '/settings',
@@ -23,9 +43,13 @@ class SettingsService {
       );
 
       if (response.data['success'] == true) {
+        final data = Map<String, dynamic>.from(response.data['data']);
+        _cachedSettings = data;
+        _cachedSettingsFetchedAt = DateTime.now();
+
         return ApiResponse(
           success: true,
-          data: Map<String, dynamic>.from(response.data['data']),
+          data: data,
           message: response.data['message'],
         );
       } else {
@@ -62,6 +86,11 @@ class SettingsService {
       );
 
       if (response.data['success'] == true) {
+        // Setelah update, segarkan cache dengan data terbaru
+        _cachedSettings =
+            Map<String, dynamic>.from(response.data['data'] ?? {});
+        _cachedSettingsFetchedAt = DateTime.now();
+
         return ApiResponse(
           success: true,
           data: Map<String, dynamic>.from(response.data['data']),
