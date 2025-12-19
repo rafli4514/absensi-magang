@@ -89,8 +89,9 @@ export default function Sidebar({ isOpen, isMinimized, onClose }: SidebarProps) 
           </div>
 
           {/* Navigation */}
-          <nav className="flex-grow mt-2 px-2 overflow-hidden">
-            <ul className="space-y-2 overflow-hidden">
+          {/* Jadikan area menu scrollable agar semua item bisa diakses saat tinggi layar kecil */}
+          <nav className="flex-grow mt-2 px-2 overflow-y-auto">
+            <ul className="space-y-2">
               {navigation
                 .filter((item) => {
                   // Filter berdasarkan role - hanya tampilkan jika user memiliki akses

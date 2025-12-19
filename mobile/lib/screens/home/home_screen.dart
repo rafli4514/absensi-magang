@@ -205,12 +205,42 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Clock out bisa dilakukan kapan saja - tidak ada validasi waktu
 
-    // Tampilkan loading dialog
+    // Tampilkan loading dialog dengan teks agar user tahu apa yang sedang terjadi
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
+      builder: (context) => Dialog(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(40),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppThemes.darkSurface.withOpacity(0.95),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppThemes.primaryColor,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Mendeteksi lokasi dan mencatat kehadiran...',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
 
