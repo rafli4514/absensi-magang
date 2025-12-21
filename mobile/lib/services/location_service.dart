@@ -60,13 +60,38 @@ class QRValidationResponse {
 class LocationService {
   static final ApiService _apiService = ApiService();
 
-  static Future<ApiResponse<OfficeLocationSettings>>
-  getLocationSettings() async {
+  // Cache ringan untuk setting lokasi kantor selama sesi aplikasi
+  static OfficeLocationSettings? _cachedLocationSettings;
+  static DateTime? _cachedLocationFetchedAt;
+
+  static Future<ApiResponse<OfficeLocationSettings>> getLocationSettings({
+    bool forceRefresh = false,
+  }) async {
     try {
+      // Gunakan cache jika masih dianggap fresh (misal 5 menit)
+      if (!forceRefresh &&
+          _cachedLocationSettings != null &&
+          _cachedLocationFetchedAt != null) {
+        final diff = DateTime.now().difference(_cachedLocationFetchedAt!);
+        if (diff.inMinutes < 5) {
+          return ApiResponse<OfficeLocationSettings>(
+            success: true,
+            data: _cachedLocationSettings,
+            message: 'Location settings loaded from cache',
+            statusCode: 200,
+          );
+        }
+      }
+
       final response = await _apiService.get(
         '${AppConstants.settingsEndpoint}/location',
         (data) => OfficeLocationSettings.fromJson(data),
       );
+
+      if (response.success && response.data != null) {
+        _cachedLocationSettings = response.data;
+        _cachedLocationFetchedAt = DateTime.now();
+      }
 
       return response;
     } catch (e) {
