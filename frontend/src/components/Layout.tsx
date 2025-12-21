@@ -30,18 +30,19 @@ export default function Layout() {
   }, [sidebarMinimized]);
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Sidebar 
-        isOpen={sidebarOpen} 
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Sidebar sits in the flex flow, no need for absolute positioning or margins */}
+      <Sidebar
+        isOpen={sidebarOpen}
         isMinimized={sidebarMinimized}
         onClose={() => setSidebarOpen(false)}
         onToggleMinimize={() => setSidebarMinimized(!sidebarMinimized)}
       />
 
-      <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${
-        sidebarMinimized ? 'lg:ml-' : 'lg:ml-'
-      }`}>
-        <Header 
+      {/* Main Content Wrapper */}
+      {/* Removed 'lg:ml-' classes which caused the scrollbar/layout break */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300">
+        <Header
           onMenuClick={() => setSidebarOpen(true)}
           onToggleMinimize={() => setSidebarMinimized(!sidebarMinimized)}
           sidebarMinimized={sidebarMinimized}
