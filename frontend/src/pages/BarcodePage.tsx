@@ -8,13 +8,9 @@ import pengaturanService from "../services/pengaturanService";
 import {
   Card,
   Flex,
-  Text,
   Button,
   Dialog,
   IconButton,
-  Badge,
-  // Switch,
-  // ScrollArea,
 } from "@radix-ui/themes";
 
 // Icons
@@ -24,26 +20,35 @@ import {
   RefreshCw,
   Copy,
   Check,
-  Calendar,
   Maximize2,
   X,
   AlertTriangle,
   History,
   Clock,
   Smartphone,
-  Share2
+  Calendar,
+  Image as ImageIcon // Import icon Image untuk memperjelas
 } from "lucide-react";
+
+interface QrHistoryItem {
+  id: string;
+  type: string;
+  timestamp: string;
+  qrData: string;
+  expiresAt: string;
+}
 
 export default function BarcodePage() {
   // ============ State Management ============
   const [currentQR, setCurrentQR] = useState("");
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [qrHistory, setQrHistory] = useState([]);
+  const [qrHistory, setQrHistory] = useState<QrHistoryItem[]>([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [isMaximized, setIsMaximized] = useState(false);
   const [error, setError] = useState("");
   const [qrExpiresAt, setQrExpiresAt] = useState("");
+  const [remainingTime, setRemainingTime] = useState("");
 
   // ============ QR Code Generation for Attendance ============
   const generateAttendanceQR = async () => {
@@ -57,7 +62,7 @@ export default function BarcodePage() {
         setCurrentQR(qrCodeDataURL);
         setQrExpiresAt(response.data.expiresAt);
 
-        const newQR = {
+        const newQR: QrHistoryItem = {
           id: `ABSEN_MASUK_${Date.now()}`,
           type: 'masuk',
           timestamp: new Date().toISOString(),
@@ -86,14 +91,54 @@ export default function BarcodePage() {
     }
   }, [autoRefresh, currentQR]);
 
+  // ============ Countdown Timer Logic ============
+  useEffect(() => {
+    if (!qrExpiresAt) {
+      setRemainingTime("");
+      return;
+    }
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const expiration = new Date(qrExpiresAt).getTime();
+      const diff = expiration - now;
+
+      if (diff <= 0) {
+        setRemainingTime("00:00");
+      } else {
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        setRemainingTime(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      }
+    };
+
+    updateTimer();
+    const timerInterval = setInterval(updateTimer, 1000);
+    return () => clearInterval(timerInterval);
+  }, [qrExpiresAt]);
+
   // ============ Utilities ============
-  const copyToClipboard = async (text) => {
+
+  // FUNGSI COPY GAMBAR KE CLIPBOARD YANG DIPERBAIKI
+  const copyImageToClipboard = async () => {
+    if (!currentQR) return;
+
     try {
-      await navigator.clipboard.writeText(text);
+      // 1. Fetch gambar dari Data URL
+      const response = await fetch(currentQR);
+      const blob = await response.blob();
+
+      // 2. Buat ClipboardItem dengan tipe PNG
+      const item = new ClipboardItem({ "image/png": blob });
+
+      // 3. Tulis ke clipboard
+      await navigator.clipboard.write([item]);
+
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy:', error);
+      console.error("Gagal menyalin gambar:", error);
+      setError("Gagal menyalin gambar. Browser mungkin tidak mendukung fitur ini.");
     }
   };
 
@@ -108,187 +153,195 @@ export default function BarcodePage() {
   };
 
   return (
-    // PERUBAHAN 1: Menghapus max-w-5xl mx-auto, diganti w-full
-    <div className="space-y-4 w-full h-full p-1">
-
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-gray-100 pb-4 gap-4">
+    <div className="space-y-4 w-full h-[calc(100vh-8rem)] flex flex-col pb-1">
+      {/* Header - Compact */}
+      <div className="flex justify-between items-center gap-4 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Absensi QR Code</h1>
-          <p className="text-sm text-gray-500">
-            Manajemen kode akses harian peserta magang
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">QR Code Absensi</h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Manajemen kode akses harian
           </p>
         </div>
-        {/* Error Notification (Inline) */}
+
         {error && (
-          <div role="alert" className="flex items-center gap-2 bg-red-50 text-red-700 px-3 py-1.5 rounded-md text-sm border border-red-200 animate-in fade-in slide-in-from-right-5">
-            <AlertTriangle className="h-4 w-4" />
+          <div role="alert" className="flex items-center gap-2 bg-red-50 text-red-700 px-3 py-1.5 rounded-md text-xs border border-red-200 animate-in fade-in slide-in-from-right-5">
+            <AlertTriangle className="h-3.5 w-3.5" />
             <span>{error}</span>
-            <button onClick={() => setError("")} className="ml-2 hover:text-red-900" aria-label="Close error">
+            <button onClick={() => setError("")} className="ml-2 hover:text-red-900 cursor-pointer">
               <X className="h-3 w-3" />
             </button>
           </div>
         )}
       </div>
 
-      <Card className="w-full h-full">
-        {/* Main Dashboard Layout */}
-        <div className="flex flex-col lg:flex-row h-full min-h-[500px]">
+      {/* Main Content - Full Height Card */}
+      <Card className="w-full flex-1 overflow-hidden shadow-sm flex flex-col p-0">
+        <div className="flex flex-col lg:flex-row h-full">
 
           {/* LEFT COLUMN: Visual QR Display */}
-          {/* PERUBAHAN 2: Lebar kolom disesuaikan (lg:w-1/2) agar seimbang di layar lebar */}
-          <div className="lg:w-1/2 p-8 bg-gray-50 border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col items-center justify-center relative">
+          <div className="lg:w-1/2 p-6 bg-gray-50/50 border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col items-center justify-center relative">
             {currentQR ? (
-              <div className="text-center w-full space-y-6 animate-in zoom-in-95 duration-300">
+              <div className="text-center w-full flex flex-col items-center gap-5 animate-in zoom-in-95 duration-300">
+
+                {/* 1. Status Info & Timer (SIDE BY SIDE) */}
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  {/* Status Badge */}
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium border border-green-200 shadow-sm">
+                    <div className="w-1.5 h-1.5 bg-green-600 rounded-full animate-pulse" />
+                    Aktif
+                  </div>
+
+                  {/* Timer Badge (With Countdown) */}
+                  {qrExpiresAt && (
+                     <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white text-gray-500 rounded-full text-xs font-medium border border-gray-200 shadow-sm">
+                       <Clock className="h-3 w-3 text-gray-400" />
+                       <span>
+                         Berakhir: <span className="text-gray-900 font-semibold">{new Date(qrExpiresAt).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })}</span>
+                         <span className="ml-1.5 text-orange-600 font-mono font-bold">({remainingTime})</span>
+                       </span>
+                     </div>
+                  )}
+                </div>
+
+                {/* 2. QR Image Block (DI TENGAH) */}
                 <div className="relative group inline-block">
-                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                     <img
                       src={currentQR}
                       alt="QR Code Absensi Aktif"
-                      className="w-56 h-56 md:w-72 md:h-72 object-contain"
+                      className="w-48 h-48 md:w-64 md:h-64 object-contain"
                     />
                   </div>
                   {/* Overlay Action */}
-                  <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <IconButton
                       variant="solid"
                       color="gray"
                       highContrast
                       size="2"
                       onClick={() => setIsMaximized(true)}
-                      aria-label="Perbesar tampilan QR Code"
+                      className="cursor-pointer"
                     >
                       <Maximize2 className="h-4 w-4" />
                     </IconButton>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                    <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse" />
-                    Aktif & Valid
-                  </div>
-                  {qrExpiresAt && (
-                     <p className="text-sm text-gray-500 flex items-center justify-center gap-1.5">
-                       <Clock className="h-4 w-4" />
-                       Berakhir: {new Date(qrExpiresAt).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })}
-                     </p>
-                  )}
-                </div>
-
-                <p className="text-gray-500 max-w-sm mx-auto">
-                  Scan menggunakan aplikasi mobile untuk melakukan absensi masuk.
+                {/* 3. Helper Text (DI BAWAH) */}
+                <p className="text-xs text-gray-400 max-w-xs mx-auto">
+                  Scan untuk absensi masuk. Kode akan diperbarui otomatis.
                 </p>
               </div>
             ) : (
-              <div className="text-center space-y-4">
-                <div className="bg-white p-6 rounded-full shadow-sm inline-block">
-                  <QrCode className="h-12 w-12 text-gray-300" />
+              <div className="text-center space-y-3">
+                <div className="bg-white p-4 rounded-full shadow-sm border border-gray-100 inline-block">
+                  <QrCode className="h-8 w-8 text-gray-300" />
                 </div>
                 <div>
-                  <h3 className="text-gray-900 font-medium text-lg">QR Code Belum Dibuat</h3>
-                  <p className="text-gray-500">Klik tombol generate di panel kanan untuk memulai sesi</p>
+                  <h3 className="text-gray-900 font-medium text-sm">QR Code Belum Dibuat</h3>
+                  <p className="text-xs text-gray-500">Klik generate untuk memulai sesi</p>
                 </div>
               </div>
             )}
           </div>
 
           {/* RIGHT COLUMN: Controls & History */}
-          {/* PERUBAHAN 3: Kolom kanan juga w-1/2 agar proporsional */}
-          <div className="lg:w-1/2 p-8 flex flex-col bg-white">
+          <div className="lg:w-1/2 p-6 flex flex-col bg-white">
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
 
-            <div className="flex-1 space-y-8">
               {/* 1. Primary Actions */}
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 text-lg">
-                  <Smartphone className="h-5 w-5" />
+              <div className="shrink-0 mb-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Smartphone className="h-4 w-4" />
                   Kontrol Sesi
                 </h3>
 
-                <Flex gap="3" direction={{ initial: "column", sm: "row" }} className="w-full">
+                <Flex gap="3" direction="column" className="w-full">
                   <Button
                     onClick={() => generateAttendanceQR()}
                     disabled={loading}
-                    size="4"
-                    className="flex-1 cursor-pointer"
+                    size="3"
+                    className="w-full cursor-pointer bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     {loading ? (
                       <>
-                        <RefreshCw className="h-5 w-5 animate-spin mr-2" />
-                        Generating...
+                        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                        Memproses...
                       </>
                     ) : (
                       <>
-                        <QrCode className="h-5 w-5 mr-2" />
-                        {currentQR ? "Regenerate QR" : "Generate QR Code"}
+                        <QrCode className="h-4 w-4 mr-2" />
+                        {currentQR ? "Regenerate QR Baru" : "Buat QR Code"}
                       </>
                     )}
                   </Button>
 
                   {currentQR && (
-                    <div className="flex gap-2">
-                       <Button variant="outline" size="4" onClick={downloadQR} aria-label="Download QR Code" className="cursor-pointer">
-                         <Download className="h-5 w-5" />
+                    <div className="grid grid-cols-2 gap-3">
+                       <Button variant="soft" color="gray" size="2" onClick={downloadQR} className="cursor-pointer">
+                         <Download className="h-4 w-4 mr-2" /> Download
                        </Button>
-                       <Button variant="outline" size="4" onClick={() => copyToClipboard(currentQR)} aria-label="Copy QR Code Image" className="cursor-pointer">
-                         {copied ? <Check className="h-5 w-5 text-green-600" /> : <Copy className="h-5 w-5" />}
+                       {/* Tombol Copy Gambar */}
+                       <Button variant="soft" color="gray" size="2" onClick={copyImageToClipboard} className="cursor-pointer">
+                         {copied ? <Check className="h-4 w-4 mr-2 text-green-600" /> : <ImageIcon className="h-4 w-4 mr-2" />}
+                         {copied ? "Tersalin" : "Salin Gambar"}
                        </Button>
                     </div>
                   )}
                 </Flex>
               </div>
 
-              {/* 2. Settings */}
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
-                <div className="space-y-1">
+              {/* 2. Settings Toggle */}
+              <div className="shrink-0 mb-6 flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <div className="space-y-0.5">
                   <label htmlFor="auto-refresh" className="text-sm font-medium text-gray-900 cursor-pointer block">Auto Refresh</label>
-                  <p className="text-xs text-gray-500">Perbarui QR code setiap 5 menit secara otomatis</p>
+                  <p className="text-[10px] text-gray-500">Perbarui otomatis tiap 5 menit</p>
                 </div>
                 <button
                   id="auto-refresh"
                   role="switch"
                   aria-checked={autoRefresh}
                   onClick={() => setAutoRefresh(!autoRefresh)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer ${
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer ${
                     autoRefresh ? 'bg-blue-600' : 'bg-gray-300'
                   }`}
                 >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    autoRefresh ? 'translate-x-6' : 'translate-x-1'
+                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                    autoRefresh ? 'translate-x-4.5' : 'translate-x-0.5'
                   }`} />
                 </button>
               </div>
 
-              {/* 3. History */}
-              <div className="border-t border-gray-100 pt-6 flex-grow flex flex-col">
-                 <div className="flex items-center justify-between mb-4">
-                   <h3 className="font-semibold text-gray-900 flex items-center gap-2 text-lg">
-                     <History className="h-5 w-5" />
-                     Riwayat Hari Ini
+              {/* 3. History List - Scrollable Area */}
+              <div className="flex-1 flex flex-col min-h-0 border-t border-gray-100 pt-4">
+                 <div className="flex items-center justify-between mb-3 shrink-0">
+                   <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                     <History className="h-4 w-4" />
+                     Riwayat
                    </h3>
                    {qrHistory.length > 0 && (
-                     <Button variant="ghost" color="red" size="2" onClick={() => setQrHistory([])} className="cursor-pointer">
+                     <button onClick={() => setQrHistory([])} className="text-xs text-red-600 hover:text-red-700 font-medium cursor-pointer">
                        Hapus Semua
-                     </Button>
+                     </button>
                    )}
                  </div>
 
-                 <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1 max-h-[300px]">
+                 <div className="overflow-y-auto pr-1 space-y-2 flex-1">
                     {qrHistory.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-10 text-gray-400 text-sm border-2 border-dashed border-gray-100 rounded-xl h-full">
-                        <History className="h-8 w-8 mb-2 opacity-20" />
-                        <p>Belum ada riwayat generate</p>
+                      <div className="flex flex-col items-center justify-center h-32 text-gray-400 text-xs border-2 border-dashed border-gray-100 rounded-lg">
+                        <History className="h-6 w-6 mb-1 opacity-20" />
+                        <p>Belum ada riwayat</p>
                       </div>
                     ) : (
                       qrHistory.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
-                          <div className="flex items-center gap-4">
-                            <div className="bg-purple-50 p-2 rounded-lg">
-                              <Calendar className="h-4 w-4 text-purple-600" />
+                        <div key={item.id} className="flex items-center justify-between p-2.5 bg-white border border-gray-100 rounded-md hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-purple-50 p-1.5 rounded-md">
+                              <Calendar className="h-3.5 w-3.5 text-purple-600" />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-sm font-medium text-gray-900">Absen Masuk</span>
-                              <span className="text-xs text-gray-500 font-mono">ID: {item.id.split('_').pop()}</span>
+                              <span className="text-xs font-medium text-gray-900">Absen Masuk</span>
+                              <span className="text-[10px] text-gray-500 font-mono tracking-tight">ID: {item.id.split('_').pop()}</span>
                             </div>
                           </div>
                           <div className="text-right">
@@ -302,6 +355,7 @@ export default function BarcodePage() {
                     )}
                  </div>
               </div>
+
             </div>
           </div>
         </div>
@@ -309,30 +363,37 @@ export default function BarcodePage() {
 
       {/* Fullscreen Dialog */}
       <Dialog.Root open={isMaximized} onOpenChange={setIsMaximized}>
-        <Dialog.Content style={{ maxWidth: '600px' }} className="p-0 overflow-hidden rounded-2xl">
-          <div className="bg-gray-900 p-10 flex flex-col items-center justify-center text-white relative min-h-[500px]">
+        <Dialog.Content style={{ maxWidth: '500px' }} className="p-0 overflow-hidden rounded-xl">
+          <div className="bg-gray-900 p-8 flex flex-col items-center justify-center text-white relative min-h-[450px]">
             <Dialog.Close className="absolute top-4 right-4 z-10">
               <IconButton variant="ghost" color="gray" radius="full" className="text-white hover:bg-white/20 cursor-pointer">
-                 <X className="h-6 w-6" />
+                 <X className="h-5 w-5" />
               </IconButton>
             </Dialog.Close>
 
-            <h2 className="text-2xl font-bold mb-8">Scan Absensi Masuk</h2>
+            <h2 className="text-xl font-bold mb-6">Scan Absensi Masuk</h2>
 
-            <div className="bg-white p-6 rounded-2xl mb-8 shadow-2xl">
+            {qrExpiresAt && (
+              <div className="flex items-center gap-3 text-gray-400 text-sm mb-4 bg-white/10 px-4 py-1.5 rounded-full">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-green-400 font-medium">Aktif</span>
+                </div>
+                <div className="h-3 w-px bg-gray-600" />
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>Berakhir {new Date(qrExpiresAt).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })} <span className="text-orange-400 font-mono ml-1">({remainingTime})</span></span>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-white p-4 rounded-xl mb-6 shadow-2xl">
               <img
                 src={currentQR}
                 alt="QR Code Fullscreen"
-                className="w-80 h-80 object-contain"
+                className="w-64 h-64 object-contain"
               />
             </div>
-
-            {qrExpiresAt && (
-              <div className="flex items-center gap-2 text-gray-300">
-                <Clock className="h-4 w-4" />
-                <span className="text-lg">Berlaku s.d. {new Date(qrExpiresAt).toLocaleTimeString("id-ID")}</span>
-              </div>
-            )}
           </div>
         </Dialog.Content>
       </Dialog.Root>

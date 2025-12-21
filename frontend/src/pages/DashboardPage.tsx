@@ -1,4 +1,3 @@
-
 // React
 import { useState, useEffect } from "react";
 
@@ -8,7 +7,9 @@ import {
   Flex,
   Grid,
   Text,
-  Progress,
+  IconButton,
+  Button,
+  Badge,
 } from "@radix-ui/themes";
 
 // Ikon
@@ -21,7 +22,13 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
-  Calendar,
+  Calendar as CalendarIcon,
+  RefreshCw,
+  Activity,
+  UserCheck,
+  UserX,
+  LogIn,
+  LogOut,
 } from "lucide-react";
 
 // Tipe Data
@@ -30,47 +37,94 @@ import type { DashboardStats, Absensi } from "../types";
 // Layanan
 import dashboardService from "../services/dashboardService";
 
-// Menggunakan API real - data dummy sudah dihapus
-
 // =====================================
 // Komponen Pembantu
 // =====================================
 
-const StatusBadge = ({ status }: { status: Absensi["status"] }) => {
-  const statusConfig = {
-    VALID: { color: "bg-green-100 text-green-800", label: "Tepat Waktu" },
-    TERLAMBAT: { color: "bg-yellow-100 text-yellow-800", label: "Terlambat" },
-    INVALID: { color: "bg-red-100 text-red-800", label: "Tidak Valid" },
-  };
+// Pie Chart Sederhana menggunakan SVG
+const SimplePieChart = ({ percentage }: { percentage: number }) => {
+  const radius = 50;
+  const stroke = 10;
+  const normalizedRadius = radius - stroke / 2;
+  const circumference = normalizedRadius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
-  const config = statusConfig[status] || { color: "bg-gray-100 text-gray-800", label: status };
+  // Tentukan warna berdasarkan persentase
+  let strokeColor = "#ef4444"; // red-500
+  if (percentage >= 80) strokeColor = "#22c55e"; // green-500
+  else if (percentage >= 60) strokeColor = "#eab308"; // yellow-500
 
   return (
-    <span
-      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}
-    >
+    <div className="relative flex items-center justify-center w-28 h-28">
+      <svg
+        height="100%"
+        width="100%"
+        viewBox={`0 0 ${radius * 2} ${radius * 2}`}
+        style={{ transform: 'rotate(-90deg)' }}
+      >
+        {/* Background Circle */}
+        <circle
+          stroke="#f3f4f6"
+          strokeWidth={stroke}
+          fill="transparent"
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+        {/* Progress Circle */}
+        <circle
+          stroke={strokeColor}
+          strokeWidth={stroke}
+          strokeDasharray={circumference + ' ' + circumference}
+          style={{ strokeDashoffset, transition: 'stroke-dashoffset 1s ease-in-out' }}
+          strokeLinecap="round"
+          fill="transparent"
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+      </svg>
+      {/* Teks Tengah */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <Text size="4" weight="bold" style={{ color: strokeColor }}>
+          {percentage.toFixed(0)}%
+        </Text>
+      </div>
+    </div>
+  );
+};
+
+const StatusBadge = ({ status }: { status: Absensi["status"] }) => {
+  const statusConfig = {
+    VALID: { color: "green", label: "Tepat Waktu" },
+    TERLAMBAT: { color: "orange", label: "Terlambat" },
+    INVALID: { color: "red", label: "Invalid" },
+  };
+
+  const config = statusConfig[status] || { color: "gray", label: status };
+
+  return (
+    <Badge color={config.color as any} size="1" variant="soft" radius="full">
       {config.label}
-    </span>
+    </Badge>
   );
 };
 
 const TypeBadge = ({ tipe }: { tipe: Absensi["tipe"] }) => {
   const typeConfig = {
-    MASUK: { color: "bg-blue-100 text-blue-800", label: "Masuk" },
-    KELUAR: { color: "bg-purple-100 text-purple-800", label: "Keluar" },
-    IZIN: { color: "bg-orange-100 text-orange-800", label: "Izin" },
-    SAKIT: { color: "bg-red-100 text-red-800", label: "Sakit" },
-    CUTI: { color: "bg-green-100 text-green-800", label: "Cuti" },
+    MASUK: { color: "blue", label: "Masuk" },
+    KELUAR: { color: "purple", label: "Keluar" },
+    IZIN: { color: "orange", label: "Izin" },
+    SAKIT: { color: "red", label: "Sakit" },
+    CUTI: { color: "green", label: "Cuti" },
   };
 
-  const config = typeConfig[tipe] || { color: "bg-gray-100 text-gray-800", label: tipe };
+  const config = typeConfig[tipe] || { color: "gray", label: tipe };
 
   return (
-    <span
-      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.color}`}
-    >
+    <Badge color={config.color as any} size="1" variant="outline">
       {config.label}
-    </span>
+    </Badge>
   );
 };
 
@@ -80,7 +134,7 @@ const TypeBadge = ({ tipe }: { tipe: Absensi["tipe"] }) => {
 
 const useDashboardData = () => {
   const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0] // Tanggal hari ini dalam format YYYY-MM-DD
+    new Date().toISOString().split('T')[0]
   );
   const [stats, setStats] = useState<DashboardStats>({
     totalPesertaMagang: 0,
@@ -96,113 +150,54 @@ const useDashboardData = () => {
 
   const fetchStats = async (isRefresh = false, date?: string) => {
     try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-      
-      setError(null); // Hapus error sebelumnya
-      
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+
+      setError(null);
       const targetDate = date || selectedDate;
-      
-      // Panggil API dengan parameter tanggal spesifik
       const response = await dashboardService.getDailyStats(targetDate);
-      
+
       if (response.success && response.data) {
         setStats(response.data);
-        console.log('Statistik harian dashboard dimuat untuk', targetDate, ':', response.data);
       } else {
-        const errorMessage = response.message || 'Gagal memuat statistik dashboard';
-        setError(errorMessage);
-        console.error('Error API Dashboard:', errorMessage);
+        setError(response.message || 'Gagal memuat data');
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Gagal memuat statistik dashboard';
-      console.error('Error statistik dashboard:', error);
-      setError(errorMessage);
-      
-      // Pertahankan data yang ada saat error daripada reset ke nol
-      if (stats.totalPesertaMagang === 0) {
-        // Hanya set data fallback jika tidak ada data sama sekali
-        setStats(prev => ({
-          ...prev,
-          // Pertahankan nilai non-zero yang ada
-        }));
-      }
+      setError(error instanceof Error ? error.message : 'Gagal memuat data');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    fetchStats();
-  }, [selectedDate]); // Muat ulang saat tanggal berubah
+  useEffect(() => { fetchStats(); }, [selectedDate]);
 
   useEffect(() => {
-    // Auto refresh setiap 30 detik hanya jika menampilkan data hari ini
     const isToday = selectedDate === new Date().toISOString().split('T')[0];
-    
     if (isToday) {
-      const interval = setInterval(() => {
-        fetchStats(true);
-      }, 30000);
-      
-      // Refresh saat window kembali fokus
-      const handleFocus = () => {
-        fetchStats(true);
-      };
-      
-      window.addEventListener('focus', handleFocus);
-      
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener('focus', handleFocus);
-      };
+      const interval = setInterval(() => fetchStats(true), 30000);
+      return () => clearInterval(interval);
     }
   }, [selectedDate]);
 
-  const refresh = () => {
-    fetchStats(true);
-  };
-
-  const changeDate = (newDate: string) => {
-    setSelectedDate(newDate);
-  };
-
   const goToPreviousDay = () => {
-    const currentDate = new Date(selectedDate);
-    currentDate.setDate(currentDate.getDate() - 1);
-    setSelectedDate(currentDate.toISOString().split('T')[0]);
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() - 1);
+    setSelectedDate(d.toISOString().split('T')[0]);
   };
 
   const goToNextDay = () => {
-    const currentDate = new Date(selectedDate);
+    const d = new Date(selectedDate);
     const today = new Date().toISOString().split('T')[0];
-    
-    // Jangan izinkan ke tanggal masa depan
     if (selectedDate < today) {
-      currentDate.setDate(currentDate.getDate() + 1);
-      setSelectedDate(currentDate.toISOString().split('T')[0]);
+      d.setDate(d.getDate() + 1);
+      setSelectedDate(d.toISOString().split('T')[0]);
     }
   };
 
-  const goToToday = () => {
-    setSelectedDate(new Date().toISOString().split('T')[0]);
-  };
-
-  return { 
-    stats, 
-    loading, 
-    error, 
-    refreshing, 
-    refresh, 
-    selectedDate, 
-    changeDate, 
-    goToPreviousDay, 
-    goToNextDay, 
-    goToToday 
+  return {
+    stats, loading, error, refreshing, refresh: () => fetchStats(true),
+    selectedDate, setSelectedDate, goToPreviousDay, goToNextDay
   };
 };
 
@@ -211,448 +206,241 @@ const useDashboardData = () => {
 // =====================================
 
 export default function DashboardPage() {
-  // ============ Data ============
-  const { 
-    stats, 
-    loading, 
-    error, 
-    refreshing, 
-    refresh, 
-    selectedDate, 
-    changeDate, 
-    goToPreviousDay, 
-    goToNextDay, 
-    goToToday 
+  const {
+    stats, loading, error, refreshing, refresh,
+    selectedDate, setSelectedDate, goToPreviousDay, goToNextDay
   } = useDashboardData();
 
-  // State loading yang ditingkatkan
+  const isToday = selectedDate === new Date().toISOString().split('T')[0];
+
   if (loading) {
     return (
-      <div className="space-y-6">
-        {/* Skeleton Header Halaman */}
-        <div className="flex justify-between items-center">
-          <div>
-            <div className="h-8 w-48 bg-gray-200 rounded animate-pulse"></div>
-            <div className="h-4 w-64 bg-gray-200 rounded animate-pulse mt-2"></div>
-          </div>
-          <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
-        </div>
-
-        {/* Skeleton Kartu Statistik */}
-        <Grid columns={{ initial: "1", md: "2", lg: "4" }} gap="4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="p-6">
-              <div className="space-y-3">
-                <div className="w-12 h-12 bg-gray-200 rounded-lg animate-pulse"></div>
-                <div className="space-y-2">
-                  <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </Grid>
-
-        {/* Skeleton Konten */}
-        <div className="space-y-4">
-          <Card className="p-6">
-            <div className="h-32 bg-gray-200 rounded animate-pulse"></div>
-          </Card>
-          <Card className="p-6">
-            <div className="h-48 bg-gray-200 rounded animate-pulse"></div>
-          </Card>
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 text-blue-600 animate-spin mx-auto" />
+          <p className="mt-2 text-sm text-gray-500">Memuat dashboard...</p>
         </div>
       </div>
     );
   }
 
-  // ============ Render ============
   return (
-    <div className="space-y-6">
-      {/* Peringatan Error */}
+    <div className="space-y-4 pb-10">
+
+      {/* Error Alert */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-              <div>
-                <h3 className="text-sm font-medium text-red-800">
-                  Terjadi kesalahan saat memuat data
-                </h3>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
-              </div>
-            </div>
-            <button
-              onClick={refresh}
-              disabled={refreshing}
-              className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
-            >
-              {refreshing ? 'Memuat...' : 'Coba Lagi'}
-            </button>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center justify-between text-xs text-red-700">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            <span>{error}</span>
           </div>
+          <button onClick={refresh} className="font-bold hover:underline">Retry</button>
         </div>
       )}
 
-      {/* Header Halaman */}
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dasboard</h1>
-            <p className="text-gray-600">
-              Sistem Absensi IconPlus - Data Harian
-            </p>
-          </div>
-          <button
-            onClick={refresh}
-            disabled={refreshing}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium disabled:opacity-50 flex items-center gap-2 px-3 py-2 border border-blue-200 rounded-lg hover:bg-blue-50"
-          >
-            <Clock className="h-4 w-4" />
-            {refreshing ? 'Memuat...' : 'Muat Ulang Data'}
-          </button>
+      {/* Header & Date Navigation */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Dashboard</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Ringkasan aktivitas dan performa</p>
         </div>
 
-        {/* Navigasi Tanggal */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-gray-500" />
-                <Text size="3" weight="bold" color="gray">
-                  Data untuk:
-                </Text>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={goToPreviousDay}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Hari sebelumnya"
-                >
-                  <ChevronLeft className="h-4 w-4 text-gray-600" />
-                </button>
-                
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => changeDate(e.target.value)}
-                    max={new Date().toISOString().split('T')[0]}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  <Text size="2" color="gray" className="text-center sm:whitespace-nowrap">
-                    ({new Date(selectedDate).toLocaleDateString('id-ID', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })})
-                  </Text>
-                </div>
-                
-                <button
-                  onClick={goToNextDay}
-                  disabled={selectedDate >= new Date().toISOString().split('T')[0]}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Hari berikutnya"
-                >
-                  <ChevronRight className="h-4 w-4 text-gray-600" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-center lg:justify-end gap-2">
-              {selectedDate !== new Date().toISOString().split('T')[0] && (
-                <button
-                  onClick={goToToday}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Hari Ini
-                </button>
-              )}
-              {selectedDate === new Date().toISOString().split('T')[0] && (
-                <div className="flex items-center gap-1 px-3 py-2 bg-green-100 text-green-800 text-sm font-medium rounded-lg">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  Data Langsung
-                </div>
-              )}
-            </div>
+        <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-gray-200 shadow-sm">
+          <IconButton size="1" variant="ghost" color="gray" onClick={goToPreviousDay}>
+            <ChevronLeft className="h-4 w-4" />
+          </IconButton>
+
+          <div className="flex items-center gap-2 px-2 min-w-[140px] justify-center border-x border-gray-100">
+            <CalendarIcon className="h-3.5 w-3.5 text-gray-500" />
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
+              className="text-xs font-medium text-gray-700 bg-transparent border-none focus:ring-0 p-0 cursor-pointer"
+            />
+          </div>
+
+          <IconButton
+            size="1"
+            variant="ghost"
+            color="gray"
+            onClick={goToNextDay}
+            disabled={isToday}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </IconButton>
+
+          {/* Refresh / Live Indicator */}
+          <div className="pl-2 border-l border-gray-100">
+             <IconButton
+               size="1"
+               variant={isToday ? "soft" : "ghost"}
+               color={isToday ? "green" : "gray"}
+               onClick={refresh}
+               loading={refreshing}
+               title="Refresh Data"
+             >
+               <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+             </IconButton>
           </div>
         </div>
       </div>
 
-      {/* Kartu Statistik */}
-      <Grid columns={{ initial: "1", md: "2", lg: "4" }} gap="4">
-        <Card className={`p-6 transition-opacity duration-200 ${refreshing ? 'opacity-60' : ''}`}>
-          <Flex direction="column" gap="3">
-            <Flex justify="between" align="center">
-              <div className="p-3 bg-blue-100 rounded-lg w-fit">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-              {refreshing && <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>}
+      {/* Statistik Utama - Compact Grid */}
+      <Grid columns={{ initial: "2", md: "4" }} gap="3">
+        {/* Total Peserta */}
+        <Card className="shadow-sm border border-gray-100">
+          <Flex direction="column" p="3" gap="1">
+            <Flex justify="between" align="start">
+              <Text size="1" weight="medium" color="gray" className="uppercase tracking-wider">Total Peserta</Text>
+              <div className="p-1 bg-blue-50 rounded text-blue-600"><Users className="h-3.5 w-3.5" /></div>
             </Flex>
-            <div>
-              <Text size="5" weight="bold" className="text-gray-900 block mb-1">
-                {stats.totalPesertaMagang.toLocaleString('id-ID')}
-              </Text>
-              <Text size="2" color="gray">
-                Total Peserta Magang
-              </Text>
-              {stats.totalPesertaMagang > 0 && (
-                <Text size="1" color="green" className="mt-1 block">
-                  ✓ Data tersedia
-                </Text>
-              )}
-            </div>
+            <Text size="6" weight="bold" className="text-gray-900 mt-1">{stats.totalPesertaMagang}</Text>
+            <Text size="1" color="gray" className="text-[10px]">Terdaftar dalam sistem</Text>
           </Flex>
         </Card>
 
-        <Card className={`p-6 transition-opacity duration-200 ${refreshing ? 'opacity-60' : ''}`}>
-          <Flex direction="column" gap="3">
-            <Flex justify="between" align="center">
-              <div className="p-3 bg-green-100 rounded-lg w-fit">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              {refreshing && <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>}
+        {/* Peserta Aktif */}
+        <Card className="shadow-sm border border-gray-100">
+          <Flex direction="column" p="3" gap="1">
+            <Flex justify="between" align="start">
+              <Text size="1" weight="medium" color="gray" className="uppercase tracking-wider">Hadir Hari Ini</Text>
+              <div className="p-1 bg-green-50 rounded text-green-600"><UserCheck className="h-3.5 w-3.5" /></div>
             </Flex>
-            <div>
-              <Text size="5" weight="bold" className="text-gray-900 block mb-1">
-                {stats.pesertaMagangAktif.toLocaleString('id-ID')}
-              </Text>
-              <Text size="2" color="gray">
-                Peserta Aktif
-              </Text>
-              <Text size="1" color="gray" className="mt-1 block">
-                {stats.totalPesertaMagang > 0 
-                  ? `${Math.round((stats.pesertaMagangAktif / stats.totalPesertaMagang) * 100)}% dari total`
-                  : 'Tidak ada data'
-                }
-              </Text>
-            </div>
+            <Text size="6" weight="bold" className="text-gray-900 mt-1">{stats.pesertaMagangAktif}</Text>
+            <Text size="1" color="gray" className="text-[10px]">
+              {stats.totalPesertaMagang > 0 ? `${Math.round((stats.pesertaMagangAktif / stats.totalPesertaMagang) * 100)}% kehadiran` : '0%'}
+            </Text>
           </Flex>
         </Card>
 
-        <Card className={`p-6 transition-opacity duration-200 ${refreshing ? 'opacity-60' : ''}`}>
-          <Flex direction="column" gap="3">
-            <Flex justify="between" align="center">
-              <div className="p-3 bg-orange-100 rounded-lg w-fit">
-                <Clock className="h-6 w-6 text-orange-600" />
-              </div>
-              {refreshing && <div className="w-4 h-4 border-2 border-orange-600 border-t-transparent rounded-full animate-spin"></div>}
+        {/* Absen Masuk */}
+        <Card className="shadow-sm border border-gray-100">
+          <Flex direction="column" p="3" gap="1">
+            <Flex justify="between" align="start">
+              <Text size="1" weight="medium" color="gray" className="uppercase tracking-wider">Check In</Text>
+              <div className="p-1 bg-orange-50 rounded text-orange-600"><LogIn className="h-3.5 w-3.5" /></div>
             </Flex>
-            <div>
-              <Text size="5" weight="bold" className="text-gray-900 block mb-1">
-                {stats.absensiMasukHariIni.toLocaleString('id-ID')}
-              </Text>
-              <Text size="2" color="gray">
-                Absen Masuk
-              </Text>
-              <Text size="1" color="gray" className="mt-1 block">
-                {selectedDate === new Date().toISOString().split('T')[0] 
-                  ? 'Hari ini' 
-                  : new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
-                }
-              </Text>
-            </div>
+            <Text size="6" weight="bold" className="text-gray-900 mt-1">{stats.absensiMasukHariIni}</Text>
+            <Text size="1" color="gray" className="text-[10px]">Total scan masuk</Text>
           </Flex>
         </Card>
 
-        <Card className={`p-6 transition-opacity duration-200 ${refreshing ? 'opacity-60' : ''}`}>
-          <Flex direction="column" gap="3">
-            <Flex justify="between" align="center">
-              <div className="p-3 bg-purple-100 rounded-lg w-fit">
-                <XCircle className="h-6 w-6 text-purple-600" />
-              </div>
-              {refreshing && <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>}
+        {/* Absen Keluar */}
+        <Card className="shadow-sm border border-gray-100">
+          <Flex direction="column" p="3" gap="1">
+            <Flex justify="between" align="start">
+              <Text size="1" weight="medium" color="gray" className="uppercase tracking-wider">Check Out</Text>
+              <div className="p-1 bg-purple-50 rounded text-purple-600"><LogOut className="h-3.5 w-3.5" /></div>
             </Flex>
-            <div>
-              <Text size="5" weight="bold" className="text-gray-900 block mb-1">
-                {stats.absensiKeluarHariIni.toLocaleString('id-ID')}
-              </Text>
-              <Text size="2" color="gray">
-                Absen Keluar
-              </Text>
-              <Text size="1" color="gray" className="mt-1 block">
-                {selectedDate === new Date().toISOString().split('T')[0] 
-                  ? 'Hari ini' 
-                  : new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
-                }
-              </Text>
-            </div>
+            <Text size="6" weight="bold" className="text-gray-900 mt-1">{stats.absensiKeluarHariIni}</Text>
+            <Text size="1" color="gray" className="text-[10px]">Total scan keluar</Text>
           </Flex>
         </Card>
       </Grid>
 
-      {/* Grafik Tingkat Kehadiran */}
-      <Card className={`p-6 transition-opacity duration-200 ${refreshing ? 'opacity-60' : ''}`}>
-        <Flex direction="column" gap="4">
-          <Flex align="center" gap="3" justify="between">
-            <Flex align="center" gap="3">
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <BarChart3 className="h-6 w-6 text-purple-600" />
-              </div>
-              <Text size="4" weight="bold">
-                Tingkat Kehadiran
-              </Text>
-              <Text size="1" color="gray">
-                {selectedDate === new Date().toISOString().split('T')[0] 
-                  ? 'Hari ini' 
-                  : new Date(selectedDate).toLocaleDateString('id-ID', { 
-                      weekday: 'long',
-                      day: 'numeric', 
-                      month: 'long' 
-                    })
-                }
-              </Text>
-            </Flex>
-            {refreshing && <div className="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>}
-          </Flex>
+      {/* Grid Content: Chart & Activity */}
+      <Grid columns={{ initial: "1", md: "3" }} gap="4">
 
-          <div>
-            <Flex justify="between" mb="2">
-              <Text size="2" color="gray">Tingkat Kehadiran</Text>
-              <Text size="3" weight="bold" color={stats.tingkatKehadiran >= 80 ? "green" : stats.tingkatKehadiran >= 60 ? "yellow" : "red"}>
-                {stats.tingkatKehadiran.toFixed(1)}%
-              </Text>
-            </Flex>
-            <Progress value={stats.tingkatKehadiran} className="h-3" />
-            <Text size="1" color="gray" className="mt-2">
-              {stats.tingkatKehadiran >= 90 ? 'Luar Biasa! Tingkat kehadiran sangat baik' :
-               stats.tingkatKehadiran >= 80 ? 'Bagus! Tingkat kehadiran baik' :
-               stats.tingkatKehadiran >= 60 ? 'Cukup. Perlu peningkatan kehadiran' :
-               'Kurang. Tingkat kehadiran perlu ditingkatkan'}
-            </Text>
-          </div>
-
-            <Flex gap="6" wrap="wrap">
-            <Flex align="center" gap="2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <Text size="2" color="gray">
-                Hadir: {Math.round(stats.tingkatKehadiran * stats.pesertaMagangAktif / 100)} dari {stats.pesertaMagangAktif} orang
-              </Text>
-            </Flex>
-            <Flex align="center" gap="2">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <Text size="2" color="gray">
-                Belum hadir: {Math.max(0, stats.pesertaMagangAktif - Math.round(stats.tingkatKehadiran * stats.pesertaMagangAktif / 100))} orang
-              </Text>
-            </Flex>
-            <Flex align="center" gap="2">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <Text size="2" color="gray">
-                Total absen masuk: {stats.absensiMasukHariIni} catatan
-              </Text>
-            </Flex>
-          </Flex>
-        </Flex>
-      </Card>
-
-      {/* Bagian Dasbor */}
-      <Grid columns={{ initial: "1" }} gap="4">
-        {/* Aktivitas Terbaru */}
-        <Card className={`p-6 transition-opacity duration-200 ${refreshing ? 'opacity-60' : ''}`}>
-          <Flex direction="column" gap="4">
-            <Flex align="center" gap="3" justify="between">
-              <Flex align="center" gap="3">
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <Clock className="h-6 w-6 text-blue-600" />
-                </div>
-                <Flex gap="4" align="center">
-                  <Text size="4" weight="bold">
-                    Aktivitas
-                  </Text>
-                  <Text size="1" color="gray">
-                    {stats.aktivitasBaruBaruIni.length} aktivitas pada {
-                      selectedDate === new Date().toISOString().split('T')[0] 
-                        ? 'hari ini' 
-                        : new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
-                    }
-                  </Text>
-                </Flex>
+        {/* Kolom Kiri: Tingkat Kehadiran (Pie Chart) */}
+        <div className="md:col-span-1 space-y-4">
+          <Card className="shadow-sm border border-gray-100 h-full">
+            <Flex direction="column" p="3" gap="4" className="h-full">
+              <Flex align="center" gap="2" className="border-b border-gray-50 pb-2">
+                <BarChart3 className="h-4 w-4 text-gray-500" />
+                <Text weight="bold" size="2">Tingkat Kehadiran</Text>
               </Flex>
-              {refreshing && <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>}
+
+              <Flex direction="column" align="center" justify="center" gap="4" className="flex-1">
+                {/* PIE CHART */}
+                <SimplePieChart percentage={stats.tingkatKehadiran} />
+
+                <Text size="1" color="gray" align="center" className="text-[10px] leading-tight max-w-[200px]">
+                  {stats.tingkatKehadiran >= 90 ? 'Luar Biasa! Pertahankan performa ini.' :
+                   stats.tingkatKehadiran >= 75 ? 'Cukup Baik. Tingkatkan lagi.' : 'Perlu ditingkatkan.'}
+                </Text>
+              </Flex>
+
+              <div className="space-y-2 pt-3 border-t border-gray-100 mt-auto">
+                <Flex justify="between" align="center">
+                  <Flex align="center" gap="2">
+                    <div className="w-2 h-2 rounded-full bg-green-500"/>
+                    <Text size="1" color="gray">Hadir</Text>
+                  </Flex>
+                  <Text size="1" weight="bold">{Math.round(stats.tingkatKehadiran * stats.pesertaMagangAktif / 100)}</Text>
+                </Flex>
+                <Flex justify="between" align="center">
+                  <Flex align="center" gap="2">
+                    <div className="w-2 h-2 rounded-full bg-gray-300"/>
+                    <Text size="1" color="gray">Belum Hadir</Text>
+                  </Flex>
+                  <Text size="1" weight="bold">{Math.max(0, stats.pesertaMagangAktif - Math.round(stats.tingkatKehadiran * stats.pesertaMagangAktif / 100))}</Text>
+                </Flex>
+              </div>
+            </Flex>
+          </Card>
+        </div>
+
+        {/* Kolom Kanan: Aktivitas Terbaru (2/3) */}
+        <div className="md:col-span-2">
+          <Card className="shadow-sm border border-gray-100 h-full flex flex-col">
+            <Flex justify="between" align="center" p="3" className="border-b border-gray-100 bg-gray-50/50">
+              <Flex align="center" gap="2">
+                <Activity className="h-4 w-4 text-blue-600" />
+                <Text weight="bold" size="2">Aktivitas Terbaru</Text>
+              </Flex>
+              <Text size="1" color="gray">{stats.aktivitasBaruBaruIni.length} item</Text>
             </Flex>
 
-            <div className="max-h-96 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto max-h-[400px] p-0">
               {stats.aktivitasBaruBaruIni.length > 0 ? (
-                <Flex direction="column" gap="3">
+                <div className="divide-y divide-gray-100">
                   {stats.aktivitasBaruBaruIni.map((activity, index) => (
-                    <Flex key={activity.id || index} align="center" gap="4" className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className={`p-2 rounded-lg ${
-                        activity.status === "VALID"
-                          ? "bg-green-100"
-                          : activity.status === "TERLAMBAT"
-                          ? "bg-yellow-100"
-                          : "bg-red-100"
+                    <Flex key={index} align="center" gap="3" className="p-3 hover:bg-gray-50 transition-colors">
+                      <div className={`p-1.5 rounded-full shrink-0 ${
+                        activity.status === "VALID" ? "bg-green-100 text-green-600" :
+                        activity.status === "TERLAMBAT" ? "bg-yellow-100 text-yellow-600" :
+                        "bg-red-100 text-red-600"
                       }`}>
-                        {activity.status === "VALID" ? (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        ) : activity.status === "TERLAMBAT" ? (
-                          <AlertCircle className="h-4 w-4 text-yellow-600" />
-                        ) : (
-                          <XCircle className="h-4 w-4 text-red-600" />
-                        )}
+                        {activity.status === "VALID" ? <CheckCircle size={16} /> :
+                         activity.status === "TERLAMBAT" ? <AlertCircle size={16} /> :
+                         <XCircle size={16} />}
                       </div>
 
-                      <Flex direction="column" flexGrow="1" gap="1">
-                        <Text size="3" weight="bold">
-                          {activity.pesertaMagang?.nama || 'Nama tidak tersedia'}
-                        </Text>
-                        <Flex align="center" gap="2" wrap="wrap">
-                          <TypeBadge tipe={activity.tipe} />
-                          <Text size="1" color="gray">
-                            • {new Date(activity.timestamp).toLocaleTimeString("id-ID", {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              second: '2-digit'
-                            })}
+                      <div className="flex-1 min-w-0">
+                        <Flex justify="between" align="start">
+                          <Text size="2" weight="bold" className="truncate">
+                            {activity.pesertaMagang?.nama || 'Unknown'}
                           </Text>
+                          <Text size="1" color="gray" className="shrink-0">
+                            {new Date(activity.timestamp).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })}
+                          </Text>
+                        </Flex>
+
+                        <Flex align="center" gap="2" mt="1">
+                          <TypeBadge tipe={activity.tipe} />
+                          <StatusBadge status={activity.status} />
                           {activity.lokasi?.alamat && (
-                            <Text size="1" color="gray">
+                            <Text size="1" color="gray" className="truncate hidden sm:block max-w-[150px]">
                               • {activity.lokasi.alamat}
                             </Text>
                           )}
                         </Flex>
-                        {activity.catatan && (
-                          <Text size="1" color="gray" className="mt-1">
-                            Catatan: {activity.catatan}
-                          </Text>
-                        )}
-                      </Flex>
-
-                      <div className="flex flex-col items-end gap-2">
-                        <StatusBadge status={activity.status} />
-                        <Text size="1" color="gray">
-                          {new Date(activity.timestamp).toLocaleDateString("id-ID")}
-                        </Text>
                       </div>
                     </Flex>
                   ))}
-                </Flex>
+                </div>
               ) : (
-                <Flex direction="column" justify="center" className="text-center py-8">
-                  <Clock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <Text size="3" color="gray" weight="medium">
-                    {selectedDate === new Date().toISOString().split('T')[0] 
-                      ? 'Belum ada aktivitas hari ini' 
-                      : `Tidak ada aktivitas pada ${new Date(selectedDate).toLocaleDateString('id-ID', { 
-                          day: 'numeric', 
-                          month: 'long',
-                          year: 'numeric'
-                        })}`
-                    }
-                  </Text>
-                  <Text size="2" color="gray">
-                    {selectedDate === new Date().toISOString().split('T')[0] 
-                      ? 'Aktivitas absensi akan muncul di sini'
-                      : 'Pilih tanggal lain untuk melihat aktivitas'
-                    }
-                  </Text>
+                <Flex direction="column" align="center" justify="center" className="py-12 text-gray-400">
+                  <Clock className="h-8 w-8 mb-2 opacity-20" />
+                  <Text size="2">Belum ada aktivitas tercatat</Text>
                 </Flex>
               )}
             </div>
-          </Flex>
-        </Card>
+          </Card>
+        </div>
+
       </Grid>
     </div>
   );
