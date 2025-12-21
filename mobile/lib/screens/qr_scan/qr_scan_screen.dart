@@ -1,7 +1,6 @@
 // lib/screens/qr_scan/qr_scan_screen.dart
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +17,7 @@ import '../../services/storage_service.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/constants.dart';
 import '../../utils/indonesian_time.dart';
+import '../../utils/ui_utils.dart'; // IMPORTED FOR GlobalSnackBar
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/floating_bottom_nav.dart';
 
@@ -138,20 +138,23 @@ class _QrScanScreenState extends State<QrScanScreen>
     super.didChangeDependencies();
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    _attendanceType = args?['type'] ?? 'CLOCK_IN'; // Default to CLOCK_IN for QR scan
-    
+    _attendanceType =
+        args?['type'] ?? 'CLOCK_IN'; // Default to CLOCK_IN for QR scan
+
     if (kDebugMode) {
-      print('📱 QR SCAN: didChangeDependencies - attendanceType: $_attendanceType');
+      print(
+          '📱 QR SCAN: didChangeDependencies - attendanceType: $_attendanceType');
     }
-    
+
     // QR scan is only for check-in, so ensure it's CLOCK_IN
     if (_attendanceType != 'CLOCK_IN') {
       if (kDebugMode) {
-        print('⚠️ QR SCAN: Invalid attendance type $_attendanceType, forcing to CLOCK_IN');
+        print(
+            '⚠️ QR SCAN: Invalid attendance type $_attendanceType, forcing to CLOCK_IN');
       }
       _attendanceType = 'CLOCK_IN';
     }
-    
+
     _loadLocationSettings();
   }
 
@@ -227,6 +230,7 @@ class _QrScanScreenState extends State<QrScanScreen>
     );
   }
 
+  // Used for Location/Radius errors where we might want "Retry" or "Back" options
   void _showLocationErrorDialog(String message) {
     showDialog(
       context: context,
@@ -247,6 +251,17 @@ class _QrScanScreenState extends State<QrScanScreen>
         },
       ),
     );
+  }
+
+  // NEW: Helper for Network/API errors using GlobalSnackBar
+  void _showErrorNotification(String message) {
+    GlobalSnackBar.show(
+      message,
+      title: 'Gagal Presensi',
+      isError: true,
+    );
+    // Important: Reset processing state if strictly used for errors
+    if (mounted) setState(() => _isProcessing = false);
   }
 
   void _showPermissionDialog(String title, String message) {
@@ -328,24 +343,23 @@ class _QrScanScreenState extends State<QrScanScreen>
       // Get pesertaMagangId from user data
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.user;
-      
+
       if (user == null) {
-        _showLocationErrorDialog('User data not found. Please login again.');
-        if (mounted) setState(() => _isProcessing = false);
+        _showErrorNotification('User data not found. Please login again.');
         return;
       }
 
       String? pesertaMagangId;
       try {
-        final userDataStr = await StorageService.getString(AppConstants.userDataKey);
+        final userDataStr =
+            await StorageService.getString(AppConstants.userDataKey);
         if (userDataStr != null) {
           final userData = jsonDecode(userDataStr);
           pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
         }
       } catch (e) {
         if (mounted) {
-          _showLocationErrorDialog('Error getting user data: $e');
-          setState(() => _isProcessing = false);
+          _showErrorNotification('Error getting user data: $e');
         }
         return;
       }
@@ -353,16 +367,18 @@ class _QrScanScreenState extends State<QrScanScreen>
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
         // Try to refresh profile
         await authProvider.refreshProfile();
-        final refreshedUserDataStr = await StorageService.getString(AppConstants.userDataKey);
+        final refreshedUserDataStr =
+            await StorageService.getString(AppConstants.userDataKey);
         if (refreshedUserDataStr != null) {
           final refreshedUserData = jsonDecode(refreshedUserDataStr);
-          pesertaMagangId = refreshedUserData['pesertaMagang']?['id']?.toString();
+          pesertaMagangId =
+              refreshedUserData['pesertaMagang']?['id']?.toString();
         }
       }
 
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
-        _showLocationErrorDialog('Peserta magang ID not found. Please ensure you are registered as a student.');
-        if (mounted) setState(() => _isProcessing = false);
+        _showErrorNotification(
+            'Peserta magang ID not found. Please ensure you are registered as a student.');
         return;
       }
 
@@ -374,20 +390,21 @@ class _QrScanScreenState extends State<QrScanScreen>
         }
         _attendanceType = 'CLOCK_IN';
       }
-      
+
       // Only allow CLOCK_IN for QR scan (check-in only)
       if (_attendanceType != 'CLOCK_IN') {
-        _showLocationErrorDialog('QR scan hanya untuk check-in. Silakan gunakan tombol clock out untuk checkout.');
-        if (mounted) setState(() => _isProcessing = false);
+        _showErrorNotification(
+            'QR scan hanya untuk check-in. Silakan gunakan tombol clock out untuk checkout.');
         return;
       }
-      
+
       // Map CLOCK_IN to MASUK
       final tipe = 'MASUK';
       final now = IndonesianTime.now; // Use Indonesian time
-      
+
       if (kDebugMode) {
-        print('📤 QR SCAN: Submitting attendance - type: $_attendanceType, tipe: $tipe, timestamp: $now');
+        print(
+            '📤 QR SCAN: Submitting attendance - type: $_attendanceType, tipe: $tipe, timestamp: $now');
       }
 
       // Create attendance using AttendanceService
@@ -413,20 +430,17 @@ class _QrScanScreenState extends State<QrScanScreen>
           'location': _currentLocation,
           'success': true,
         };
-        
+
         if (kDebugMode) {
           print('📤 QR SCAN: Sending result with type: $resultType');
         }
-        
+
         _safePop(result);
       } else {
-        // FIX: Hapus ?? karena message di ApiResponse tidak nullable
-        _showLocationErrorDialog(attendanceResponse.message);
-        if (mounted) setState(() => _isProcessing = false);
+        _showErrorNotification(attendanceResponse.message);
       }
     } catch (e) {
-      _showLocationErrorDialog('Terjadi kesalahan jaringan: ${e.toString()}');
-      if (mounted) setState(() => _isProcessing = false);
+      _showErrorNotification('Terjadi kesalahan jaringan: ${e.toString()}');
     }
   }
 
@@ -521,23 +535,14 @@ class _QrScanScreenState extends State<QrScanScreen>
       }
     } catch (e) {
       if (mounted) {
-        _showErrorDialog('Gagal mengambil gambar dari galeri');
+        GlobalSnackBar.show(
+          'Gagal mengambil gambar dari galeri',
+          title: 'Error Galeri',
+          isError: true,
+        );
         _startScan();
       }
     }
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => CustomDialog(
-        title: 'Error',
-        content: message,
-        primaryButtonText: 'OK',
-        primaryButtonColor: AppThemes.errorColor,
-        onPrimaryButtonPressed: () => Navigator.pop(context),
-      ),
-    );
   }
 
   // --- UI BUILDER ---

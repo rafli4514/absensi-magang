@@ -198,48 +198,76 @@ export default function PengajuanIzinPage() {
       {/* Filters */}
       <Box className="bg-white p-4 shadow-md rounded-2xl">
         <Flex direction="column" gap="4">
+          {/* Header */}
           <Flex align="center" gap="2">
             <MixerHorizontalIcon width="18" height="18" />
             <Text weight="bold">Filter Izin</Text>
           </Flex>
-          <Flex gap="4" wrap="wrap">
-            <Flex className="flex items-center w-full relative">
+
+          {/* Controls Area */}
+          {/* justify="between" memisahkan Search (kiri) dan Filter (kanan) */}
+          <Flex gap="4" wrap="wrap" align="center" justify="between">
+
+            {/* 1. SEARCH BAR (KIRI) */}
+            {/* flex-1 agar mengisi ruang kosong yang tersedia */}
+            <div className="flex-1 min-w-[250px]">
               <TextField.Root
                 color="indigo"
                 placeholder="Cari pengajuan izin…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
+                radius="large"
               />
+            </div>
+
+            {/* 2. GROUP FILTER (KANAN) */}
+            {/* Dibungkus Flex agar kedua Select tetap bersebelahan di kanan */}
+            <Flex gap="3" align="center">
+
+              {/* Filter Status */}
+              <Select.Root
+                size="2"
+                defaultValue="Semua"
+                value={statusFilter}
+                onValueChange={(value) => setStatusFilter(value)}
+              >
+                <Select.Trigger
+                  color="indigo"
+                  radius="large"
+                  className="min-w-[140px]"
+                  placeholder="Status"
+                />
+                <Select.Content color="indigo">
+                  <Select.Item value="Semua">Semua Status</Select.Item>
+                  <Select.Item value="PENDING">Menunggu</Select.Item>
+                  <Select.Item value="DISETUJUI">Disetujui</Select.Item>
+                  <Select.Item value="DITOLAK">Ditolak</Select.Item>
+                </Select.Content>
+              </Select.Root>
+
+              {/* Filter Jenis */}
+              <Select.Root
+                size="2"
+                defaultValue="Semua"
+                value={typeFilter}
+                onValueChange={(value) => setTypeFilter(value)}
+              >
+                <Select.Trigger
+                  color="indigo"
+                  radius="large"
+                  className="min-w-[140px]"
+                  placeholder="Jenis"
+                />
+                <Select.Content color="indigo">
+                  <Select.Item value="Semua">Semua Jenis</Select.Item>
+                  <Select.Item value="SAKIT">Sakit</Select.Item>
+                  <Select.Item value="IZIN">Izin</Select.Item>
+                  <Select.Item value="CUTI">Cuti</Select.Item>
+                </Select.Content>
+              </Select.Root>
+
             </Flex>
-            <Select.Root
-              size="2"
-              defaultValue="Semua"
-              value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value)}
-            >
-              <Select.Trigger color="indigo" radius="large" />
-              <Select.Content color="indigo">
-                <Select.Item value="Semua">Semua Status</Select.Item>
-                <Select.Item value="PENDING">Menunggu</Select.Item>
-                <Select.Item value="DISETUJUI">Disetujui</Select.Item>
-                <Select.Item value="DITOLAK">Ditolak</Select.Item>
-              </Select.Content>
-            </Select.Root>
-            <Select.Root
-              size="2"
-              defaultValue="Semua"
-              value={typeFilter}
-              onValueChange={(value) => setTypeFilter(value)}
-            >
-              <Select.Trigger color="indigo" radius="large" />
-              <Select.Content color="indigo">
-                <Select.Item value="Semua">Semua Jenis</Select.Item>
-                <Select.Item value="SAKIT">Sakit</Select.Item>
-                <Select.Item value="IZIN">Izin</Select.Item>
-                <Select.Item value="CUTI">Cuti</Select.Item>
-              </Select.Content>
-            </Select.Root>
           </Flex>
         </Flex>
       </Box>

@@ -210,67 +210,94 @@ export default function AbsensiPage() {
       {/* Filters */}
       <Box className="bg-white p-4 shadow-md rounded-2xl">
         <Flex direction="column" gap="4">
+          {/* Header Judul */}
           <Flex align="center" gap="2">
             <MixerHorizontalIcon width="18" height="18" />
             <h3 className="text-lg font-semibold text-gray-900">
               Filter Absensi
             </h3>
           </Flex>
-          <Flex gap="4" wrap="wrap">
-            <Flex className="flex items-center w-full relative">
+
+          {/* Area Controls */}
+          {/* justify="between" akan memisahkan Search (kiri) dan Group Filter (kanan) */}
+          <Flex gap="4" wrap="wrap" align="center" justify="between">
+
+            {/* 1. SEARCH BAR (KIRI) */}
+            {/* class flex-1 membuat elemen ini mengisi ruang kosong, mendorong filter ke kanan */}
+            <div className="flex-1 min-w-[250px]">
               <TextField.Root
                 color="indigo"
                 placeholder="Cari Peserta Magang…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
-              />
-            </Flex>
-            <div className="flex items-center">
-              <Select.Root
-                size="2"
-                defaultValue="Semua"
-                value={statusFilter}
-                onValueChange={(value) => setStatusFilter(value)}
-              >
-                <Select.Trigger color="indigo" radius="large" />
-                <Select.Content color="indigo">
-                  <Select.Item value="Semua">Semua Status</Select.Item>
-                  <Select.Item value="VALID">Valid</Select.Item>
-                  <Select.Item value="TERLAMBAT">Terlambat</Select.Item>
-                  <Select.Item value="INVALID">Tidak Valid</Select.Item>
-                </Select.Content>
-              </Select.Root>
-            </div>
-            <div className="flex items-center">
-              <Select.Root
-                size="2"
-                defaultValue="Semua"
-                value={typeFilter}
-                onValueChange={(value) => setTypeFilter(value)}
-              >
-                <Select.Trigger color="indigo" radius="large" />
-                <Select.Content color="indigo">
-                  <Select.Item value="Semua">Semua Tipe</Select.Item>
-                  <Select.Item value="MASUK">Masuk</Select.Item>
-                  <Select.Item value="KELUAR">Keluar</Select.Item>
-                  <Select.Item value="IZIN">Izin</Select.Item>
-                  <Select.Item value="SAKIT">Sakit</Select.Item>
-                  <Select.Item value="CUTI">Cuti</Select.Item>
-                </Select.Content>
-              </Select.Root>
-            </div>
-            <div className="flex items-center">
-              <TextField.Root
-                aria-label="Filter Tanggal"
-                size="2"
                 radius="large"
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="input-field"
               />
             </div>
+
+            {/* 2. GROUP FILTER (KANAN) */}
+            {/* Dibungkus Flex lagi agar mereka tetap berdekatan di sisi kanan */}
+            <Flex gap="3" align="center" wrap="wrap" className="justify-end">
+
+              {/* Filter Status */}
+              <div className="w-auto">
+                <Select.Root
+                  defaultValue="Semua"
+                  value={statusFilter}
+                  onValueChange={(value) => setStatusFilter(value)}
+                >
+                  <Select.Trigger
+                    color="indigo"
+                    radius="large"
+                    placeholder="Status"
+                    className="min-w-[140px]" // Opsional: agar lebar konsisten
+                  />
+                  <Select.Content color="indigo">
+                    <Select.Item value="Semua">Semua Status</Select.Item>
+                    <Select.Item value="VALID">Valid</Select.Item>
+                    <Select.Item value="TERLAMBAT">Terlambat</Select.Item>
+                    <Select.Item value="INVALID">Tidak Valid</Select.Item>
+                  </Select.Content>
+                </Select.Root>
+              </div>
+
+              {/* Filter Tipe */}
+              <div className="w-auto">
+                <Select.Root
+                  defaultValue="Semua"
+                  value={typeFilter}
+                  onValueChange={(value) => setTypeFilter(value)}
+                >
+                  <Select.Trigger
+                    color="indigo"
+                    radius="large"
+                    placeholder="Tipe"
+                    className="min-w-[130px]"
+                  />
+                  <Select.Content color="indigo">
+                    <Select.Item value="Semua">Semua Tipe</Select.Item>
+                    <Select.Item value="MASUK">Masuk</Select.Item>
+                    <Select.Item value="KELUAR">Keluar</Select.Item>
+                    <Select.Item value="IZIN">Izin</Select.Item>
+                    <Select.Item value="SAKIT">Sakit</Select.Item>
+                    <Select.Item value="CUTI">Cuti</Select.Item>
+                  </Select.Content>
+                </Select.Root>
+              </div>
+
+              {/* Filter Tanggal */}
+              <div className="w-auto">
+                <TextField.Root
+                  aria-label="Filter Tanggal"
+                  radius="large"
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="cursor-pointer"
+                  color="indigo"
+                />
+              </div>
+            </Flex>
           </Flex>
         </Flex>
       </Box>

@@ -5,19 +5,31 @@ import {
   PersonIcon,
 } from "@radix-ui/react-icons";
 
-import { LogOut, Users, CalendarDays, Clock, Settings, QrCode, UserCog} from "lucide-react";
+import { LogOut, Users, CalendarDays, Clock, Settings, QrCode } from "lucide-react";
 import Logo from "../assets/64eb562e223ee070362018.png";
-import Logo2 from "../assets/pln-logo-png_seeklogo-355620.png"
+import Logo2 from "../assets/pln-logo-png_seeklogo-355620.png";
 import { cn } from "../lib/utils";
 import authService from "../services/authService";
 
+// REORDERED NAVIGATION BASED ON ADMIN PRIORITY
 const navigation = [
+  // 1. Overview (Ringkasan)
   { name: "Dashboard", href: "/", icon: DashboardIcon, requiredRole: null as string | null },
-  { name: "Manajemen User", href: "/manage-users", icon: Users, requiredRole: null },
+  
+  // 2. Core Operations (Paling sering dipantau harian)
   { name: "Manajemen Absensi", href: "/absensi", icon: Clock, requiredRole: null },
   { name: "Manajemen Izin", href: "/izin", icon: CalendarDays, requiredRole: null },
-  { name: "QR Code Check-In", href: "/barcode", icon: QrCode, requiredRole: "ADMIN" },
+  
+  // 3. Reporting (Output data)
   { name: "Laporan Absensi", href: "/laporan", icon: FileTextIcon, requiredRole: null },
+  
+  // 4. Data Management (Setup data)
+  { name: "Manajemen User", href: "/manage-users", icon: Users, requiredRole: null },
+  
+  // 5. Admin Tools
+  { name: "QR Code Check-In", href: "/barcode", icon: QrCode, requiredRole: "ADMIN" },
+  
+  // 6. Configuration (Jarang diakses)
   { name: "Pengaturan", href: "/pengaturan", icon: Settings, requiredRole: "ADMIN" },
   { name: "Profil Pengguna", href: "/profil-pengguna", icon: PersonIcon, requiredRole: null },
 ];
@@ -35,22 +47,20 @@ export default function Sidebar({ isOpen, isMinimized, onClose }: SidebarProps) 
   const currentUser = authService.getCurrentUser();
 
   const handleLogout = () => {
-    // Show confirmation dialog
+    // Clear authentication data
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+    localStorage.removeItem('isAuthenticated');
+    sessionStorage.clear();
 
-      // Clear authentication data
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('userData');
-      localStorage.removeItem('isAuthenticated');
-      sessionStorage.clear();
+    // Close mobile sidebar if open
+    onClose();
 
-      // Close mobile sidebar if open
-      onClose();
+    // Redirect to login page
+    navigate('/login');
 
-      // Redirect to login page
-      navigate('/login');
-
-      // Optional: Show success message
-      console.log('User logged out successfully');
+    // Optional: Show success message
+    console.log('User logged out successfully');
   };
 
   return (
@@ -58,7 +68,7 @@ export default function Sidebar({ isOpen, isMinimized, onClose }: SidebarProps) 
       {/* Mobile backdrop */}
       {isOpen && (
         <div
-          // className="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden"
+          className="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden"
           onClick={onClose}
         />
       )}
@@ -84,7 +94,7 @@ export default function Sidebar({ isOpen, isMinimized, onClose }: SidebarProps) 
             {!isMinimized ? (
               <img src={Logo} alt="Iconnet Logo" className="h-15" />
             ) : (
-              <img src={Logo2} alt="Iconnet Logo" className="h-10 mb-5  " />
+              <img src={Logo2} alt="Iconnet Logo" className="h-10 mb-5" />
             )}
           </div>
 
@@ -99,43 +109,43 @@ export default function Sidebar({ isOpen, isMinimized, onClose }: SidebarProps) 
                   return false;
                 })
                 .map((item) => {
-                const isActive = location.pathname === item.href || 
-                  (item.href === "/manage-users" && (location.pathname === "/peserta-magang" || location.pathname === "/manage-users"));
-                return (
-                  <li key={item.name}>
-                    <Link
-                      to={item.href}
-                      className={cn(
-                        "flex items-center text-sm font-medium rounded-lg transition-all duration-200 group relative",
-                        isMinimized ? "px-3 py-3 justify-center" : "px-4 py-3",
-                        isActive
-                          ? "bg-blue-500 text-amber-50"
-                          : "text-gray-500 hover:bg-gray-100 hover:text-black"
-                      )}
-                      onClick={onClose}
-                      title={isMinimized ? item.name : ""}
-                    >
-                      <item.icon
+                  const isActive = location.pathname === item.href || 
+                    (item.href === "/manage-users" && (location.pathname === "/peserta-magang" || location.pathname === "/manage-users"));
+                  return (
+                    <li key={item.name}>
+                      <Link
+                        to={item.href}
                         className={cn(
-                          "h-5 w-5 flex-shrink-0",
-                          isMinimized ? "" : "mr-3"
+                          "flex items-center text-sm font-medium rounded-lg transition-all duration-200 group relative",
+                          isMinimized ? "px-3 py-3 justify-center" : "px-4 py-3",
+                          isActive
+                            ? "bg-blue-500 text-amber-50"
+                            : "text-gray-500 hover:bg-gray-100 hover:text-black"
                         )}
-                      />
-                      {!isMinimized && (
-                        <span className="truncate">{item.name}</span>
-                      )}
+                        onClick={onClose}
+                        title={isMinimized ? item.name : ""}
+                      >
+                        <item.icon
+                          className={cn(
+                            "h-5 w-5 flex-shrink-0",
+                            isMinimized ? "" : "mr-3"
+                          )}
+                        />
+                        {!isMinimized && (
+                          <span className="truncate">{item.name}</span>
+                        )}
 
-                      {/* Tooltip for minimized state */}
-                      {isMinimized && (
-                        <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
-                          {item.name}
-                          <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45"></div>
-                        </div>
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
+                        {/* Tooltip for minimized state */}
+                        {isMinimized && (
+                          <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
+                            {item.name}
+                            <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45"></div>
+                          </div>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
             </ul>
           </nav>
 

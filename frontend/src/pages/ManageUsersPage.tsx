@@ -204,7 +204,9 @@ export default function ManageUsersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    // PERBAIKAN: Menggunakan Flex column gap="5" sebagai container utama
+    <Flex direction="column" gap="5">
+
       {/* Error message */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
@@ -213,7 +215,8 @@ export default function ManageUsersPage() {
       )}
 
       {/* Page header */}
-      <div className="flex justify-between items-center">
+      {/* PERBAIKAN: items-end agar sejajar dengan style halaman sebelumnya */}
+      <div className="flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             Manajemen User
@@ -295,9 +298,9 @@ export default function ManageUsersPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, isActive: e.target.checked })
                   }
-                  className="w-4 h-4"
+                  className="w-4 h-4 cursor-pointer"
                 />
-                <label htmlFor="isActive" className="font-semibold text-gray-700">
+                <label htmlFor="isActive" className="font-semibold text-gray-700 cursor-pointer">
                   Aktif
                 </label>
               </div>
@@ -314,7 +317,6 @@ export default function ManageUsersPage() {
                 <Button
                   onClick={async () => {
                     await handleCreate();
-                    // Dialog will close automatically via Dialog.Close
                   }}
                   disabled={isCreating}
                 >
@@ -329,30 +331,43 @@ export default function ManageUsersPage() {
       {/* Filters */}
       <Box className="bg-white p-4 shadow-md rounded-2xl">
         <Flex direction="column" gap="4">
+          {/* Header */}
           <Flex align="center" gap="2">
             <MixerHorizontalIcon width="18" height="18" />
             <h3 className="text-lg font-semibold text-gray-900">
               Filter Users
             </h3>
           </Flex>
-          <Flex gap="4" wrap="wrap">
-            <Flex className="flex items-center w-full relative">
+
+          {/* Controls Area */}
+          <Flex gap="4" wrap="wrap" align="center" justify="between">
+
+            {/* 1. SEARCH BAR (KIRI) */}
+            <div className="flex-1 min-w-[250px]">
               <TextField.Root
                 color="indigo"
                 placeholder="Cari User…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
+                radius="large"
               />
-            </Flex>
-            <div className="flex items-center">
+            </div>
+
+            {/* 2. FILTER ROLE (KANAN) */}
+            <div className="w-auto">
               <Select.Root
                 size="2"
                 defaultValue="Semua"
                 value={roleFilter}
                 onValueChange={(value) => setRoleFilter(value)}
               >
-                <Select.Trigger color="indigo" radius="large" />
+                <Select.Trigger
+                  color="indigo"
+                  radius="large"
+                  className="min-w-[160px]"
+                  placeholder="Pilih Role"
+                />
                 <Select.Content color="indigo">
                   <Select.Item value="Semua">Semua Role</Select.Item>
                   <Select.Item value="ADMIN">Admin</Select.Item>
@@ -486,9 +501,9 @@ export default function ManageUsersPage() {
                                     isActive: e.target.checked,
                                   })
                                 }
-                                className="w-4 h-4"
+                                className="w-4 h-4 cursor-pointer"
                               />
-                              <label htmlFor="updateIsActive" className="font-semibold text-gray-700">
+                              <label htmlFor="updateIsActive" className="font-semibold text-gray-700 cursor-pointer">
                                 Aktif
                               </label>
                             </div>
@@ -572,7 +587,6 @@ export default function ManageUsersPage() {
           )}
         </Card>
       </Box>
-    </div>
+    </Flex>
   );
 }
-

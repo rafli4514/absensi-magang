@@ -29,6 +29,9 @@ import pesertaMagangService from "../services/pesertaMagangService";
 import userService, { type CreateUserRequest, type UpdateUserRequest } from "../services/userService";
 import Avatar from "../components/Avatar";
 
+// Import Halaman User
+import ManageUsersPage from "./ManageUsersPage";
+
 const StatusBadge = ({ status }: { status: PesertaMagang["status"] }) => {
   const statusConfig = {
     AKTIF: { color: "bg-success-100 text-success-800", label: "Aktif" },
@@ -50,8 +53,6 @@ const StatusBadge = ({ status }: { status: PesertaMagang["status"] }) => {
   );
 };
 
-import ManageUsersPage from "./ManageUsersPage";
-
 export default function PesertaMagang() {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(
@@ -66,6 +67,7 @@ export default function PesertaMagang() {
       setActiveTab("peserta-magang");
     }
   }, [location.pathname]);
+
   const [pesertaMagang, setPesertaMagang] = useState<PesertaMagang[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -214,9 +216,6 @@ export default function PesertaMagang() {
 
   const handleAvatarUpload = async (id: string, file: File) => {
     try {
-      console.log("Uploading avatar for ID:", id);
-      console.log("File:", file);
-
       const formData = new FormData();
       formData.append("avatar", file);
 
@@ -231,11 +230,8 @@ export default function PesertaMagang() {
         }
       );
 
-      console.log("Response status:", response.status);
-
       if (response.ok) {
         const result = await response.json();
-        console.log("Upload result:", result);
         if (result.success) {
           await fetchPesertaMagang();
           setUpdateFormData({
@@ -246,14 +242,9 @@ export default function PesertaMagang() {
           setError(result.message || "Failed to upload avatar");
         }
       } else {
-        const errorText = await response.text();
-        console.error("Upload error response:", errorText);
-        setError(
-          `Failed to upload avatar: ${response.status} ${response.statusText}`
-        );
+        setError(`Failed to upload avatar: ${response.status}`);
       }
     } catch (error) {
-      console.error("Avatar upload error:", error);
       setError("Failed to upload avatar: " + (error as Error).message);
     }
   };
@@ -283,7 +274,7 @@ export default function PesertaMagang() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
+      {/* Page header utama */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -299,716 +290,739 @@ export default function PesertaMagang() {
           <Tabs.Trigger value="users">User</Tabs.Trigger>
         </Tabs.List>
 
-        <Tabs.Content value="peserta-magang">
-      {/* Error message */}
-      {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mt-4">
-          {error}
-        </div>
-      )}
+        {/* PERBAIKAN: Menambahkan class mt-6 agar ada jarak dari Tab List ke Konten */}
+        <Tabs.Content value="peserta-magang" className="mt-6">
 
-          {/* Page header for Peserta Magang */}
-          <div className="flex justify-between items-center mt-4">
-        <div>
-              <h2 className="text-xl font-bold text-gray-900">
-                Manajemen Peserta Magang
-              </h2>
-          <p className="text-gray-600">Kelola data peserta magang/PKL</p>
-        </div>
-        <Dialog.Root>
-          <Dialog.Trigger>
-            <Button>Tambah Peserta Magang</Button>
-          </Dialog.Trigger>
+          {/* PERBAIKAN: Membungkus semua konten tab dalam Flex column dengan gap 5 agar rapi */}
+          <Flex direction="column" gap="5">
 
-          <Dialog.Content maxWidth="850px" onKeyDown={handleKeyDown}>
-            <Dialog.Title>Tambah Peserta Magang</Dialog.Title>
-            <Dialog.Description size="2" mb="4">
-              Isi data peserta magang baru dengan lengkap. Tekan <kbd className="px-2 py-1 bg-gray-100 rounded text-sm">Enter</kbd> untuk menyimpan.
-            </Dialog.Description>
-
-            <Flex direction="column" gap="6">
-              <div className="w-full">
-                <label className="block mb-2 font-semibold text-gray-700">
-                  Nama Lengkap
-                </label>
-                <TextField.Root
-                  placeholder="Masukkan nama lengkap"
-                  value={formData.nama}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nama: e.target.value })
-                  }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
+            {/* Error message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+                {error}
               </div>
-              <div className="w-full">
-                <label className="block mb-2 font-semibold text-gray-700">
-                  Username
-                </label>
-                <TextField.Root
-                  placeholder="Masukkan Username"
-                  value={formData.username}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
-                  }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
+            )}
+
+            {/* Sub-Header + Tombol Tambah */}
+            <div className="flex justify-between items-end">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Manajemen Peserta Magang
+                </h2>
+                <p className="text-gray-600">Kelola data peserta magang/PKL</p>
               </div>
+              <Dialog.Root>
+                <Dialog.Trigger>
+                  <Button><PlusIcon width="16" height="16" />Tambah Peserta Magang</Button>
+                </Dialog.Trigger>
 
-              {/* ID Peserta Magang (NISN/NIM) */}
-              <div className="w-full">
-                <label className="block mb-2 font-semibold text-gray-700">
-                  ID Peserta Magang (NISN/NIM)
-                </label>
-                <TextField.Root
-                  placeholder="Masukkan NISN/NIM"
-                  value={formData.id_peserta_magang}
-                  onChange={(e) =>
-                    setFormData({ ...formData, id_peserta_magang: e.target.value })
-                  }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  ID unik peserta magang (NISN untuk SMA/SMK, NIM untuk Mahasiswa)
-                </p>
-              </div>
+                <Dialog.Content maxWidth="850px" onKeyDown={handleKeyDown}>
+                  <Dialog.Title>Tambah Peserta Magang</Dialog.Title>
+                  <Dialog.Description size="2" mb="4">
+                    Isi data peserta magang baru dengan lengkap. Tekan <kbd className="px-2 py-1 bg-gray-100 rounded text-sm">Enter</kbd> untuk menyimpan.
+                  </Dialog.Description>
 
-              {/* Third Row: Nomor HP and Status */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="w-full">
-                  <label className="block mb-2 font-semibold text-gray-700">
-                    Nomor HP
-                  </label>
-                  <TextField.Root
-                    placeholder="Masukkan Nomor HP"
-                    value={formData.nomorHp}
-                    onChange={(e) =>
-                      setFormData({ ...formData, nomorHp: e.target.value })
-                    }
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-                <div className="w-full sm:w-1/2">
-                  <label className="block mb-2 font-semibold text-gray-700">
-                    Status
-                  </label>
-                  <Select.Root
-                    size="2"
-                    value={formData.status}
-                    onValueChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        status: value as PesertaMagang["status"],
-                      })
-                    }
-                  >
-                    <Select.Trigger
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      color="indigo"
-                      radius="large"
-                    />
-                    <Select.Content color="indigo">
-                      <Select.Item value="AKTIF">Aktif</Select.Item>
-                      <Select.Item value="NONAKTIF">Tidak Aktif</Select.Item>
-                      <Select.Item value="SELESAI">Selesai</Select.Item>
-                    </Select.Content>
-                  </Select.Root>
-                </div>
-              </div>
-
-              {/* Second Row: Password */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="w-full">
-                  <label className="block mb-2 font-semibold text-gray-700">
-                    Password Awal
-                  </label>
-                  <TextField.Root
-                    type="password"
-                    placeholder="Masukkan Password Awal"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                  <p className="text-sm text-gray-500 mt-1">
-                    Password ini akan digunakan peserta magang untuk login pertama kali
-                  </p>
-                </div>
-              </div>
-
-              {/* Third Row: Divisi and Instansi */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="w-full sm:w-1/2">
-                  <label className="block mb-2 font-semibold text-gray-700">
-                    Divisi
-                  </label>
-                  <TextField.Root
-                    placeholder="Masukkan Divisi"
-                    value={formData.divisi}
-                    onChange={(e) =>
-                      setFormData({ ...formData, divisi: e.target.value })
-                    }
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-                <div className="w-full sm:w-1/2">
-                  <label className="block mb-2 font-semibold text-gray-700">
-                    Instansi
-                  </label>
-                  <TextField.Root
-                    placeholder="Masukkan Instansi"
-                    value={formData.instansi}
-                    onChange={(e) =>
-                      setFormData({ ...formData, instansi: e.target.value })
-                    }
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-
-              {/* ID Instansi */}
-              <div className="w-full">
-                <label className="block mb-2 font-semibold text-gray-700">
-                  ID Peserta/Student ID
-                </label>
-                <TextField.Root
-                  placeholder="Masukkan ID Peserta"
-                  value={formData.id_instansi}
-                  onChange={(e) =>
-                    setFormData({ ...formData, id_instansi: e.target.value })
-                  }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  ID unik peserta magang (NIM/NIS/ID lainnya)
-                </p>
-              </div>
-
-              {/* Fourth Row: Tanggal Selesai and Status */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="w-full sm:w-1/2">
-                  <label className="block mb-2 font-semibold text-gray-700">
-                    Tanggal Mulai
-                  </label>
-                  <TextField.Root
-                    type="date"
-                    value={formData.tanggalMulai}
-                    onChange={(e) =>
-                      setFormData({ ...formData, tanggalMulai: e.target.value })
-                    }
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-                <div className="w-full sm:w-1/2">
-                  <label className="block mb-2 font-semibold text-gray-700">
-                    Tanggal Selesai
-                  </label>
-                  <TextField.Root
-                    type="date"
-                    value={formData.tanggalSelesai}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        tanggalSelesai: e.target.value,
-                      })
-                    }
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-            </Flex>
-
-            {/* Avatar Upload - placed at bottom */}
-            <div className="mt-4 w-full">
-              <label className="block mb-2 font-semibold text-gray-700">
-                Avatar
-              </label>
-              <div className="w-full border-2 border-dashed border-gray-300 rounded-xl p-4">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="block w-full text-base file:mr-4 file:py-3 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                />
-                <p className="mt-2 text-xs text-gray-500">
-                  PNG, JPG, atau JPEG.
-                </p>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="mt-6 flex justify-end gap-4">
-              <Dialog.Close>
-                <Button
-                  variant="soft"
-                  color="gray"
-                  className="px-6 py-2 rounded-lg"
-                >
-                  Batal
-                </Button>
-              </Dialog.Close>
-              <Dialog.Close>
-                <Button
-                  className="px-6 py-2 bg-indigo-600 text-white rounded-lg"
-                  onClick={handleCreate}
-                  disabled={isCreating}
-                >
-                  {isCreating ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Menyimpan...
-                    </div>
-                  ) : (
-                    "Simpan"
-                  )}
-                </Button>
-              </Dialog.Close>
-            </div>
-          </Dialog.Content>
-        </Dialog.Root>
-      </div>
-
-      {/* Filters */}
-      <Box className="bg-white p-4 shadow-md rounded-2xl">
-        <Flex direction="column" gap="4">
-          <Flex align="center" gap="2">
-            <MixerHorizontalIcon width="18" height="18" />
-            <h3 className="text-lg font-semibold text-gray-900">
-              Filter Peserta Magang
-            </h3>
-          </Flex>
-          <Flex gap="4" wrap="wrap">
-            <Flex className="flex items-center w-full relative">
-              <TextField.Root
-                color="indigo"
-                placeholder="Cari Peserta Magang…"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
-              />
-            </Flex>
-            <div className="flex items-center">
-              <Select.Root
-                size="2"
-                defaultValue="Semua"
-                value={statusFilter}
-                onValueChange={(value) => setStatusFilter(value)}
-              >
-                <Select.Trigger color="indigo" radius="large" />
-                <Select.Content color="indigo">
-                  <Select.Item value="Semua">Semua Status</Select.Item>
-                  <Select.Item value="AKTIF">Aktif</Select.Item>
-                  <Select.Item value="NONAKTIF">Tidak Aktif</Select.Item>
-                  <Select.Item value="SELESAI">Selesai</Select.Item>
-                </Select.Content>
-              </Select.Root>
-            </div>
-          </Flex>
-        </Flex>
-      </Box>
-
-      <Box>
-        <Card>
-          <Table.Root variant="ghost">
-            <Table.Header>
-              <Table.Row>
-                <Table.ColumnHeaderCell>Nama</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>ID Peserta</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>Instansi</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>Nomor HP</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>Periode</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>Aksi</Table.ColumnHeaderCell>
-              </Table.Row>
-            </Table.Header>
-
-            <Table.Body>
-              {filteredPesertaMagang.map((item) => (
-                <Table.Row key={item.id} className="hover:bg-gray-50">
-                  <Table.Cell>
-                    <div className="flex items-center">
-                      <Avatar
-                        src={item.avatar}
-                        alt={item.nama}
-                        name={item.nama}
-                        size="lg"
-                        showBorder={true}
-                        showHover={true}
-                        className="border-gray-200"
+                  <Flex direction="column" gap="6">
+                    <div className="w-full">
+                      <label className="block mb-2 font-semibold text-gray-700">
+                        Nama Lengkap
+                      </label>
+                      <TextField.Root
+                        placeholder="Masukkan nama lengkap"
+                        value={formData.nama}
+                        onChange={(e) =>
+                          setFormData({ ...formData, nama: e.target.value })
+                        }
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {item.nama}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {item.username}
-                        </div>
+                    </div>
+                    <div className="w-full">
+                      <label className="block mb-2 font-semibold text-gray-700">
+                        Username
+                      </label>
+                      <TextField.Root
+                        placeholder="Masukkan Username"
+                        value={formData.username}
+                        onChange={(e) =>
+                          setFormData({ ...formData, username: e.target.value })
+                        }
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    {/* ID Peserta Magang (NISN/NIM) */}
+                    <div className="w-full">
+                      <label className="block mb-2 font-semibold text-gray-700">
+                        ID Peserta Magang (NISN/NIM)
+                      </label>
+                      <TextField.Root
+                        placeholder="Masukkan NISN/NIM"
+                        value={formData.id_peserta_magang}
+                        onChange={(e) =>
+                          setFormData({ ...formData, id_peserta_magang: e.target.value })
+                        }
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <p className="text-sm text-gray-500 mt-1">
+                        ID unik peserta magang (NISN untuk SMA/SMK, NIM untuk Mahasiswa)
+                      </p>
+                    </div>
+
+                    {/* Third Row: Nomor HP and Status */}
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="w-full">
+                        <label className="block mb-2 font-semibold text-gray-700">
+                          Nomor HP
+                        </label>
+                        <TextField.Root
+                          placeholder="Masukkan Nomor HP"
+                          value={formData.nomorHp}
+                          onChange={(e) =>
+                            setFormData({ ...formData, nomorHp: e.target.value })
+                          }
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div className="w-full sm:w-1/2">
+                        <label className="block mb-2 font-semibold text-gray-700">
+                          Status
+                        </label>
+                        <Select.Root
+                          size="2"
+                          value={formData.status}
+                          onValueChange={(value) =>
+                            setFormData({
+                              ...formData,
+                              status: value as PesertaMagang["status"],
+                            })
+                          }
+                        >
+                          <Select.Trigger
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            color="indigo"
+                            radius="large"
+                          />
+                          <Select.Content color="indigo">
+                            <Select.Item value="AKTIF">Aktif</Select.Item>
+                            <Select.Item value="NONAKTIF">Tidak Aktif</Select.Item>
+                            <Select.Item value="SELESAI">Selesai</Select.Item>
+                          </Select.Content>
+                        </Select.Root>
                       </div>
                     </div>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <div className="text-sm text-gray-500">{item.id_instansi || '-'}</div>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <div className="text-sm text-gray-900">{item.instansi}</div>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <div className="text-sm text-gray-900">{item.nomorHp}</div>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <div className="text-sm text-gray-900">
-                      {new Date(item.tanggalMulai).toLocaleDateString("id-ID")}
+
+                    {/* Second Row: Password */}
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="w-full">
+                        <label className="block mb-2 font-semibold text-gray-700">
+                          Password Awal
+                        </label>
+                        <TextField.Root
+                          type="password"
+                          placeholder="Masukkan Password Awal"
+                          value={formData.password}
+                          onChange={(e) =>
+                            setFormData({ ...formData, password: e.target.value })
+                          }
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <p className="text-sm text-gray-500 mt-1">
+                          Password ini akan digunakan peserta magang untuk login pertama kali
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-900">
-                      s/d{" "}
-                      {new Date(item.tanggalSelesai).toLocaleDateString(
-                        "id-ID"
-                      )}
+
+                    {/* Third Row: Divisi and Instansi */}
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="w-full sm:w-1/2">
+                        <label className="block mb-2 font-semibold text-gray-700">
+                          Divisi
+                        </label>
+                        <TextField.Root
+                          placeholder="Masukkan Divisi"
+                          value={formData.divisi}
+                          onChange={(e) =>
+                            setFormData({ ...formData, divisi: e.target.value })
+                          }
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div className="w-full sm:w-1/2">
+                        <label className="block mb-2 font-semibold text-gray-700">
+                          Instansi
+                        </label>
+                        <TextField.Root
+                          placeholder="Masukkan Instansi"
+                          value={formData.instansi}
+                          onChange={(e) =>
+                            setFormData({ ...formData, instansi: e.target.value })
+                          }
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
                     </div>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <StatusBadge status={item.status} />
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Flex align="center" gap="2">
-                      {/* Detail User */}
-                      <Link to={`/profil-peserta/${item.id}`}>
-                        <IconButton color="blue" variant="outline" highContrast>
-                          <EyeOpenIcon width="18" height="18" />
-                        </IconButton>
-                      </Link>
 
-                      {/* Edit User */}
-                      <Dialog.Root>
-                        {/* Dialog Trigger  */}
-                        <Dialog.Trigger>
-                          <IconButton
-                            color="blue"
-                            variant="outline"
-                            onClick={() => initializeUpdateForm(item)}
-                          >
-                            <Pencil2Icon width="18" height="18" />
-                          </IconButton>
-                        </Dialog.Trigger>
-                        {/* Dialog Content */}
-                        <Dialog.Content maxWidth="850px" onKeyDown={handleUpdateKeyDown}>
-                          <Dialog.Title>Edit Peserta Magang</Dialog.Title>
-                          <Dialog.Description size="2" mb="4">
-                            Edit data peserta magang dengan lengkap. Tekan <kbd className="px-2 py-1 bg-gray-100 rounded text-sm">Enter</kbd> untuk menyimpan.
-                          </Dialog.Description>
-                          {/* Form Fields*/}
-                          <Flex direction="column" gap="6">
-                            {/* row 1: Nama Lengkap */}
-                            <div className="w-full">
-                              <label className="block mb-2 font-semibold text-gray-700">
-                                Nama Lengkap
-                              </label>
-                              <TextField.Root
-                                placeholder="Masukkan nama lengkap"
-                                value={updateFormData.nama || ""}
-                                onChange={(e) =>
-                                  setUpdateFormData({
-                                    ...updateFormData,
-                                    nama: e.target.value,
-                                  })
-                                }
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              />
-                            </div>
-                            {/* row 2: Username */}
-                            <div className="w-full">
-                              <label className="block mb-2 font-semibold text-gray-700">
-                                Username
-                              </label>
-                              <TextField.Root
-                                placeholder="Masukkan Username"
-                                value={updateFormData.username || ""}
-                                onChange={(e) =>
-                                  setUpdateFormData({
-                                    ...updateFormData,
-                                    username: e.target.value,
-                                  })
-                                }
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              />
-                            </div>
+                    {/* ID Instansi */}
+                    <div className="w-full">
+                      <label className="block mb-2 font-semibold text-gray-700">
+                        ID Peserta/Student ID
+                      </label>
+                      <TextField.Root
+                        placeholder="Masukkan ID Peserta"
+                        value={formData.id_instansi}
+                        onChange={(e) =>
+                          setFormData({ ...formData, id_instansi: e.target.value })
+                        }
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <p className="text-sm text-gray-500 mt-1">
+                        ID unik peserta magang (NIM/NIS/ID lainnya)
+                      </p>
+                    </div>
 
-                            {/* ID Peserta Magang (NISN/NIM) */}
-                            <div className="w-full">
-                              <label className="block mb-2 font-semibold text-gray-700">
-                                ID Peserta Magang (NISN/NIM)
-                              </label>
-                              <TextField.Root
-                                placeholder="Masukkan NISN/NIM"
-                                value={updateFormData.id_peserta_magang || ""}
-                                onChange={(e) =>
-                                  setUpdateFormData({
-                                    ...updateFormData,
-                                    id_peserta_magang: e.target.value,
-                                  })
-                                }
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              />
-                              <p className="text-sm text-gray-500 mt-1">
-                                ID unik peserta magang (NISN untuk SMA/SMK, NIM untuk Mahasiswa)
-                              </p>
-                            </div>
+                    {/* Fourth Row: Tanggal Selesai and Status */}
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="w-full sm:w-1/2">
+                        <label className="block mb-2 font-semibold text-gray-700">
+                          Tanggal Mulai
+                        </label>
+                        <TextField.Root
+                          type="date"
+                          value={formData.tanggalMulai}
+                          onChange={(e) =>
+                            setFormData({ ...formData, tanggalMulai: e.target.value })
+                          }
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div className="w-full sm:w-1/2">
+                        <label className="block mb-2 font-semibold text-gray-700">
+                          Tanggal Selesai
+                        </label>
+                        <TextField.Root
+                          type="date"
+                          value={formData.tanggalSelesai}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              tanggalSelesai: e.target.value,
+                            })
+                          }
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+                    </div>
+                  </Flex>
 
-                            {/* row 3: Nomor HP and Status */}
-                            <div className="flex flex-col sm:flex-row gap-4">
-                              <div className="w-full">
-                                <label className="block mb-2 font-semibold text-gray-700">
-                                  Nomor HP
-                                </label>
-                                <TextField.Root
-                                  placeholder="Masukkan Nomor HP"
-                                  value={updateFormData.nomorHp || ""}
-                                  onChange={(e) =>
-                                    setUpdateFormData({
-                                      ...updateFormData,
-                                      nomorHp: e.target.value,
-                                    })
-                                  }
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block mb-2 font-semibold text-gray-700">
-                                  Status
-                                </label>
-                                <Select.Root
-                                  size="2"
-                                  value={updateFormData.status || "AKTIF"}
-                                  onValueChange={(value) =>
-                                    setUpdateFormData({
-                                      ...updateFormData,
-                                      status: value as PesertaMagang["status"],
-                                    })
-                                  }
-                                >
-                                  <Select.Trigger
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    color="indigo"
-                                    // variant="soft"
-                                    radius="large"
-                                  />
-                                  <Select.Content color="indigo">
-                                    <Select.Item value="Aktif">
-                                      Aktif
-                                    </Select.Item>
-                                    <Select.Item value="Nonaktif">
-                                      Tidak Aktif
-                                    </Select.Item>
-                                    <Select.Item value="Selesai">
-                                      Selesai
-                                    </Select.Item>
-                                  </Select.Content>
-                                </Select.Root>
-                              </div>
-                            </div>
+                  {/* Avatar Upload - placed at bottom */}
+                  <div className="mt-4 w-full">
+                    <label className="block mb-2 font-semibold text-gray-700">
+                      Avatar
+                    </label>
+                    <div className="w-full border-2 border-dashed border-gray-300 rounded-xl p-4">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="block w-full text-base file:mr-4 file:py-3 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                      />
+                      <p className="mt-2 text-xs text-gray-500">
+                        PNG, JPG, atau JPEG.
+                      </p>
+                    </div>
+                  </div>
 
-                            {/* row 4: Divisi and Instansi */}
-                            <div className="flex flex-col sm:flex-row gap-4">
-                              <div className="w-full sm:w-1/2">
-                                <label className="block mb-2 font-semibold text-gray-700">
-                                  Divisi
-                                </label>
-                                <TextField.Root
-                                  placeholder="Masukkan Divisi"
-                                  value={updateFormData.divisi || ""}
-                                  onChange={(e) =>
-                                    setUpdateFormData({
-                                      ...updateFormData,
-                                      divisi: e.target.value,
-                                    })
-                                  }
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                />
-                              </div>
-                              <div className="w-full sm:w-1/2">
-                                <label className="block mb-2 font-semibold text-gray-700">
-                                  Instansi
-                                </label>
-                                <TextField.Root
-                                  placeholder="Masukkan Instansi"
-                                  value={updateFormData.instansi || ""}
-                                  onChange={(e) =>
-                                    setUpdateFormData({
-                                      ...updateFormData,
-                                      instansi: e.target.value,
-                                    })
-                                  }
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                />
-                              </div>
-                            </div>
-
-                            {/* ID Instansi */}
-                            <div className="w-full">
-                              <label className="block mb-2 font-semibold text-gray-700">
-                                ID Peserta/Student ID
-                              </label>
-                              <TextField.Root
-                                placeholder="Masukkan ID Peserta"
-                                value={updateFormData.id_instansi || ""}
-                                onChange={(e) =>
-                                  setUpdateFormData({
-                                    ...updateFormData,
-                                    id_instansi: e.target.value,
-                                  })
-                                }
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              />
-                            </div>
-
-                            {/* row 5: Tanggal Mulai dan Tanggal Selesai */}
-                            <div className="flex flex-col sm:flex-row gap-4">
-                              <div className="w-full sm:w-1/2">
-                                <label className="block mb-2 font-semibold text-gray-700">
-                                  Tanggal Mulai
-                                </label>
-                                <TextField.Root
-                                  type="date"
-                                  value={updateFormData.tanggalMulai || ""}
-                                  onChange={(e) =>
-                                    setUpdateFormData({
-                                      ...updateFormData,
-                                      tanggalMulai: e.target.value,
-                                    })
-                                  }
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                />
-                              </div>
-                              <div className="w-full sm:w-1/2">
-                                <label className="block mb-2 font-semibold text-gray-700">
-                                  Tanggal Selesai
-                                </label>
-                                <TextField.Root
-                                  type="date"
-                                  value={updateFormData.tanggalSelesai || ""}
-                                  onChange={(e) =>
-                                    setUpdateFormData({
-                                      ...updateFormData,
-                                      tanggalSelesai: e.target.value,
-                                    })
-                                  }
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                />
-                              </div>
-                            </div>
-                          </Flex>
-
-                          {/* Avatar Upload - placed at bottom */}
-                          <div className="mt-2 w-full">
-                            <label className="block mb-2 font-semibold text-gray-700">
-                              Avatar
-                            </label>
-                            <div className="w-full border-2 border-dashed border-gray-300 rounded-xl p-4">
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    handleAvatarUpload(item.id, file);
-                                  }
-                                }}
-                                className="block w-full text-base file:mr-4 file:py-3 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                              />
-                              <p className="mt-2 text-xs text-gray-500">
-                                PNG, JPG, atau JPEG.
-                              </p>
-                            </div>
+                  {/* Action Buttons */}
+                  <div className="mt-6 flex justify-end gap-4">
+                    <Dialog.Close>
+                      <Button
+                        variant="soft"
+                        color="gray"
+                        className="px-6 py-2 rounded-lg"
+                      >
+                        Batal
+                      </Button>
+                    </Dialog.Close>
+                    <Dialog.Close>
+                      <Button
+                        className="px-6 py-2 bg-indigo-600 text-white rounded-lg"
+                        onClick={handleCreate}
+                        disabled={isCreating}
+                      >
+                        {isCreating ? (
+                          <div className="flex items-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Menyimpan...
                           </div>
+                        ) : (
+                          "Simpan"
+                        )}
+                      </Button>
+                    </Dialog.Close>
+                  </div>
+                </Dialog.Content>
+              </Dialog.Root>
+            </div>
 
-                          {/* Action Buttons */}
-                          <div className="mt-6 flex justify-end gap-4">
-                            {/* Batal */}
-                            <Dialog.Close>
-                              <Button
-                                variant="soft"
-                                color="gray"
-                                className="px-6 py-2 rounded-lg"
-                              >
-                                Batal
-                              </Button>
-                            </Dialog.Close>
-                            {/* Simpan */}
-                            <Dialog.Close>
-                              <Button
-                                className="px-6 py-2 bg-indigo-600 text-white rounded-lg"
-                                onClick={() => handleUpdate(item.id)}
-                                disabled={isUpdating === item.id}
-                              >
-                                {isUpdating === item.id ? (
-                                  <div className="flex items-center">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                    Menyimpan...
-                                  </div>
-                                ) : (
-                                  "Simpan"
-                                )}
-                              </Button>
-                            </Dialog.Close>
-                          </div>
-                        </Dialog.Content>
-                      </Dialog.Root>
+            {/* Filters */}
+            <Box className="bg-white p-4 shadow-md rounded-2xl">
+              <Flex direction="column" gap="4">
+                {/* Header */}
+                <Flex align="center" gap="2">
+                  <MixerHorizontalIcon width="18" height="18" />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Filter Peserta Magang
+                  </h3>
+                </Flex>
 
-                      {/* Delete User */}
-                      <AlertDialog.Root>
-                        {/* AlertDialog.Trigger */}
-                        <AlertDialog.Trigger>
-                          {/* icon button */}
-                          <IconButton color="red" variant="outline">
-                            <TrashIcon width="18" height="18" color="red" />
-                          </IconButton>
-                        </AlertDialog.Trigger>
-                        <AlertDialog.Content>
-                          <AlertDialog.Title>Hapus Pengguna</AlertDialog.Title>
-                          <AlertDialog.Description>
-                            Apakah Anda yakin ingin menghapus peserta magang{" "}
-                            <strong>{item.nama}</strong>?
-                          </AlertDialog.Description>
-                          <Flex gap="3" mt="4" justify="end">
-                            <AlertDialog.Cancel>
-                              <Button variant="soft" color="gray">
-                                Batal
-                              </Button>
-                            </AlertDialog.Cancel>
-                            <AlertDialog.Action>
-                              <Button
-                                variant="solid"
-                                color="red"
-                                onClick={() => handleDelete(item.id)}
-                              >
-                                Hapus
-                              </Button>
-                            </AlertDialog.Action>
-                          </Flex>
-                        </AlertDialog.Content>
-                      </AlertDialog.Root>
-                    </Flex>
-                  </Table.Cell>
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table.Root>
-          {filteredPesertaMagang.length === 0 && (
-            <Box className="text-center py-12">
-              <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <Flex direction="column" justify="center">
-                <Text size="3" color="gray" weight="medium">
-                  Tidak ada data Peserta Magang yang ditemukan
-                </Text>
-                <Text size="3" color="gray" mt="2">
-                  {searchTerm
-                    ? "Coba ubah kata kunci pencarian"
-                    : "Belum ada riwayat Peserta Magang"}
-                </Text>
+                {/* Controls Area */}
+                {/* justify="between" memisahkan Search (Kiri) dan Filter (Kanan) */}
+                <Flex gap="4" wrap="wrap" align="center" justify="between">
+
+                  {/* 1. SEARCH BAR (KIRI) */}
+                  {/* flex-1 agar mengisi ruang sisa */}
+                  <div className="flex-1 min-w-[250px]">
+                    <TextField.Root
+                      color="indigo"
+                      placeholder="Cari Peserta Magang…"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full"
+                      radius="large"
+                    />
+                  </div>
+
+                  {/* 2. FILTER STATUS (KANAN) */}
+                  <div className="w-auto">
+                    <Select.Root
+                      size="2"
+                      defaultValue="Semua"
+                      value={statusFilter}
+                      onValueChange={(value) => setStatusFilter(value)}
+                    >
+                      <Select.Trigger
+                        color="indigo"
+                        radius="large"
+                        className="min-w-[150px]"
+                        placeholder="Status"
+                      />
+                      <Select.Content color="indigo">
+                        <Select.Item value="Semua">Semua Status</Select.Item>
+                        <Select.Item value="AKTIF">Aktif</Select.Item>
+                        <Select.Item value="NONAKTIF">Tidak Aktif</Select.Item>
+                        <Select.Item value="SELESAI">Selesai</Select.Item>
+                      </Select.Content>
+                    </Select.Root>
+                  </div>
+
+                </Flex>
               </Flex>
             </Box>
-          )}
-        </Card>
-      </Box>
+
+            {/* Table */}
+            <Box>
+              <Card>
+                <Table.Root variant="ghost">
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeaderCell>Nama</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>ID Peserta</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Instansi</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Nomor HP</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Periode</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Aksi</Table.ColumnHeaderCell>
+                    </Table.Row>
+                  </Table.Header>
+
+                  <Table.Body>
+                    {filteredPesertaMagang.map((item) => (
+                      <Table.Row key={item.id} className="hover:bg-gray-50">
+                        <Table.Cell>
+                          <div className="flex items-center">
+                            <Avatar
+                              src={item.avatar}
+                              alt={item.nama}
+                              name={item.nama}
+                              size="lg"
+                              showBorder={true}
+                              showHover={true}
+                              className="border-gray-200"
+                            />
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {item.nama}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {item.username}
+                              </div>
+                            </div>
+                          </div>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <div className="text-sm text-gray-500">{item.id_instansi || '-'}</div>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <div className="text-sm text-gray-900">{item.instansi}</div>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <div className="text-sm text-gray-900">{item.nomorHp}</div>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <div className="text-sm text-gray-900">
+                            {new Date(item.tanggalMulai).toLocaleDateString("id-ID")}
+                          </div>
+                          <div className="text-sm text-gray-900">
+                            s/d{" "}
+                            {new Date(item.tanggalSelesai).toLocaleDateString(
+                              "id-ID"
+                            )}
+                          </div>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <StatusBadge status={item.status} />
+                        </Table.Cell>
+                        <Table.Cell>
+                          <Flex align="center" gap="2">
+                            {/* Detail User */}
+                            <Link to={`/profil-peserta/${item.id}`}>
+                              <IconButton color="blue" variant="outline" highContrast>
+                                <EyeOpenIcon width="18" height="18" />
+                              </IconButton>
+                            </Link>
+
+                            {/* Edit User */}
+                            <Dialog.Root>
+                              {/* Dialog Trigger  */}
+                              <Dialog.Trigger>
+                                <IconButton
+                                  color="blue"
+                                  variant="outline"
+                                  onClick={() => initializeUpdateForm(item)}
+                                >
+                                  <Pencil2Icon width="18" height="18" />
+                                </IconButton>
+                              </Dialog.Trigger>
+                              {/* Dialog Content */}
+                              <Dialog.Content maxWidth="850px" onKeyDown={handleUpdateKeyDown}>
+                                <Dialog.Title>Edit Peserta Magang</Dialog.Title>
+                                <Dialog.Description size="2" mb="4">
+                                  Edit data peserta magang dengan lengkap. Tekan <kbd className="px-2 py-1 bg-gray-100 rounded text-sm">Enter</kbd> untuk menyimpan.
+                                </Dialog.Description>
+                                {/* Form Fields*/}
+                                <Flex direction="column" gap="6">
+                                  {/* row 1: Nama Lengkap */}
+                                  <div className="w-full">
+                                    <label className="block mb-2 font-semibold text-gray-700">
+                                      Nama Lengkap
+                                    </label>
+                                    <TextField.Root
+                                      placeholder="Masukkan nama lengkap"
+                                      value={updateFormData.nama || ""}
+                                      onChange={(e) =>
+                                        setUpdateFormData({
+                                          ...updateFormData,
+                                          nama: e.target.value,
+                                        })
+                                      }
+                                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                  </div>
+                                  {/* row 2: Username */}
+                                  <div className="w-full">
+                                    <label className="block mb-2 font-semibold text-gray-700">
+                                      Username
+                                    </label>
+                                    <TextField.Root
+                                      placeholder="Masukkan Username"
+                                      value={updateFormData.username || ""}
+                                      onChange={(e) =>
+                                        setUpdateFormData({
+                                          ...updateFormData,
+                                          username: e.target.value,
+                                        })
+                                      }
+                                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                  </div>
+
+                                  {/* ID Peserta Magang (NISN/NIM) */}
+                                  <div className="w-full">
+                                    <label className="block mb-2 font-semibold text-gray-700">
+                                      ID Peserta Magang (NISN/NIM)
+                                    </label>
+                                    <TextField.Root
+                                      placeholder="Masukkan NISN/NIM"
+                                      value={updateFormData.id_peserta_magang || ""}
+                                      onChange={(e) =>
+                                        setUpdateFormData({
+                                          ...updateFormData,
+                                          id_peserta_magang: e.target.value,
+                                        })
+                                      }
+                                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                    <p className="text-sm text-gray-500 mt-1">
+                                      ID unik peserta magang (NISN untuk SMA/SMK, NIM untuk Mahasiswa)
+                                    </p>
+                                  </div>
+
+                                  {/* row 3: Nomor HP and Status */}
+                                  <div className="flex flex-col sm:flex-row gap-4">
+                                    <div className="w-full">
+                                      <label className="block mb-2 font-semibold text-gray-700">
+                                        Nomor HP
+                                      </label>
+                                      <TextField.Root
+                                        placeholder="Masukkan Nomor HP"
+                                        value={updateFormData.nomorHp || ""}
+                                        onChange={(e) =>
+                                          setUpdateFormData({
+                                            ...updateFormData,
+                                            nomorHp: e.target.value,
+                                          })
+                                        }
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block mb-2 font-semibold text-gray-700">
+                                        Status
+                                      </label>
+                                      <Select.Root
+                                        size="2"
+                                        value={updateFormData.status || "AKTIF"}
+                                        onValueChange={(value) =>
+                                          setUpdateFormData({
+                                            ...updateFormData,
+                                            status: value as PesertaMagang["status"],
+                                          })
+                                        }
+                                      >
+                                        <Select.Trigger
+                                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                          color="indigo"
+                                          // variant="soft"
+                                          radius="large"
+                                        />
+                                        <Select.Content color="indigo">
+                                          <Select.Item value="Aktif">
+                                            Aktif
+                                          </Select.Item>
+                                          <Select.Item value="Nonaktif">
+                                            Tidak Aktif
+                                          </Select.Item>
+                                          <Select.Item value="Selesai">
+                                            Selesai
+                                          </Select.Item>
+                                        </Select.Content>
+                                      </Select.Root>
+                                    </div>
+                                  </div>
+
+                                  {/* row 4: Divisi and Instansi */}
+                                  <div className="flex flex-col sm:flex-row gap-4">
+                                    <div className="w-full sm:w-1/2">
+                                      <label className="block mb-2 font-semibold text-gray-700">
+                                        Divisi
+                                      </label>
+                                      <TextField.Root
+                                        placeholder="Masukkan Divisi"
+                                        value={updateFormData.divisi || ""}
+                                        onChange={(e) =>
+                                          setUpdateFormData({
+                                            ...updateFormData,
+                                            divisi: e.target.value,
+                                          })
+                                        }
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                      />
+                                    </div>
+                                    <div className="w-full sm:w-1/2">
+                                      <label className="block mb-2 font-semibold text-gray-700">
+                                        Instansi
+                                      </label>
+                                      <TextField.Root
+                                        placeholder="Masukkan Instansi"
+                                        value={updateFormData.instansi || ""}
+                                        onChange={(e) =>
+                                          setUpdateFormData({
+                                            ...updateFormData,
+                                            instansi: e.target.value,
+                                          })
+                                        }
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* ID Instansi */}
+                                  <div className="w-full">
+                                    <label className="block mb-2 font-semibold text-gray-700">
+                                      ID Peserta/Student ID
+                                    </label>
+                                    <TextField.Root
+                                      placeholder="Masukkan ID Peserta"
+                                      value={updateFormData.id_instansi || ""}
+                                      onChange={(e) =>
+                                        setUpdateFormData({
+                                          ...updateFormData,
+                                          id_instansi: e.target.value,
+                                        })
+                                      }
+                                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                  </div>
+
+                                  {/* row 5: Tanggal Mulai dan Tanggal Selesai */}
+                                  <div className="flex flex-col sm:flex-row gap-4">
+                                    <div className="w-full sm:w-1/2">
+                                      <label className="block mb-2 font-semibold text-gray-700">
+                                        Tanggal Mulai
+                                      </label>
+                                      <TextField.Root
+                                        type="date"
+                                        value={updateFormData.tanggalMulai || ""}
+                                        onChange={(e) =>
+                                          setUpdateFormData({
+                                            ...updateFormData,
+                                            tanggalMulai: e.target.value,
+                                          })
+                                        }
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                      />
+                                    </div>
+                                    <div className="w-full sm:w-1/2">
+                                      <label className="block mb-2 font-semibold text-gray-700">
+                                        Tanggal Selesai
+                                      </label>
+                                      <TextField.Root
+                                        type="date"
+                                        value={updateFormData.tanggalSelesai || ""}
+                                        onChange={(e) =>
+                                          setUpdateFormData({
+                                            ...updateFormData,
+                                            tanggalSelesai: e.target.value,
+                                          })
+                                        }
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                      />
+                                    </div>
+                                  </div>
+                                </Flex>
+
+                                {/* Avatar Upload - placed at bottom */}
+                                <div className="mt-2 w-full">
+                                  <label className="block mb-2 font-semibold text-gray-700">
+                                    Avatar
+                                  </label>
+                                  <div className="w-full border-2 border-dashed border-gray-300 rounded-xl p-4">
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          handleAvatarUpload(item.id, file);
+                                        }
+                                      }}
+                                      className="block w-full text-base file:mr-4 file:py-3 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                    />
+                                    <p className="mt-2 text-xs text-gray-500">
+                                      PNG, JPG, atau JPEG.
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="mt-6 flex justify-end gap-4">
+                                  {/* Batal */}
+                                  <Dialog.Close>
+                                    <Button
+                                      variant="soft"
+                                      color="gray"
+                                      className="px-6 py-2 rounded-lg"
+                                    >
+                                      Batal
+                                    </Button>
+                                  </Dialog.Close>
+                                  {/* Simpan */}
+                                  <Dialog.Close>
+                                    <Button
+                                      className="px-6 py-2 bg-indigo-600 text-white rounded-lg"
+                                      onClick={() => handleUpdate(item.id)}
+                                      disabled={isUpdating === item.id}
+                                    >
+                                      {isUpdating === item.id ? (
+                                        <div className="flex items-center">
+                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                          Menyimpan...
+                                        </div>
+                                      ) : (
+                                        "Simpan"
+                                      )}
+                                    </Button>
+                                  </Dialog.Close>
+                                </div>
+                              </Dialog.Content>
+                            </Dialog.Root>
+
+                            {/* Delete User */}
+                            <AlertDialog.Root>
+                              {/* AlertDialog.Trigger */}
+                              <AlertDialog.Trigger>
+                                {/* icon button */}
+                                <IconButton color="red" variant="outline">
+                                  <TrashIcon width="18" height="18" color="red" />
+                                </IconButton>
+                              </AlertDialog.Trigger>
+                              <AlertDialog.Content>
+                                <AlertDialog.Title>Hapus Pengguna</AlertDialog.Title>
+                                <AlertDialog.Description>
+                                  Apakah Anda yakin ingin menghapus peserta magang{" "}
+                                  <strong>{item.nama}</strong>?
+                                </AlertDialog.Description>
+                                <Flex gap="3" mt="4" justify="end">
+                                  <AlertDialog.Cancel>
+                                    <Button variant="soft" color="gray">
+                                      Batal
+                                    </Button>
+                                  </AlertDialog.Cancel>
+                                  <AlertDialog.Action>
+                                    <Button
+                                      variant="solid"
+                                      color="red"
+                                      onClick={() => handleDelete(item.id)}
+                                    >
+                                      Hapus
+                                    </Button>
+                                  </AlertDialog.Action>
+                                </Flex>
+                              </AlertDialog.Content>
+                            </AlertDialog.Root>
+                          </Flex>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Root>
+                {filteredPesertaMagang.length === 0 && (
+                  <Box className="text-center py-12">
+                    <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <Flex direction="column" justify="center">
+                      <Text size="3" color="gray" weight="medium">
+                        Tidak ada data Peserta Magang yang ditemukan
+                      </Text>
+                      <Text size="3" color="gray" mt="2">
+                        {searchTerm
+                          ? "Coba ubah kata kunci pencarian"
+                          : "Belum ada riwayat Peserta Magang"}
+                      </Text>
+                    </Flex>
+                  </Box>
+                )}
+              </Card>
+            </Box>
+          </Flex>
         </Tabs.Content>
 
         <Tabs.Content value="users">

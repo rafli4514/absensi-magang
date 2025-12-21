@@ -17,7 +17,7 @@ import '../../themes/app_themes.dart';
 import '../../utils/constants.dart';
 import '../../utils/indonesian_time.dart';
 import '../../utils/navigation_helper.dart';
-import '../../utils/ui_utils.dart';
+import '../../utils/ui_utils.dart'; // Pastikan import ini ada
 import '../../widgets/announcement_card.dart';
 import '../../widgets/attendance_card.dart';
 import '../../widgets/attendance_status_card.dart';
@@ -46,8 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // terutama setelah login dengan akun berbeda.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        final authProvider =
-            Provider.of<AuthProvider>(context, listen: false);
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final attendanceProvider =
             Provider.of<AttendanceProvider>(context, listen: false);
 
@@ -62,13 +61,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadPerformanceData() async {
     if (!mounted) return;
-    
+
     setState(() => _isLoadingPerformance = true);
-    
+
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.user;
-      
+
       if (user == null) {
         setState(() => _isLoadingPerformance = false);
         return;
@@ -77,7 +76,8 @@ class _HomeScreenState extends State<HomeScreen> {
       // Get pesertaMagangId
       String? pesertaMagangId;
       try {
-        final userDataStr = await StorageService.getString(AppConstants.userDataKey);
+        final userDataStr =
+            await StorageService.getString(AppConstants.userDataKey);
         if (userDataStr != null) {
           final userData = jsonDecode(userDataStr);
           pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
@@ -89,10 +89,12 @@ class _HomeScreenState extends State<HomeScreen> {
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
         // Try to refresh profile
         await authProvider.refreshProfile();
-        final refreshedUserDataStr = await StorageService.getString(AppConstants.userDataKey);
+        final refreshedUserDataStr =
+            await StorageService.getString(AppConstants.userDataKey);
         if (refreshedUserDataStr != null) {
           final refreshedUserData = jsonDecode(refreshedUserDataStr);
-          pesertaMagangId = refreshedUserData['pesertaMagang']?['id']?.toString();
+          pesertaMagangId =
+              refreshedUserData['pesertaMagang']?['id']?.toString();
         }
       }
 
@@ -107,10 +109,17 @@ class _HomeScreenState extends State<HomeScreen> {
             _isLoadingPerformance = false;
           });
         } else {
-          setState(() {
-            _performanceStats = PerformanceStats.empty();
-            _isLoadingPerformance = false;
-          });
+          // [FIXED] Tambahkan notifikasi warning/error jika gagal load performa
+          if (mounted) {
+            setState(() {
+              _performanceStats = PerformanceStats.empty();
+              _isLoadingPerformance = false;
+            });
+            GlobalSnackBar.show(
+              'Gagal memuat statistik performa',
+              isWarning: true,
+            );
+          }
         }
       } else {
         setState(() {
@@ -120,20 +129,26 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       if (kDebugMode) print('Error loading performance: $e');
+      // [FIXED] Tambahkan notifikasi error koneksi
       if (mounted) {
         setState(() {
           _performanceStats = PerformanceStats.empty();
           _isLoadingPerformance = false;
         });
+        GlobalSnackBar.show(
+          'Koneksi error saat memuat statistik',
+          isError: true,
+        );
       }
     }
   }
 
   // Method untuk handle attendance result
-  Future<void> _handleAttendanceResult(BuildContext context, dynamic result) async {
+  Future<void> _handleAttendanceResult(
+      BuildContext context, dynamic result) async {
     if (result != null && result is Map<String, dynamic> && mounted) {
       if (kDebugMode) {
-        print('🏠 HOME: Received result from QR: $result');
+        print('匠 HOME: Received result from QR: $result');
       }
 
       final attendanceProvider =
@@ -142,38 +157,49 @@ class _HomeScreenState extends State<HomeScreen> {
       final time = result['time'] as String? ?? '';
 
       if (kDebugMode) {
-        print('🏠 HOME: Processing attendance type: $attendanceType, time: $time');
+        print(
+            '匠 HOME: Processing attendance type: $attendanceType, time: $time');
       }
 
       if (attendanceType == 'CLOCK_IN' && time.isNotEmpty) {
         attendanceProvider.clockIn(time);
-        
+
         if (kDebugMode) {
-          print('🏠 HOME: Clock in processed, waiting before refresh...');
+          print('匠 HOME: Clock in processed, waiting before refresh...');
         }
-        
+
         // Wait a bit for backend to process
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         // Refresh today attendance after clock in, preserve local state if API doesn't have it yet
-        await attendanceProvider.refreshTodayAttendance(preserveLocalState: true);
-        
+        await attendanceProvider.refreshTodayAttendance(
+            preserveLocalState: true);
+
         if (kDebugMode) {
-          print('🏠 HOME: Clock in processed successfully');
+          print('匠 HOME: Clock in processed successfully');
         }
+
+        // Menampilkan notifikasi sukses di Home juga (optional, karena QR screen mungkin sudah close)
+        GlobalSnackBar.show(
+          'Berhasil melakukan Clock In pada $time',
+          title: 'Presensi Sukses',
+          isSuccess: true,
+        );
       } else if (attendanceType.isEmpty) {
         if (kDebugMode) {
-          print('🏠 HOME: Warning - attendance type is empty in result, refreshing from API...');
+          print(
+              '匠 HOME: Warning - attendance type is empty in result, refreshing from API...');
         }
         // Wait a bit for backend to process
         await Future.delayed(const Duration(milliseconds: 500));
         // Try to refresh from API anyway
-        await attendanceProvider.refreshTodayAttendance(preserveLocalState: true);
+        await attendanceProvider.refreshTodayAttendance(
+            preserveLocalState: true);
       }
 
       if (kDebugMode) {
         print(
-          '🏠 HOME: After - isClockedIn: ${attendanceProvider.isClockedIn}, clockInTime: ${attendanceProvider.clockInTime}',
+          '匠 HOME: After - isClockedIn: ${attendanceProvider.isClockedIn}, clockInTime: ${attendanceProvider.clockInTime}',
         );
       }
     }
@@ -183,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _handleClockOut(BuildContext context) async {
     if (!mounted) return;
 
-    // Tampilkan dialog konfirmasi terlebih dahulu
+    // Tampilkan dialog konfirmasi terlebih dahulu (User Decision -> Tetap Dialog)
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => CustomDialog(
@@ -203,9 +229,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    // Clock out bisa dilakukan kapan saja - tidak ada validasi waktu
-
-    // Tampilkan loading dialog
+    // Tampilkan loading indicator (bisa pakai AppLoadingOverlay atau Dialog sederhana)
+    // Disini kita pakai Dialog simple agar memblokir interaksi
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -220,15 +245,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!hasPermission) {
         if (mounted) {
           Navigator.pop(context); // Close loading
-          showDialog(
-            context: context,
-            builder: (context) => CustomDialog(
-              title: 'Izin Lokasi Diperlukan',
-              content: 'Harap berikan akses lokasi untuk melakukan presensi.',
-              primaryButtonText: 'OK',
-              primaryButtonColor: AppThemes.errorColor,
-              onPrimaryButtonPressed: () => Navigator.pop(context),
-            ),
+          // REPLACED: CustomDialog -> GlobalSnackBar
+          GlobalSnackBar.show(
+            'Harap berikan akses lokasi untuk melakukan presensi.',
+            title: 'Izin Diperlukan',
+            isWarning: true,
           );
         }
         return;
@@ -239,15 +260,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (currentLocation == null) {
         if (mounted) {
           Navigator.pop(context); // Close loading
-          showDialog(
-            context: context,
-            builder: (context) => CustomDialog(
-              title: 'Gagal Mendeteksi Lokasi',
-              content: 'Tidak dapat mendeteksi lokasi Anda. Pastikan GPS aktif.',
-              primaryButtonText: 'OK',
-              primaryButtonColor: AppThemes.errorColor,
-              onPrimaryButtonPressed: () => Navigator.pop(context),
-            ),
+          // REPLACED: CustomDialog -> GlobalSnackBar
+          GlobalSnackBar.show(
+            'Tidak dapat mendeteksi lokasi Anda. Pastikan GPS aktif.',
+            title: 'Lokasi Tidak Ditemukan',
+            isError: true,
           );
         }
         return;
@@ -260,15 +277,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (user == null) {
         if (mounted) {
           Navigator.pop(context); // Close loading
-          showDialog(
-            context: context,
-            builder: (context) => CustomDialog(
-              title: 'Error',
-              content: 'User data not found. Please login again.',
-              primaryButtonText: 'OK',
-              primaryButtonColor: AppThemes.errorColor,
-              onPrimaryButtonPressed: () => Navigator.pop(context),
-            ),
+          // REPLACED: CustomDialog -> GlobalSnackBar
+          GlobalSnackBar.show(
+            'Data user tidak ditemukan. Silakan login ulang.',
+            title: 'Sesi Invalid',
+            isError: true,
           );
         }
         return;
@@ -276,7 +289,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       String? pesertaMagangId;
       try {
-        final userDataStr = await StorageService.getString(AppConstants.userDataKey);
+        final userDataStr =
+            await StorageService.getString(AppConstants.userDataKey);
         if (userDataStr != null) {
           final userData = jsonDecode(userDataStr);
           pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
@@ -288,25 +302,23 @@ class _HomeScreenState extends State<HomeScreen> {
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
         // Try to refresh profile
         await authProvider.refreshProfile();
-        final refreshedUserDataStr = await StorageService.getString(AppConstants.userDataKey);
+        final refreshedUserDataStr =
+            await StorageService.getString(AppConstants.userDataKey);
         if (refreshedUserDataStr != null) {
           final refreshedUserData = jsonDecode(refreshedUserDataStr);
-          pesertaMagangId = refreshedUserData['pesertaMagang']?['id']?.toString();
+          pesertaMagangId =
+              refreshedUserData['pesertaMagang']?['id']?.toString();
         }
       }
 
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
         if (mounted) {
           Navigator.pop(context); // Close loading
-          showDialog(
-            context: context,
-            builder: (context) => CustomDialog(
-              title: 'Error',
-              content: 'Peserta magang ID not found. Please ensure you are registered as a student.',
-              primaryButtonText: 'OK',
-              primaryButtonColor: AppThemes.errorColor,
-              onPrimaryButtonPressed: () => Navigator.pop(context),
-            ),
+          // REPLACED: CustomDialog -> GlobalSnackBar
+          GlobalSnackBar.show(
+            'ID Peserta Magang tidak ditemukan. Hubungi admin.',
+            title: 'Data Tidak Lengkap',
+            isError: true,
           );
         }
         return;
@@ -335,8 +347,10 @@ class _HomeScreenState extends State<HomeScreen> {
               Provider.of<AttendanceProvider>(context, listen: false);
           final time = IndonesianTime.formatTime(IndonesianTime.now);
           attendanceProvider.clockOut(time);
-          await attendanceProvider.refreshTodayAttendance(preserveLocalState: true);
+          await attendanceProvider.refreshTodayAttendance(
+              preserveLocalState: true);
 
+          // SUKSES
           GlobalSnackBar.show(
             'Clock out berhasil dilakukan',
             title: 'Berhasil',
@@ -344,33 +358,35 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.check_circle_outline_rounded,
           );
         } else {
-          showDialog(
-            context: context,
-            builder: (context) => CustomDialog(
-              title: 'Gagal Clock Out',
-              content: attendanceResponse.message,
-              primaryButtonText: 'OK',
-              primaryButtonColor: AppThemes.errorColor,
-              onPrimaryButtonPressed: () => Navigator.pop(context),
-            ),
+          // REPLACED: CustomDialog -> GlobalSnackBar (API Error)
+          GlobalSnackBar.show(
+            attendanceResponse.message,
+            title: 'Gagal Clock Out',
+            isError: true,
           );
         }
       }
     } catch (e) {
       if (mounted) {
         Navigator.pop(context); // Close loading
-        showDialog(
-          context: context,
-          builder: (context) => CustomDialog(
-            title: 'Error',
-            content: 'Terjadi kesalahan: ${e.toString()}',
-            primaryButtonText: 'OK',
-            primaryButtonColor: AppThemes.errorColor,
-            onPrimaryButtonPressed: () => Navigator.pop(context),
-          ),
+        // REPLACED: CustomDialog -> GlobalSnackBar (Exception)
+        GlobalSnackBar.show(
+          'Terjadi kesalahan: ${e.toString()}',
+          title: 'System Error',
+          isError: true,
         );
       }
     }
+  }
+
+  // Helper untuk notifikasi "Sudah Absen" (digunakan di tombol & FAB)
+  void _showAlreadyClockedInNotification() {
+    GlobalSnackBar.show(
+      'Anda sudah melakukan clock in hari ini.',
+      title: 'Info Presensi',
+      isWarning: true, // Warning kuning lebih cocok daripada dialog blocking
+      icon: Icons.info_outline_rounded,
+    );
   }
 
   @override
@@ -394,7 +410,10 @@ class _HomeScreenState extends State<HomeScreen> {
               color:
                   isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
             ),
-            onPressed: () {},
+            onPressed: () {
+              GlobalSnackBar.show('Tidak ada notifikasi baru',
+                  title: 'Info', isInfo: true);
+            },
           ),
         ],
       ),
@@ -412,18 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onClockIn: () async {
                         // Jika sudah pernah clock in hari ini, jangan izinkan scan lagi
                         if (attendanceProvider.isClockedIn) {
-                          showDialog(
-                            context: context,
-                            builder: (context) => CustomDialog(
-                              title: 'Sudah Absen',
-                              content:
-                                  'Anda sudah melakukan absensi hari ini. Silakan absen lagi besok.',
-                              primaryButtonText: 'OK',
-                              primaryButtonColor: AppThemes.primaryColor,
-                              onPrimaryButtonPressed: () =>
-                                  Navigator.pop(context),
-                            ),
-                          );
+                          _showAlreadyClockedInNotification();
                           return;
                         }
 
@@ -554,18 +562,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     onQRScanTap: () {
                       // Cegah scan langsung dari FAB jika sudah clock in hari ini
                       if (attendanceProvider.isClockedIn) {
-                        showDialog(
-                          context: context,
-                          builder: (context) => CustomDialog(
-                            title: 'Sudah Absen',
-                            content:
-                                'Anda sudah melakukan absensi hari ini. Silakan absen lagi besok.',
-                            primaryButtonText: 'OK',
-                            primaryButtonColor: AppThemes.primaryColor,
-                            onPrimaryButtonPressed: () =>
-                                Navigator.pop(context),
-                          ),
-                        );
+                        _showAlreadyClockedInNotification();
                         return;
                       }
 

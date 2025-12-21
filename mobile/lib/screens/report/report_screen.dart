@@ -28,7 +28,7 @@ class ReportScreen extends StatefulWidget {
 
 class _ReportScreenState extends State<ReportScreen> {
   DateTime _selectedMonth = DateTime.now();
-  
+
   // State to hold the data for the UI
   List<AttendanceRecord> _attendanceRecords = [];
   bool _isLoading = true;
@@ -45,7 +45,8 @@ class _ReportScreenState extends State<ReportScreen> {
 
     // 1. Calculate Start and End Date for the selected month
     final start = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
-    final end = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0, 23, 59, 59);
+    final end =
+        DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0, 23, 59, 59);
 
     try {
       // 2. Get current user's pesertaMagangId from auth provider
@@ -59,39 +60,46 @@ class _ReportScreenState extends State<ReportScreen> {
 
       // Get pesertaMagangId from multiple sources
       String? pesertaMagangId;
-      
+
       try {
         // Method 1: Try from stored user data (pesertaMagang.id)
-        final userDataStr = await StorageService.getString(AppConstants.userDataKey);
+        final userDataStr =
+            await StorageService.getString(AppConstants.userDataKey);
         if (userDataStr != null) {
           final userData = jsonDecode(userDataStr);
           pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
           if (kDebugMode && pesertaMagangId != null) {
-            debugPrint('✅ Got pesertaMagangId from stored data: $pesertaMagangId');
+            debugPrint(
+                '✅ Got pesertaMagangId from stored data: $pesertaMagangId');
           }
         }
-        
+
         // Method 2: If not found, refresh profile from API (most reliable)
         if ((pesertaMagangId == null || pesertaMagangId.isEmpty) && mounted) {
           if (kDebugMode) {
             debugPrint('🔄 Refreshing profile to get pesertaMagangId...');
           }
           await authProvider.refreshProfile();
-          final refreshedUserDataStr = await StorageService.getString(AppConstants.userDataKey);
+          final refreshedUserDataStr =
+              await StorageService.getString(AppConstants.userDataKey);
           if (refreshedUserDataStr != null) {
             final refreshedUserData = jsonDecode(refreshedUserDataStr);
-            pesertaMagangId = refreshedUserData['pesertaMagang']?['id']?.toString();
+            pesertaMagangId =
+                refreshedUserData['pesertaMagang']?['id']?.toString();
             if (kDebugMode && pesertaMagangId != null) {
-              debugPrint('✅ Got pesertaMagangId from refreshed profile: $pesertaMagangId');
+              debugPrint(
+                  '✅ Got pesertaMagangId from refreshed profile: $pesertaMagangId');
             }
           }
         }
-        
+
         // Method 3: If still not found, try to get from API using userId endpoint
-        if ((pesertaMagangId == null || pesertaMagangId.isEmpty) && user.id.isNotEmpty) {
+        if ((pesertaMagangId == null || pesertaMagangId.isEmpty) &&
+            user.id.isNotEmpty) {
           try {
             if (kDebugMode) {
-              debugPrint('🔄 Trying to get pesertaMagangId from API endpoint...');
+              debugPrint(
+                  '🔄 Trying to get pesertaMagangId from API endpoint...');
             }
             final token = await StorageService.getString(AppConstants.tokenKey);
             if (token != null) {
@@ -99,46 +107,55 @@ class _ReportScreenState extends State<ReportScreen> {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer $token',
               };
-              
-              final response = await http.get(
-                Uri.parse('${AppConstants.baseUrl}/peserta-magang/user/${user.id}'),
-                headers: headers,
-              ).timeout(const Duration(seconds: 10));
-              
+
+              final response = await http
+                  .get(
+                    Uri.parse(
+                        '${AppConstants.baseUrl}/peserta-magang/user/${user.id}'),
+                    headers: headers,
+                  )
+                  .timeout(const Duration(seconds: 10));
+
               if (response.statusCode == 200) {
                 final responseData = jsonDecode(response.body);
-                if (responseData['success'] == true && responseData['data'] != null) {
+                if (responseData['success'] == true &&
+                    responseData['data'] != null) {
                   pesertaMagangId = responseData['data']['id']?.toString();
                   if (kDebugMode && pesertaMagangId != null) {
-                    debugPrint('✅ Got pesertaMagangId from API endpoint: $pesertaMagangId');
+                    debugPrint(
+                        '✅ Got pesertaMagangId from API endpoint: $pesertaMagangId');
                   }
                 }
               } else if (kDebugMode) {
-                debugPrint('⚠️ API returned status ${response.statusCode}: ${response.body}');
+                debugPrint(
+                    '⚠️ API returned status ${response.statusCode}: ${response.body}');
               }
             }
           } catch (apiError) {
             if (kDebugMode) {
-              debugPrint('⚠️ Error fetching pesertaMagangId from API: $apiError');
+              debugPrint(
+                  '⚠️ Error fetching pesertaMagangId from API: $apiError');
             }
           }
         }
-        
+
         // Method 4: Last resort - try to get from first attendance record
         if ((pesertaMagangId == null || pesertaMagangId.isEmpty)) {
           if (kDebugMode) {
-            debugPrint('🔄 Trying to get pesertaMagangId from attendance records...');
+            debugPrint(
+                '🔄 Trying to get pesertaMagangId from attendance records...');
           }
           final tempResponse = await AttendanceService.getAllAttendance(
             limit: 1,
           );
-          
-          if (tempResponse.success && 
-              tempResponse.data != null && 
+
+          if (tempResponse.success &&
+              tempResponse.data != null &&
               tempResponse.data!.isNotEmpty) {
             pesertaMagangId = tempResponse.data!.first.pesertaMagangId;
             if (kDebugMode && pesertaMagangId != null) {
-              debugPrint('✅ Got pesertaMagangId from attendance: $pesertaMagangId');
+              debugPrint(
+                  '✅ Got pesertaMagangId from attendance: $pesertaMagangId');
             }
           }
         }
@@ -150,7 +167,8 @@ class _ReportScreenState extends State<ReportScreen> {
 
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
         if (mounted) {
-          _showError('Peserta magang ID not found. Please ensure you are logged in as a student and have completed registration. If the issue persists, please contact support.');
+          _showError(
+              'Peserta magang ID not found. Please ensure you are logged in as a student and have completed registration. If the issue persists, please contact support.');
           if (kDebugMode) {
             debugPrint('❌ Final check: pesertaMagangId is still null or empty');
             debugPrint('User ID: ${user.id}');
@@ -171,18 +189,20 @@ class _ReportScreenState extends State<ReportScreen> {
         final filteredData = response.data!.where((item) {
           final itemDate = item.timestamp;
           return itemDate.isAfter(start.subtract(const Duration(days: 1))) &&
-                 itemDate.isBefore(end.add(const Duration(days: 1)));
+              itemDate.isBefore(end.add(const Duration(days: 1)));
         }).toList();
 
         // 5. Group attendance by date and combine MASUK/KELUAR
         final Map<String, AttendanceRecord> recordsByDate = {};
 
         for (final item in filteredData) {
-          final dateKey = '${item.timestamp.year}-${item.timestamp.month.toString().padLeft(2, '0')}-${item.timestamp.day.toString().padLeft(2, '0')}';
-          
+          final dateKey =
+              '${item.timestamp.year}-${item.timestamp.month.toString().padLeft(2, '0')}-${item.timestamp.day.toString().padLeft(2, '0')}';
+
           if (!recordsByDate.containsKey(dateKey)) {
             // Create new record for this date
-            final dateOnly = DateTime(item.timestamp.year, item.timestamp.month, item.timestamp.day);
+            final dateOnly = DateTime(
+                item.timestamp.year, item.timestamp.month, item.timestamp.day);
             recordsByDate[dateKey] = AttendanceRecord(
               id: item.id,
               userId: user?.id ?? '',
@@ -206,7 +226,7 @@ class _ReportScreenState extends State<ReportScreen> {
           }
 
           final record = recordsByDate[dateKey]!;
-          
+
           // Set check-in or check-out based on tipe
           if (item.tipe.toUpperCase() == 'MASUK') {
             recordsByDate[dateKey] = AttendanceRecord(
@@ -286,20 +306,24 @@ class _ReportScreenState extends State<ReportScreen> {
 
   void _showError(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: AppThemes.errorColor,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
+      // UPDATED: Using GlobalSnackBar instead of ScaffoldMessenger
+      GlobalSnackBar.show(
+        message,
+        title: 'Gagal Memuat Data',
+        isError: true,
       );
     }
   }
-  
-  
+
+  void _exportReport() {
+    // UPDATED: Ensuring export also uses GlobalSnackBar
+    GlobalSnackBar.show(
+      'Laporan berhasil diexport ke PDF',
+      title: 'Export Berhasil',
+      isSuccess: true,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -310,10 +334,6 @@ class _ReportScreenState extends State<ReportScreen> {
     // Definisikan warna primary yang konsisten
     final primaryColor =
         isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor;
-    final onSurfaceColor =
-        isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor;
-    final hintColor =
-        isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor;
 
     final validCount = _attendanceRecords
         .where((r) => r.status == AttendanceStatus.valid)
@@ -410,11 +430,10 @@ class _ReportScreenState extends State<ReportScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color:
-                                        (isDarkMode
-                                                ? AppThemes.darkAccentBlue
-                                                : AppThemes.primaryColor)
-                                            .withOpacity(0.1),
+                                    color: (isDarkMode
+                                            ? AppThemes.darkAccentBlue
+                                            : AppThemes.primaryColor)
+                                        .withOpacity(0.1),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
@@ -428,11 +447,13 @@ class _ReportScreenState extends State<ReportScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Selected Date',
-                                        style: theme.textTheme.bodySmall?.copyWith(
+                                        style:
+                                            theme.textTheme.bodySmall?.copyWith(
                                           color: isDarkMode
                                               ? AppThemes.darkTextSecondary
                                               : theme.hintColor,
@@ -442,11 +463,13 @@ class _ReportScreenState extends State<ReportScreen> {
                                       const SizedBox(height: 2),
                                       Text(
                                         _formatMonth(_selectedMonth),
-                                        style: theme.textTheme.bodyMedium?.copyWith(
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
                                           fontWeight: FontWeight.w600,
                                           color: isDarkMode
                                               ? AppThemes.darkTextPrimary
-                                              : theme.textTheme.bodyMedium?.color,
+                                              : theme
+                                                  .textTheme.bodyMedium?.color,
                                         ),
                                       ),
                                     ],
@@ -488,11 +511,10 @@ class _ReportScreenState extends State<ReportScreen> {
                                     vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
-                                    color:
-                                        (isDarkMode
-                                                ? AppThemes.darkAccentBlue
-                                                : AppThemes.primaryColor)
-                                            .withOpacity(0.1),
+                                    color: (isDarkMode
+                                            ? AppThemes.darkAccentBlue
+                                            : AppThemes.primaryColor)
+                                        .withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
@@ -511,9 +533,36 @@ class _ReportScreenState extends State<ReportScreen> {
                           const SizedBox(height: 16),
 
                           // Attendance List - Modern Cards
-                          ..._attendanceRecords.map(
-                            (record) => _buildModernAttendanceItem(record, isDarkMode),
-                          ),
+                          if (_attendanceRecords.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 40),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.history_toggle_off_rounded,
+                                    size: 48,
+                                    color: isDarkMode
+                                        ? AppThemes.darkTextSecondary
+                                            .withOpacity(0.5)
+                                        : AppThemes.hintColor.withOpacity(0.5),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Tidak ada riwayat absensi',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: isDarkMode
+                                          ? AppThemes.darkTextSecondary
+                                          : AppThemes.hintColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            ..._attendanceRecords.map(
+                              (record) => _buildModernAttendanceItem(
+                                  record, isDarkMode),
+                            ),
                           const SizedBox(height: 20),
                         ],
                       ),
@@ -782,10 +831,6 @@ class _ReportScreenState extends State<ReportScreen> {
     return days[weekday - 1];
   }
 
-  String _formatDate(DateTime date) {
-    return '${_getDayName(date.weekday)}, ${date.day} ${_getMonthAbbreviation(date.month)} ${date.year}';
-  }
-
   String _formatTime(DateTime time) {
     return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
@@ -794,7 +839,7 @@ class _ReportScreenState extends State<ReportScreen> {
     final DateTime now = DateTime.now();
     final DateTime maxDate = DateTime(now.year + 1, 12, 31);
     final DateTime minDate = DateTime(2023, 1, 1);
-    
+
     // Ensure initialDate is within valid range
     DateTime initialDate = _selectedMonth;
     if (initialDate.isAfter(maxDate)) {
@@ -802,7 +847,7 @@ class _ReportScreenState extends State<ReportScreen> {
     } else if (initialDate.isBefore(minDate)) {
       initialDate = minDate;
     }
-    
+
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
@@ -832,7 +877,7 @@ class _ReportScreenState extends State<ReportScreen> {
     );
     if (picked != null) {
       final newMonth = DateTime(picked.year, picked.month);
-      if (newMonth.year != _selectedMonth.year || 
+      if (newMonth.year != _selectedMonth.year ||
           newMonth.month != _selectedMonth.month) {
         setState(() {
           _selectedMonth = newMonth;
@@ -858,15 +903,5 @@ class _ReportScreenState extends State<ReportScreen> {
       'December',
     ];
     return '${months[date.month - 1]} ${date.year}';
-  }
-
-  void _exportReport() {
-    // Simulasi export report
-    // NOTIFIKASI BARU: SUKSES
-    GlobalSnackBar.show(
-      'Laporan berhasil diexport ke PDF',
-      title: 'Export Berhasil',
-      isSuccess: true,
-    );
   }
 }
