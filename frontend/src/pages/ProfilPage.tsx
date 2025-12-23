@@ -20,6 +20,7 @@ import {
   CheckCircle,
   RefreshCw,
   Trash2,
+  Pencil,
 } from "lucide-react";
 import AvatarUpload from "../components/AvatarUpload";
 import profilService from "../services/profilService";
@@ -67,7 +68,7 @@ export default function ProfilPage() {
     try {
       setIsLoading(true);
       setErrorMessage('');
-      
+
       const response = await profilService.getProfile();
       if (response.success && response.data) {
         setProfileData(response.data);
@@ -96,7 +97,7 @@ export default function ProfilPage() {
 
       // Validate form data
       const newErrors: { [key: string]: string } = {};
-      
+
       if (!formData.username.trim()) {
         newErrors.username = 'Username tidak boleh kosong';
       } else {
@@ -122,7 +123,7 @@ export default function ProfilPage() {
         setOriginalProfileData(response.data);
         setIsEditingProfile(false);
         setSuccessMessage('Profil berhasil diperbarui!');
-        
+
         // Clear success message after 3 seconds
         setTimeout(() => setSuccessMessage(''), 3000);
       } else {
@@ -158,7 +159,7 @@ export default function ProfilPage() {
 
       // Validate password data
       const newErrors: { [key: string]: string } = {};
-      
+
       if (!passwordData.currentPassword) {
         newErrors.currentPassword = 'Password saat ini harus diisi';
       }
@@ -195,7 +196,7 @@ export default function ProfilPage() {
         });
         setIsChangingPassword(false);
         setSuccessMessage('Password berhasil diubah!');
-        
+
         // Clear success message after 3 seconds
         setTimeout(() => setSuccessMessage(''), 3000);
       } else {
@@ -239,7 +240,7 @@ export default function ProfilPage() {
 
       // Upload avatar
       const response = await profilService.uploadAvatar(file);
-      
+
       if (response.success && response.data) {
         // Update profile data with new avatar URL
         if (profileData) {
@@ -248,7 +249,7 @@ export default function ProfilPage() {
           setOriginalProfileData(updatedProfile);
         }
         setSuccessMessage('Avatar berhasil diupload!');
-        
+
         // Clear success message after 3 seconds
         setTimeout(() => setSuccessMessage(''), 3000);
       } else {
@@ -270,7 +271,7 @@ export default function ProfilPage() {
       setSuccessMessage('');
 
       const response = await profilService.removeAvatar();
-      
+
       if (response.success) {
         // Update profile data to remove avatar
         if (profileData) {
@@ -279,7 +280,7 @@ export default function ProfilPage() {
           setOriginalProfileData(updatedProfile);
         }
         setSuccessMessage('Avatar berhasil dihapus!');
-        
+
         // Clear success message after 3 seconds
         setTimeout(() => setSuccessMessage(''), 3000);
       } else {
@@ -328,7 +329,7 @@ export default function ProfilPage() {
             <p className="text-gray-600">Kelola informasi akun dan pengaturan keamanan</p>
           </div>
         </div>
-        
+
         <Card>
           <div className="p-6 text-center">
             <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -354,8 +355,8 @@ export default function ProfilPage() {
               Kelola informasi akun dan pengaturan keamanan
             </p>
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             color="red"
             onClick={() => setShowDeleteDialog(true)}
           >
@@ -406,7 +407,7 @@ export default function ProfilPage() {
 
             {/* Main Layout: Side by Side on Desktop (md), Stacked on Mobile */}
             <div className="flex flex-col md:flex-row gap-8 items-start">
-              
+
               {/* LEFT COLUMN: Avatar Section */}
               <div className="flex-shrink-0 flex flex-col items-center md:items-start space-y-2">
                 <div className="relative">
@@ -431,7 +432,7 @@ export default function ProfilPage() {
 
               {/* RIGHT COLUMN: Information & Form */}
               <div className="flex-grow w-full space-y-6">
-                
+
                 {/* Header: Name, Badges, and Action Buttons */}
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                   <div>
@@ -441,8 +442,8 @@ export default function ProfilPage() {
                         <Shield className="h-3 w-3 mr-1" />
                         {profileData.role}
                       </Badge>
-                      <Badge 
-                        variant={profileData.isActive ? "soft" : "outline"} 
+                      <Badge
+                        variant={profileData.isActive ? "soft" : "outline"}
                         color={profileData.isActive ? "green" : "red"}
                       >
                         {profileData.isActive ? 'Aktif' : 'Nonaktif'}
@@ -486,7 +487,10 @@ export default function ProfilPage() {
                           Simpan
                         </>
                       ) : (
-                        'Edit Profil'
+                        <>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit Profil
+                        </>
                       )}
                     </Button>
                   </div>
@@ -595,7 +599,10 @@ export default function ProfilPage() {
                         Ubah Password
                       </>
                     ) : (
-                      'Ubah Password'
+                      <>
+                        <Lock className="h-4 w-4 mr-2" />
+                        Ubah Password
+                      </>
                     )}
                   </Button>
                 </div>

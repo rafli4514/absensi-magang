@@ -81,30 +81,31 @@ export default function Sidebar({ isOpen, isMinimized, onClose }: SidebarProps) 
           isMinimized ? "lg:w-16 w-16" : "lg:w-64 w-64"
         )}
       >
-        <div className="flex flex-col h-full mt-5 overflow-hidden">
+        {/* COMPACT CHANGE 1: Ubah mt-5 jadi py-2 agar tidak terlalu turun */}
+        <div className="flex flex-col h-full py-2 overflow-hidden">
           {/* Logo Section */}
           <div
             className={cn(
-              "flex items-center h-16 bg-primary-200 flex-shrink-0 transition-all duration-300",
+              "flex items-center h-14 bg-primary-200 flex-shrink-0 transition-all duration-300", // Ubah h-16 jadi h-14
               isMinimized
                 ? "justify-center px-2"
                 : "justify-center space-x-5 px-4"
             )}
           >
             {!isMinimized ? (
-              <img src={Logo} alt="Iconnet Logo" className="h-15" />
+              <img src={Logo} alt="Iconnet Logo" className="h-12 object-contain" /> // Sesuaikan tinggi logo
             ) : (
-              <img src={Logo2} alt="Iconnet Logo" className="h-10 mb-5" />
+              // COMPACT CHANGE 2: Kurangi margin bottom logo
+              <img src={Logo2} alt="Iconnet Logo" className="h-8 mb-2 object-contain" /> 
             )}
           </div>
 
           {/* Navigation */}
-          {/* Jadikan area menu scrollable agar semua item bisa diakses saat tinggi layar kecil */}
-          <nav className="flex-grow mt-2 px-2 overflow-y-auto">
-            <ul className="space-y-2">
+          <nav className="flex-grow mt-2 px-2 overflow-y-auto no-scrollbar">
+            {/* COMPACT CHANGE 3: Ubah space-y-2 jadi space-y-1 (jarak antar item lebih rapat) */}
+            <ul className="space-y-1">
               {navigation
                 .filter((item) => {
-                  // Filter berdasarkan role - hanya tampilkan jika user memiliki akses
                   if (item.requiredRole === null) return true;
                   if (item.requiredRole === "ADMIN" && currentUser?.role === "ADMIN") return true;
                   return false;
@@ -118,7 +119,8 @@ export default function Sidebar({ isOpen, isMinimized, onClose }: SidebarProps) 
                         to={item.href}
                         className={cn(
                           "flex items-center text-sm font-medium rounded-lg transition-all duration-200 group relative",
-                          isMinimized ? "px-3 py-3 justify-center" : "px-4 py-3",
+                          // COMPACT CHANGE 4: Ubah py-3 jadi py-2 (tombol lebih tipis)
+                          isMinimized ? "px-2 py-2 justify-center" : "px-4 py-2",
                           isActive
                             ? "bg-blue-500 text-amber-50"
                             : "text-gray-500 hover:bg-gray-100 hover:text-black"
@@ -135,14 +137,6 @@ export default function Sidebar({ isOpen, isMinimized, onClose }: SidebarProps) 
                         {!isMinimized && (
                           <span className="truncate">{item.name}</span>
                         )}
-
-                        {/* Tooltip for minimized state */}
-                        {isMinimized && (
-                          <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
-                            {item.name}
-                            <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45"></div>
-                          </div>
-                        )}
                       </Link>
                     </li>
                   );
@@ -151,13 +145,15 @@ export default function Sidebar({ isOpen, isMinimized, onClose }: SidebarProps) 
           </nav>
 
           {/* Logout Button */}
-          <div className="mt-auto p-2 mb-5">
+          {/* COMPACT CHANGE 5: Kurangi margin bottom mb-5 jadi mb-2 */}
+          <div className="mt-auto p-2 mb-2">
             <button
               className={cn(
                 "flex items-center text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 hover:text-red-700 transition-all duration-200 group relative",
+                // COMPACT CHANGE 6: Ubah py-3 jadi py-2
                 isMinimized
-                  ? "w-full px-3 py-3 justify-center"
-                  : "w-full px-4 py-3"
+                  ? "w-full px-2 py-2 justify-center"
+                  : "w-full px-4 py-2"
               )}
               onClick={handleLogout}
               title={isMinimized ? "Keluar" : ""}
@@ -169,14 +165,6 @@ export default function Sidebar({ isOpen, isMinimized, onClose }: SidebarProps) 
                 )}
               />
               {!isMinimized && <span>Keluar</span>}
-
-              {/* Tooltip for minimized state */}
-              {isMinimized && (
-                <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
-                  Keluar
-                  <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45"></div>
-                </div>
-              )}
             </button>
           </div>
         </div>

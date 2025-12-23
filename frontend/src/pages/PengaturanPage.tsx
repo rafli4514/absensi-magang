@@ -675,7 +675,7 @@ const PengaturanPageContent = () => {
                         value={locationQuery}
                         onChange={(e) => setLocationQuery(e.target.value)}
                         className="flex-1"
-                        size="3"
+                        size="2"
                       />
                       <Button
                         size="3"
