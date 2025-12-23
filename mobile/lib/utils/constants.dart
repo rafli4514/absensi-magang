@@ -5,7 +5,7 @@ class AppConstants {
   // static const String baseUrl = 'http://10.140.254.115:3000/api'; // Android Emulator
   // static const String baseUrl = 'http://localhost:3000/api'; // iOS Simulator
   static const String baseUrl =
-      'http://192.170.100.24:3000/api'; // Physical Device
+      'http://192.170.100.22:3000/api'; // Physical Device
 
   // Storage Keys
   static const String tokenKey = 'auth_token';
