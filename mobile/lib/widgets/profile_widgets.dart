@@ -432,6 +432,7 @@ class InternshipInfoCard extends StatelessWidget {
   final int remainingDays;
   final String displayStartDate;
   final String displayEndDate;
+  final String? mentorName;
 
   const InternshipInfoCard({
     super.key,
@@ -443,6 +444,7 @@ class InternshipInfoCard extends StatelessWidget {
     required this.hasValidInternshipDates,
     this.startDate,
     this.endDate,
+    this.mentorName,
     required this.remainingDays,
     required this.displayStartDate,
     required this.displayEndDate,
@@ -501,6 +503,14 @@ class InternshipInfoCard extends StatelessWidget {
             value: displayInstansi,
             isDarkMode: isDarkMode,
           ),
+          // --- TAMPILKAN NAMA MENTOR ---
+          if (mentorName != null && mentorName!.isNotEmpty && mentorName != '-')
+            ProfileInfoRow(
+              icon: Icons.supervisor_account_rounded,
+              label: "Pembimbing Lapangan",
+              value: mentorName!,
+              isDarkMode: isDarkMode,
+            ),
           ProfileInfoRow(
             icon: Icons.work_outline_rounded,
             label: "Divisi Penempatan",

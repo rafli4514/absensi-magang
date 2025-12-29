@@ -223,6 +223,7 @@ export const registerPesertaMagang = async (req: Request, res: Response) => {
       nama,
       username,
       password,
+      namaMentor,
       id_peserta_magang, // NISN/NIM
       divisi,
       instansi = "Universitas/Instansi Tidak Diketahui",
@@ -318,6 +319,7 @@ export const registerPesertaMagang = async (req: Request, res: Response) => {
           instansi,
           id_instansi: id_instansi || null,
           nomorHp,
+          namaMentor: namaMentor || '',
           tanggalMulai,
           tanggalSelesai,
           status: upperStatus as any,

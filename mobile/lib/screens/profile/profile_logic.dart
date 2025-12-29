@@ -1,13 +1,9 @@
-// screens/profile/profile_logic.dart
 import 'package:intl/intl.dart';
 
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 
-// --- PROFILE LOGIC/HELPERS ---
-
 class ProfileLogic {
-  // Helper function untuk mendapatkan inisial nama
   static String getInitials(String name) {
     if (name.trim().isEmpty) return 'U';
 
@@ -40,12 +36,10 @@ class ProfileLogic {
     String displayEndDate = '-';
     bool hasValidInternshipDates = false;
 
-    // Parse join date
     if (user?.createdAt != null) {
       joinDate = DateFormat('dd MMM yyyy').format(user!.createdAt!);
     }
 
-    // Parse tanggal mulai
     if (user?.tanggalMulai != null) {
       startDate = DateTime.tryParse(user!.tanggalMulai!);
       if (startDate != null) {
@@ -53,15 +47,12 @@ class ProfileLogic {
       }
     }
 
-    // Parse tanggal selesai
     if (user?.tanggalSelesai != null) {
       endDateTime = DateTime.tryParse(user!.tanggalSelesai!);
       if (endDateTime != null) {
         endDate = DateFormat('dd MMM yyyy').format(endDateTime);
-        // FIX: Hapus ! karena endDate sudah pasti String non-null di sini
         displayEndDate = endDate;
 
-        // Hitung sisa hari
         final now = DateTime.now();
         final dateNow = DateTime(now.year, now.month, now.day);
         final dateEnd = DateTime(
@@ -89,12 +80,17 @@ class ProfileLogic {
     );
   }
 
-  // Extract data yang sering digunakan
-  static ({String displayDivisi, String displayInstansi, bool isStudent})
-      extractUserData(User? user, AuthProvider authProvider) {
+  // Extract data yang sering digunakan (termasuk MENTOR)
+  static ({
+    String displayDivisi,
+    String displayInstansi,
+    String mentorName, // Field ini wajib didefinisikan di sini
+    bool isStudent
+  }) extractUserData(User? user, AuthProvider authProvider) {
     return (
       displayDivisi: user?.divisi ?? '-',
       displayInstansi: user?.instansi ?? '-',
+      mentorName: user?.namaMentor ?? '-', // Extract dari user
       isStudent: authProvider.isStudent,
     );
   }

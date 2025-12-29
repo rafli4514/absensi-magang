@@ -32,6 +32,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _nomorHpController = TextEditingController();
   final _tanggalMulaiController = TextEditingController();
   final _tanggalSelesaiController = TextEditingController();
+  final _mentorController = TextEditingController(); // HANYA SATU DEFINISI
 
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
 
@@ -58,6 +59,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _nomorHpController.dispose();
     _tanggalMulaiController.dispose();
     _tanggalSelesaiController.dispose();
+    _mentorController.dispose();
     super.dispose();
   }
 
@@ -75,6 +77,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _nomorHpController.text = user.nomorHp ?? '';
         _tanggalMulaiController.text = user.tanggalMulai ?? '';
         _tanggalSelesaiController.text = user.tanggalSelesai ?? '';
+        _mentorController.text = user.namaMentor ?? '';
 
         if (user.tanggalMulai != null && user.tanggalSelesai != null) {
           try {
@@ -164,6 +167,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         nomorHp: _nomorHpController.text.trim(),
         tanggalMulai: _tanggalMulaiController.text.trim(),
         tanggalSelesai: _tanggalSelesaiController.text.trim(),
+        namaMentor: _mentorController.text.trim(),
       );
 
       setState(() => _isLoading = false);
@@ -349,6 +353,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   icon: Icons.school_rounded,
                   validator: (v) =>
                       v == null || v.isEmpty ? 'Wajib diisi' : null,
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  controller: _mentorController,
+                  label: 'Nama Mentor',
+                  hint: 'Nama pembimbing lapangan',
+                  icon: Icons.supervisor_account_rounded,
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(

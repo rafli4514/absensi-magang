@@ -128,15 +128,16 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
     final timeColor = _getTimeColor(hour, isDark);
     final progressColor = _getProgressColor(isDark);
 
+    // FIX: Definisikan userDepartment secara manual karena getter 'department' tidak ada di model User saat ini
+    final userDepartment = user?.divisi ?? user?.instansi;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       decoration: BoxDecoration(
-        // Integrasi Theme: Background Card
         color: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          // Integrasi Theme: Border halus
           color: isDark ? AppThemes.darkOutline : Colors.grey.withOpacity(0.1),
         ),
         boxShadow: [
@@ -181,7 +182,6 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            // Integrasi Theme: Text Secondary
                             color: isDark
                                 ? AppThemes.darkTextSecondary
                                 : AppThemes.hintColor,
@@ -195,7 +195,6 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        // Integrasi Theme: Text Primary
                         color: isDark
                             ? AppThemes.darkTextPrimary
                             : AppThemes.onSurfaceColor,
@@ -203,14 +202,12 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (user?.position != null &&
-                        user!.position!.isNotEmpty) ...[
+                    if (user?.displayRole != null) ...[
                       const SizedBox(height: 4),
                       Text(
-                        user.position!,
+                        user!.displayRole,
                         style: TextStyle(
                           fontSize: 13,
-                          // Integrasi Theme: Text Tertiary
                           color: isDark
                               ? AppThemes.darkTextTertiary
                               : AppThemes.neutralColor,
@@ -363,7 +360,7 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
           ],
 
           // Quick Stats (Department & Location Badges)
-          if (user?.department != null && user!.department!.isNotEmpty)
+          if (userDepartment != null && userDepartment.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 16),
               child: Wrap(
@@ -372,8 +369,7 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
                 children: [
                   _buildBadge(
                     icon: Icons.business_center_outlined,
-                    // FIX: Hapus ! terakhir karena logic if sudah menjamin tidak null
-                    label: user.department!,
+                    label: userDepartment,
                     isDark: isDark,
                   ),
                   _buildBadge(
@@ -389,7 +385,6 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
     );
   }
 
-  // Helper Widget untuk Badge
   Widget _buildBadge({
     required IconData icon,
     required String label,

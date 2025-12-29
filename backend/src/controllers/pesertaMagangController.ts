@@ -8,7 +8,7 @@ sendPaginatedSuccess,
 } from "../utils/response";
 import path from "path";
 import fs from "fs";
-import bcrypt from 'bcryptjs'; // Lebih rapi jika diimport di atas
+import bcrypt from 'bcryptjs';
 
 export const getAllPesertaMagang = async (req: Request, res: Response) => {
 try {
@@ -106,6 +106,7 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
       status = "AKTIF",
       avatar,
       password = "password123",
+      namaMentor, // INPUT BARU: Nama Mentor
     } = req.body;
 
     if (!nama || !username || !divisi || !nomorHp || !tanggalMulai || !tanggalSelesai) {
@@ -152,6 +153,7 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
         status: status.toUpperCase(),
         avatar,
         userId: user.id,
+        namaMentor, // SIMPAN KE DB
       },
       include: {
         user: {
@@ -186,6 +188,7 @@ export const updatePesertaMagang = async (req: Request, res: Response) => {
       tanggalSelesai,
       status,
       avatar,
+      namaMentor, // INPUT BARU: Nama Mentor
     } = req.body;
 
     const existingPeserta = await prisma.pesertaMagang.findUnique({
@@ -217,6 +220,7 @@ export const updatePesertaMagang = async (req: Request, res: Response) => {
     if (tanggalSelesai) updateData.tanggalSelesai = tanggalSelesai;
     if (status) updateData.status = status.toUpperCase();
     if (avatar !== undefined) updateData.avatar = avatar;
+    if (namaMentor) updateData.namaMentor = namaMentor; // UPDATE KE DB
 
     const updatedPesertaMagang = await prisma.pesertaMagang.update({
       where: { id },

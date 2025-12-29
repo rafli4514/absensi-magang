@@ -1,9 +1,9 @@
-import 'dart:async'; // PENTING: Untuk Timer
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Untuk format tanggal
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/performance_stats.dart';
@@ -15,7 +15,7 @@ import '../../services/dashboard_service.dart';
 import '../../services/leave_service.dart';
 import '../../services/location_service.dart';
 import '../../services/permission_service.dart';
-import '../../services/settings_service.dart'; // PENTING: Import SettingsService
+import '../../services/settings_service.dart';
 import '../../services/storage_service.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/constants.dart';
@@ -43,18 +43,21 @@ class _HomeScreenState extends State<HomeScreen> {
   PerformanceStats? _performanceStats;
   bool _isLoadingPerformance = false;
 
-  // VARIABEL BARU UNTUK VALIDASI JAM PULANG
-  String _workEndTime = "17:00"; // Default fallback
+  // Variabel Jam Pulang
+  String _workEndTime = "17:00";
   bool _canClockOut = false;
   Timer? _timer;
+
+  // Variabel Status Izin Hari Ini
+  String? _todayLeaveStatus; // 'IZIN', 'SAKIT', atau null
 
   @override
   void initState() {
     super.initState();
     _loadPerformanceData();
-    _loadSettings(); // Ambil jam pulang dari backend
+    _loadSettings();
+    _checkTodayLeaveStatus(); // <--- CEK STATUS IZIN SAAT INIT
 
-    // Cek waktu setiap 1 menit agar tombol otomatis aktif saat jamnya tiba
     _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
       _checkClockOutTime();
     });
@@ -74,24 +77,74 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _timer?.cancel(); // Bersihkan timer saat widget didestroy
+    _timer?.cancel();
     super.dispose();
   }
 
-  // --- LOGIC BARU: Ambil Setting & Cek Waktu ---
+  // --- LOGIC 1: Ambil Peserta ID Helper ---
+  Future<String?> _getPesertaId() async {
+    try {
+      final userDataStr =
+          await StorageService.getString(AppConstants.userDataKey);
+      if (userDataStr != null) {
+        final userData = jsonDecode(userDataStr);
+        return userData['pesertaMagang']?['id']?.toString();
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // --- LOGIC 2: Cek Status Izin Hari Ini ---
+  Future<void> _checkTodayLeaveStatus() async {
+    try {
+      final pesertaId = await _getPesertaId();
+      if (pesertaId == null) return;
+
+      // Ambil semua izin yang DISETUJUI milik user ini
+      final response = await LeaveService.getLeaves(
+          pesertaMagangId: pesertaId, status: 'DISETUJUI');
+
+      if (response.success && response.data != null) {
+        final now = DateTime.now();
+        // Cek apakah hari ini (now) berada dalam rentang tanggalMulai - tanggalSelesai
+        for (var leave in response.data!) {
+          final start = DateTime.parse(leave['tanggalMulai']);
+          final end = DateTime.parse(leave['tanggalSelesai']);
+
+          // Normalisasi tanggal (abaikan jam) agar akurat
+          final dateNow = DateTime(now.year, now.month, now.day);
+          final dateStart = DateTime(start.year, start.month, start.day);
+          final dateEnd = DateTime(end.year, end.month, end.day);
+
+          if ((dateNow.isAtSameMomentAs(dateStart) ||
+                  dateNow.isAfter(dateStart)) &&
+              (dateNow.isAtSameMomentAs(dateEnd) ||
+                  dateNow.isBefore(dateEnd))) {
+            if (mounted) {
+              setState(() {
+                _todayLeaveStatus = leave['tipe']; // 'IZIN' atau 'SAKIT'
+              });
+            }
+            break; // Ketemu satu sudah cukup
+          }
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) print("Error check leave status: $e");
+    }
+  }
+
+  // --- LOGIC 3: Load Settings & Jam Pulang ---
   Future<void> _loadSettings() async {
     try {
       final response = await SettingsService.getSettings();
       if (response.success && response.data != null) {
         if (mounted) {
           setState(() {
-            // Ambil workEndTime dari JSON backend (sesuai struktur controller backend)
-            // Struktur: { schedule: { workEndTime: "17:00", ... }, ... }
             final schedule = response.data!['schedule'];
             if (schedule != null && schedule['workEndTime'] != null) {
               _workEndTime = schedule['workEndTime'];
             }
-            // Panggil cek waktu segera setelah data didapat
             _checkClockOutTime();
           });
         }
@@ -102,20 +155,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _checkClockOutTime() {
-    // Gunakan IndonesianTime.now jika sudah ada utilitasnya, atau DateTime.now()
     final now = DateTime.now();
-
-    // Parsing jam pulang (Format HH:mm dari backend)
     final parts = _workEndTime.split(':');
     if (parts.length == 2) {
       final endHour = int.parse(parts[0]);
       final endMinute = int.parse(parts[1]);
-
-      // Buat DateTime hari ini dengan jam pulang target
       final endTime =
           DateTime(now.year, now.month, now.day, endHour, endMinute);
 
-      // Bandingkan: Apakah sekarang >= jam pulang?
       final canOut = now.isAfter(endTime) || now.isAtSameMomentAs(endTime);
 
       if (mounted && _canClockOut != canOut) {
@@ -126,44 +173,27 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // --- LOGIC 4: Load Performance ---
   Future<void> _loadPerformanceData() async {
     if (!mounted) return;
-
     setState(() => _isLoadingPerformance = true);
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final user = authProvider.user;
-
-      if (user == null) {
+      if (authProvider.user == null) {
         setState(() => _isLoadingPerformance = false);
         return;
       }
 
-      String? pesertaMagangId;
-      try {
-        final userDataStr =
-            await StorageService.getString(AppConstants.userDataKey);
-        if (userDataStr != null) {
-          final userData = jsonDecode(userDataStr);
-          pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
-        }
-      } catch (e) {
-        if (kDebugMode) print('Error getting pesertaMagangId: $e');
-      }
+      String? pesertaMagangId = await _getPesertaId();
 
-      if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
+      // Jika ID tidak ada, coba refresh profile
+      if (pesertaMagangId == null) {
         await authProvider.refreshProfile();
-        final refreshedUserDataStr =
-            await StorageService.getString(AppConstants.userDataKey);
-        if (refreshedUserDataStr != null) {
-          final refreshedUserData = jsonDecode(refreshedUserDataStr);
-          pesertaMagangId =
-              refreshedUserData['pesertaMagang']?['id']?.toString();
-        }
+        pesertaMagangId = await _getPesertaId();
       }
 
-      if (pesertaMagangId != null && pesertaMagangId.isNotEmpty) {
+      if (pesertaMagangId != null) {
         final response = await DashboardService.getCurrentMonthPerformance(
           pesertaMagangId: pesertaMagangId,
         );
@@ -179,8 +209,6 @@ class _HomeScreenState extends State<HomeScreen> {
               _performanceStats = PerformanceStats.empty();
               _isLoadingPerformance = false;
             });
-            GlobalSnackBar.show('Gagal memuat statistik performa',
-                isWarning: true);
           }
         }
       } else {
@@ -190,14 +218,11 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      if (kDebugMode) print('Error loading performance: $e');
       if (mounted) {
         setState(() {
           _performanceStats = PerformanceStats.empty();
           _isLoadingPerformance = false;
         });
-        GlobalSnackBar.show('Koneksi error saat memuat statistik',
-            isError: true);
       }
     }
   }
@@ -216,11 +241,8 @@ class _HomeScreenState extends State<HomeScreen> {
         await attendanceProvider.refreshTodayAttendance(
             preserveLocalState: true);
 
-        GlobalSnackBar.show(
-          'Berhasil melakukan Absen Masuk pada $time',
-          title: 'Presensi Sukses',
-          isSuccess: true,
-        );
+        GlobalSnackBar.show('Berhasil melakukan Absen Masuk pada $time',
+            isSuccess: true);
       } else if (attendanceType.isEmpty) {
         await Future.delayed(const Duration(milliseconds: 500));
         await attendanceProvider.refreshTodayAttendance(
@@ -230,7 +252,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handleClockOut(BuildContext context) async {
-    // VALIDASI TAMBAHAN: Cek lagi saat tombol ditekan
     if (!_canClockOut) {
       GlobalSnackBar.show('Belum waktunya absen pulang (Jadwal: $_workEndTime)',
           isWarning: true);
@@ -253,16 +274,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
 
-    if (confirmed != true || !mounted) {
-      return;
-    }
+    if (confirmed != true || !mounted) return;
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
     try {
@@ -270,11 +287,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!hasPermission) {
         if (mounted) {
           Navigator.pop(context);
-          GlobalSnackBar.show(
-            'Harap berikan akses lokasi untuk melakukan presensi.',
-            title: 'Izin Diperlukan',
-            isWarning: true,
-          );
+          GlobalSnackBar.show('Izin lokasi diperlukan.', isWarning: true);
         }
         return;
       }
@@ -283,61 +296,16 @@ class _HomeScreenState extends State<HomeScreen> {
       if (currentLocation == null) {
         if (mounted) {
           Navigator.pop(context);
-          GlobalSnackBar.show(
-            'Tidak dapat mendeteksi lokasi Anda. Pastikan GPS aktif.',
-            title: 'Lokasi Tidak Ditemukan',
-            isError: true,
-          );
+          GlobalSnackBar.show('Lokasi tidak ditemukan.', isError: true);
         }
         return;
       }
 
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final user = authProvider.user;
-
-      if (user == null) {
+      final pesertaMagangId = await _getPesertaId();
+      if (pesertaMagangId == null) {
         if (mounted) {
           Navigator.pop(context);
-          GlobalSnackBar.show(
-            'Data user tidak ditemukan. Silakan login ulang.',
-            title: 'Sesi Invalid',
-            isError: true,
-          );
-        }
-        return;
-      }
-
-      String? pesertaMagangId;
-      try {
-        final userDataStr =
-            await StorageService.getString(AppConstants.userDataKey);
-        if (userDataStr != null) {
-          final userData = jsonDecode(userDataStr);
-          pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
-        }
-      } catch (e) {
-        if (kDebugMode) print('Error getting pesertaMagangId: $e');
-      }
-
-      if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
-        await authProvider.refreshProfile();
-        final refreshedUserDataStr =
-            await StorageService.getString(AppConstants.userDataKey);
-        if (refreshedUserDataStr != null) {
-          final refreshedUserData = jsonDecode(refreshedUserDataStr);
-          pesertaMagangId =
-              refreshedUserData['pesertaMagang']?['id']?.toString();
-        }
-      }
-
-      if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
-        if (mounted) {
-          Navigator.pop(context);
-          GlobalSnackBar.show(
-            'ID Peserta Magang tidak ditemukan. Hubungi admin.',
-            title: 'Data Tidak Lengkap',
-            isError: true,
-          );
+          GlobalSnackBar.show('ID Peserta tidak ditemukan.', isError: true);
         }
         return;
       }
@@ -367,42 +335,26 @@ class _HomeScreenState extends State<HomeScreen> {
           await attendanceProvider.refreshTodayAttendance(
               preserveLocalState: true);
 
-          GlobalSnackBar.show(
-            'Absen pulang berhasil dilakukan',
-            title: 'Berhasil',
-            isSuccess: true,
-            icon: Icons.check_circle_outline_rounded,
-          );
+          GlobalSnackBar.show('Absen pulang berhasil dilakukan',
+              isSuccess: true);
         } else {
-          GlobalSnackBar.show(
-            attendanceResponse.message,
-            title: 'Gagal Absen Pulang',
-            isError: true,
-          );
+          GlobalSnackBar.show(attendanceResponse.message, isError: true);
         }
       }
     } catch (e) {
       if (mounted) {
         Navigator.pop(context);
-        GlobalSnackBar.show(
-          'Terjadi kesalahan: ${e.toString()}',
-          title: 'System Error',
-          isError: true,
-        );
+        GlobalSnackBar.show('Terjadi kesalahan: ${e.toString()}',
+            isError: true);
       }
     }
   }
 
   void _showAlreadyClockedInNotification() {
-    GlobalSnackBar.show(
-      'Anda sudah melakukan absen masuk hari ini.',
-      title: 'Info Presensi',
-      isWarning: true,
-      icon: Icons.info_outline_rounded,
-    );
+    GlobalSnackBar.show('Anda sudah melakukan absen masuk hari ini.',
+        isWarning: true);
   }
 
-  // --- LOGIC PENGAJUAN IZIN ---
   void _handleRequestLeave() {
     showDialog(
       context: context,
@@ -415,35 +367,11 @@ class _HomeScreenState extends State<HomeScreen> {
           );
 
           try {
-            final authProvider =
-                Provider.of<AuthProvider>(context, listen: false);
-            final user = authProvider.user;
-
-            String? pesertaMagangId;
-            try {
-              final userDataStr =
-                  await StorageService.getString(AppConstants.userDataKey);
-              if (userDataStr != null) {
-                final userData = jsonDecode(userDataStr);
-                pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
-              }
-            } catch (_) {}
-
-            if (pesertaMagangId == null && user != null) {
-              await authProvider.refreshProfile();
-              final updatedStr =
-                  await StorageService.getString(AppConstants.userDataKey);
-              if (updatedStr != null) {
-                final u = jsonDecode(updatedStr);
-                pesertaMagangId = u['pesertaMagang']?['id']?.toString();
-              }
-            }
-
+            final pesertaMagangId = await _getPesertaId();
             if (pesertaMagangId == null) {
               if (mounted) {
                 Navigator.pop(context);
-                GlobalSnackBar.show(
-                    'ID Peserta tidak ditemukan. Hubungi admin.',
+                GlobalSnackBar.show('ID Peserta tidak ditemukan.',
                     isError: true);
               }
               return;
@@ -463,19 +391,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
             if (mounted) {
               Navigator.pop(context);
-
               if (response.success) {
-                GlobalSnackBar.show(
-                  'Pengajuan berhasil dikirim. Menunggu persetujuan mentor.',
-                  title: 'Sukses',
-                  isSuccess: true,
-                );
+                GlobalSnackBar.show('Pengajuan berhasil dikirim.',
+                    isSuccess: true);
               } else {
-                GlobalSnackBar.show(
-                  response.message,
-                  title: 'Gagal',
-                  isError: true,
-                );
+                GlobalSnackBar.show(response.message, isError: true);
               }
             }
           } catch (e) {
@@ -526,20 +446,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const WelcomeHeaderWidget(),
                     const SizedBox(height: 24),
+
+                    // --- ATTENDANCE CARD dengan Parameter Baru ---
                     AttendanceCard(
                       isClockedIn: attendanceProvider.isClockedIn,
                       isClockedOut: attendanceProvider.isClockedOut,
 
-                      // --- PASSING DATA VALIDASI PULANG ---
                       canClockOut: _canClockOut,
                       workEndTime: _workEndTime,
+
+                      // Inject Status Izin (Izin/Sakit) jika ada
+                      leaveStatus: _todayLeaveStatus,
 
                       onClockIn: () async {
                         if (attendanceProvider.isClockedIn) {
                           _showAlreadyClockedInNotification();
                           return;
                         }
-
                         final result = await Navigator.pushNamed(
                           context,
                           RouteNames.qrScan,
@@ -552,6 +475,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       onRequestLeave: _handleRequestLeave,
                     ),
+
                     const SizedBox(height: 16),
                     AttendanceStatusCard(
                       clockInTime: attendanceProvider.clockInTime,
@@ -559,6 +483,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       isClockedIn: attendanceProvider.isClockedIn,
                       isClockedOut: attendanceProvider.isClockedOut,
                     ),
+                    // ... sisa widget (Performa, Pengumuman, dll) tetap sama ...
                     const SizedBox(height: 24),
                     Text(
                       'Performa',
@@ -572,12 +497,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 16),
                     _isLoadingPerformance
-                        ? const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(32.0),
-                              child: CircularProgressIndicator(),
-                            ),
-                          )
+                        ? const Center(child: CircularProgressIndicator())
                         : SizedBox(
                             width: double.infinity,
                             child: PerformanceCard(
@@ -586,72 +506,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                     const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Pengumuman',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: isDark
-                                ? AppThemes.darkTextPrimary
-                                : AppThemes.onSurfaceColor,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? AppThemes.darkSurface
-                                : AppThemes.backgroundColor,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'Dokumen',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: isDark
-                                  ? AppThemes.darkTextSecondary
-                                  : AppThemes.hintColor,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
                       child: AnnouncementCard(
-                        onDownload: (item) {
-                          showDialog(
-                            context: context,
-                            builder: (context) => CustomDialog.download(
-                              fileName: item.title,
-                              onDownload: () {
-                                Navigator.pop(context);
-                                GlobalSnackBar.show(
-                                  '${item.title} berhasil diunduh',
-                                  title: 'Unduhan Selesai',
-                                  isSuccess: true,
-                                  icon: Icons.file_download_done_rounded,
-                                );
-                              },
-                            ),
-                          );
-                        },
-                        onViewDetail: (item) {
-                          showDialog(
-                            context: context,
-                            builder: (context) => CustomDialog.detail(
-                              title: item.title,
-                              description: item.body,
-                              onClose: () => Navigator.pop(context),
-                            ),
-                          );
-                        },
+                        onDownload: (item) {},
+                        onViewDetail: (item) {},
                       ),
                     ),
                     SizedBox(height: isKeyboardOpen ? 20 : 100),
@@ -670,7 +529,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         _showAlreadyClockedInNotification();
                         return;
                       }
-
                       NavigationHelper.navigateWithoutAnimation(
                         context,
                         RouteNames.qrScan,

@@ -5,6 +5,7 @@ import '../../navigation/route_names.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/dashboard_service.dart';
 import '../../themes/app_themes.dart';
+import '../../utils/responsive_layout.dart'; // IMPORT RESPONSIVE HELPER
 import '../../utils/ui_utils.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
@@ -74,7 +75,18 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final user = Provider.of<AuthProvider>(context).user;
+
+    // --- IMPLEMENTASI RESPONSIVE HELPER ---
+    final isMobile = ResponsiveLayout.isMobile(context);
+    final isTablet = ResponsiveLayout.isTablet(context);
+
+    // Tentukan jumlah kolom dan rasio kartu berdasarkan ukuran layar
+    final int gridCrossAxisCount = isMobile ? 2 : 4;
+
+    // Aspek rasio: Mobile butuh kartu lebih tinggi (rasio lebih kecil) agar teks tidak overflow
+    final double gridChildAspectRatio = isMobile
+        ? 1.35 // Mobile: Lebih tinggi
+        : 1.5; // Tablet/Desktop: Lebih lebar
 
     return Scaffold(
       backgroundColor:
@@ -124,14 +136,15 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Statistik Grid (Label diperjelas untuk monitoring)
+                    // Statistik Grid (Responsive)
                     GridView.count(
-                      crossAxisCount: 2,
+                      crossAxisCount: gridCrossAxisCount,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
-                      childAspectRatio: 1.5,
+                      childAspectRatio:
+                          gridChildAspectRatio, // FIX OVERFLOW DISINI
                       children: [
                         _buildStatCard(
                           'Total Peserta',
@@ -141,14 +154,14 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                           isDark,
                         ),
                         _buildStatCard(
-                          'Peserta Hadir', // Diperjelas
+                          'Peserta Hadir',
                           _stats?['absensiMasukHariIni']?.toString() ?? '0',
                           Icons.check_circle_rounded,
                           AppThemes.successColor,
                           isDark,
                         ),
                         _buildStatCard(
-                          'Peserta Pulang', // Diperjelas
+                          'Peserta Pulang',
                           _stats?['absensiKeluarHariIni']?.toString() ?? '0',
                           Icons.logout_rounded,
                           AppThemes.infoColor,
@@ -177,26 +190,33 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Menu Admin
-                    _buildAdminMenuTile(
-                      title: 'Data Peserta Magang',
-                      subtitle: 'Lihat daftar, tambah, atau hapus peserta',
-                      icon: Icons.manage_accounts_rounded,
-                      color: AppThemes.primaryColor,
-                      isDark: isDark,
-                      onTap: () =>
-                          Navigator.pushNamed(context, RouteNames.adminInterns),
+                    // Menu Admin - Gunakan Responsive Layout jika perlu,
+                    // tapi Column biasanya aman untuk list menu vertical.
+                    Column(
+                      children: [
+                        _buildAdminMenuTile(
+                          title: 'Data Peserta Magang',
+                          subtitle: 'Lihat daftar, tambah, atau hapus peserta',
+                          icon: Icons.manage_accounts_rounded,
+                          color: AppThemes.primaryColor,
+                          isDark: isDark,
+                          onTap: () => Navigator.pushNamed(
+                              context, RouteNames.adminInterns),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildAdminMenuTile(
+                          title: 'Buat QR Code Absensi',
+                          subtitle: 'Generate QR untuk discan oleh peserta',
+                          icon: Icons.qr_code_2_rounded,
+                          color: AppThemes.secondaryColor,
+                          isDark: isDark,
+                          onTap: () =>
+                              Navigator.pushNamed(context, RouteNames.adminQR),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    _buildAdminMenuTile(
-                      title: 'Buat QR Code Absensi',
-                      subtitle: 'Generate QR untuk discan oleh peserta',
-                      icon: Icons.qr_code_2_rounded,
-                      color: AppThemes.secondaryColor,
-                      isDark: isDark,
-                      onTap: () =>
-                          Navigator.pushNamed(context, RouteNames.adminQR),
-                    ),
+                    // Padding bawah tambahan agar scroll tidak mentok
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
@@ -237,6 +257,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       ? AppThemes.darkTextPrimary
                       : AppThemes.onSurfaceColor,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               Text(
                 title,
@@ -246,6 +268,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       ? AppThemes.darkTextSecondary
                       : AppThemes.hintColor,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

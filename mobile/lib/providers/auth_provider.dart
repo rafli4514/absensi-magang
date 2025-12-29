@@ -138,6 +138,7 @@ class AuthProvider with ChangeNotifier {
     String? nomorHp,
     String? tanggalMulai,
     String? tanggalSelesai,
+    String? namaMentor,
   }) async {
     _isLoading = true;
     _error = null;
@@ -153,6 +154,7 @@ class AuthProvider with ChangeNotifier {
         nomorHp: nomorHp,
         tanggalMulai: tanggalMulai,
         tanggalSelesai: tanggalSelesai,
+        namaMentor: namaMentor,
       );
 
       if (response.success) {
@@ -255,6 +257,7 @@ class AuthProvider with ChangeNotifier {
     String? tanggalMulai,
     String? tanggalSelesai,
     String? role,
+    String? namaMentor,
   }) async {
     _isLoading = true;
     _error = null;
@@ -281,6 +284,7 @@ class AuthProvider with ChangeNotifier {
           tanggalMulai: tanggalMulai,
           tanggalSelesai: tanggalSelesai,
           instansi: instansi,
+          namaMentor: namaMentor,
         );
       } else {
         response = await AuthService.register(

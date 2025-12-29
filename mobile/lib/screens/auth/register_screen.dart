@@ -20,6 +20,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  final _mentorController = TextEditingController();
   final _namaController = TextEditingController();
   final _usernameController = TextEditingController();
   final _idPesertaMagangController = TextEditingController();
@@ -63,6 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    _mentorController.dispose();
     _namaController.dispose();
     _usernameController.dispose();
     _idPesertaMagangController.dispose();
@@ -155,6 +157,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         tanggalMulai: _tanggalMulaiController.text.trim(),
         tanggalSelesai: _tanggalSelesaiController.text.trim(),
         role: 'peserta_magang',
+        namaMentor: _mentorController.text.trim(),
       );
 
       if (success && mounted) {
@@ -562,6 +565,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   hint: 'Asal Universitas/Sekolah',
                   icon: Icons.school_rounded,
                   validator: (v) => (v?.isEmpty ?? true) ? 'Wajib diisi' : null,
+                ),
+                const SizedBox(height: 16),
+
+                // --- INPUT NAMA MENTOR (BARU) ---
+                CustomTextField(
+                  controller: _mentorController,
+                  label: 'Nama Mentor / Pembimbing',
+                  hint: 'Nama pembimbing lapangan',
+                  icon: Icons.supervisor_account_rounded,
+                  // Opsional: validator jika wajib
+                  // validator: (v) => (v?.isEmpty ?? true) ? 'Wajib diisi' : null,
                 ),
                 const SizedBox(height: 16),
 

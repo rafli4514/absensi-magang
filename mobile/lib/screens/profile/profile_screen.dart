@@ -47,8 +47,8 @@ class ProfileScreen extends StatelessWidget {
     final isDarkMode = themeProvider.isDarkMode;
     final user = authProvider.user;
 
-    // Logic Profile
-    final (:displayDivisi, :displayInstansi, :isStudent) =
+    // Logic Profile (Destructuring diperbaiki)
+    final (:displayDivisi, :displayInstansi, :mentorName, :isStudent) =
         ProfileLogic.extractUserData(user, authProvider);
 
     final (
@@ -78,7 +78,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Hanya tampilkan detail magang jika user adalah STUDENT (Peserta)
+                // Hanya tampilkan detail magang jika user adalah STUDENT
                 if (isStudent)
                   InternshipInfoCard(
                     isDarkMode: isDarkMode,
@@ -86,6 +86,7 @@ class ProfileScreen extends StatelessWidget {
                     displayInstansi: displayInstansi,
                     displayDivisi: displayDivisi,
                     idPesertaMagang: user?.idPesertaMagang,
+                    mentorName: mentorName,
                     hasValidInternshipDates: hasValidInternshipDates,
                     startDate: startDate,
                     endDate: endDateTime,
@@ -194,8 +195,7 @@ class ProfileScreen extends StatelessWidget {
             child: authProvider.isMentor
                 ? MentorBottomNav(currentRoute: RouteNames.profile)
                 : authProvider.isAdmin
-                    ? const SizedBox
-                        .shrink() // Admin tidak punya bottom nav di profile (bisa pakai back button)
+                    ? const SizedBox.shrink()
                     : FloatingBottomNav(
                         currentRoute: RouteNames.profile,
                         onQRScanTap: () =>

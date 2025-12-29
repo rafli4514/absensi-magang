@@ -34,6 +34,7 @@ model PesertaMagang {
   nomorHp        String
   tanggalMulai   String
   tanggalSelesai String
+  namaMentor     String?
   status         StatusPeserta   @default(AKTIF)
   avatar         String?
   createdAt      DateTime        @default(now())
