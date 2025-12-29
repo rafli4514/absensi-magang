@@ -19,14 +19,13 @@ class GlobalErrorHandler {
       if (error.statusCode == 401) {
         if (ctx != null) _handleUnauthorized(ctx);
       } else if (error.statusCode == 403) {
-        // Access Denied usually needs a Dialog, but we can stick to SnackBar for consistency if preferred
         GlobalSnackBar.show(error.message,
             title: 'Akses Ditolak', isError: true);
       } else if (error.statusCode == 404) {
         GlobalSnackBar.show(error.message, isWarning: true);
       } else if (error.statusCode != null && error.statusCode! >= 500) {
         GlobalSnackBar.show('Terjadi kesalahan server (${error.statusCode})',
-            title: 'Server Error', isError: true);
+            title: 'Kesalahan Server', isError: true);
       } else {
         GlobalSnackBar.show(error.message, isError: true);
       }
@@ -39,25 +38,27 @@ class GlobalErrorHandler {
     if (errorMsg.contains('socketexception') ||
         errorMsg.contains('connection refused') ||
         errorMsg.contains('network is unreachable')) {
-      // REPLACED AppToast with GlobalSnackBar
       GlobalSnackBar.show(
-        "Tidak ada koneksi internet. Periksa jaringan Anda.",
-        title: "Koneksi Bermasalah",
+        "Tidak ada koneksi internet. Periksa jaringan Anda.", // Translate
+        title: "Koneksi Bermasalah", // Translate
         isError: true,
         icon: Icons.wifi_off_rounded,
       );
     } else if (errorMsg.contains('timeout')) {
-      GlobalSnackBar.show("Waktu koneksi habis. Silakan coba lagi.",
-          title: "Timeout", isWarning: true, icon: Icons.timer_off_rounded);
+      GlobalSnackBar.show(
+          "Waktu koneksi habis. Silakan coba lagi.", // Translate
+          title: "Waktu Habis", // Translate
+          isWarning: true,
+          icon: Icons.timer_off_rounded);
     } else if (errorMsg.contains('permission')) {
-      // Permissions usually need an actionable dialog
       if (ctx != null) {
         AppDialog.show(
           ctx,
-          title: 'Izin Diperlukan',
-          content: 'Aplikasi memerlukan izin untuk fitur ini. Buka pengaturan?',
-          primaryText: 'Buka Pengaturan',
-          secondaryText: 'Batal',
+          title: 'Izin Diperlukan', // Translate
+          content:
+              'Aplikasi memerlukan izin untuk fitur ini. Buka pengaturan?', // Translate
+          primaryText: 'Buka Pengaturan', // Translate
+          secondaryText: 'Batal', // Translate
           onPrimary: () {
             Navigator.pop(ctx);
             PermissionService.openAppSettings();
@@ -65,9 +66,8 @@ class GlobalErrorHandler {
         );
       }
     } else {
-      // Catch-all generic errors
       GlobalSnackBar.show(
-        "Terjadi kesalahan: ${error.toString()}",
+        "Terjadi kesalahan: ${error.toString()}", // Translate
         title: "Error",
         isError: true,
       );
@@ -79,12 +79,12 @@ class GlobalErrorHandler {
 
     if (token == null || token.isEmpty) return;
 
-    // Use Dialog for Session Expiry as it forces user action
     AppDialog.show(
       null,
-      title: 'Sesi Berakhir',
-      content: 'Sesi login Anda telah berakhir. Silakan login kembali.',
-      primaryText: 'Login Ulang',
+      title: 'Sesi Berakhir', // Translate
+      content:
+          'Sesi login Anda telah berakhir. Silakan login kembali.', // Translate
+      primaryText: 'Login Ulang', // Translate
       isError: true,
       dismissible: false,
       onPrimary: () async {

@@ -25,7 +25,7 @@ class ActivitiesHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Activities Overview',
+              'Ringkasan Aktivitas',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -36,12 +36,11 @@ class ActivitiesHeader extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Track your daily progress',
+              'Pantau progres harianmu',
               style: TextStyle(
                 fontSize: 14,
-                color: isDark
-                    ? AppThemes.darkTextSecondary
-                    : AppThemes.hintColor,
+                color:
+                    isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
               ),
             ),
           ],
@@ -51,14 +50,14 @@ class ActivitiesHeader extends StatelessWidget {
           children: [
             _HeaderActionButton(
               icon: Icons.add_task,
-              label: 'Activity',
+              label: 'Aktivitas',
               onTap: onAddActivity,
               isDark: isDark,
             ),
             const SizedBox(width: 8),
             _HeaderActionButton(
               icon: Icons.book_outlined,
-              label: 'Log',
+              label: 'Log Book',
               onTap: onAddLogbook,
               isDark: isDark,
             ),
@@ -90,9 +89,8 @@ class _HeaderActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isDark
-              ? AppThemes.darkSurfaceElevated
-              : AppThemes.surfaceColor,
+          color:
+              isDark ? AppThemes.darkSurfaceElevated : AppThemes.surfaceColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDark ? AppThemes.darkOutline : Colors.grey.shade200,

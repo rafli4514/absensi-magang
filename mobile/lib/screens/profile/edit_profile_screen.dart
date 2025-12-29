@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../themes/app_themes.dart';
-import '../../utils/ui_utils.dart'; // Tambahkan import ini
+import '../../utils/ui_utils.dart';
 import '../../utils/validators.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_text_field.dart';
@@ -26,14 +26,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
-  final _idPesertaMagangController = TextEditingController(); // NISN/NIM
+  final _idPesertaMagangController = TextEditingController();
   final _divisiController = TextEditingController();
   final _instansiController = TextEditingController();
   final _nomorHpController = TextEditingController();
   final _tanggalMulaiController = TextEditingController();
   final _tanggalSelesaiController = TextEditingController();
 
-  // FIX: Hapus _imagePicker yang tidak dipakai
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
 
   bool _isLoading = false;
@@ -45,7 +44,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-    _loadUserData();
+      _loadUserData();
     });
   }
 
@@ -137,7 +136,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   void _calculateEndDate() {
     if (_tanggalMulaiController.text.isNotEmpty) {
-    try {
+      try {
         final startDate = DateTime.parse(_tanggalMulaiController.text);
         final endDate = DateTime(
           startDate.year,
@@ -171,18 +170,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       if (mounted) {
         if (success) {
-          // NOTIFIKASI BARU: SUKSES
           GlobalSnackBar.show(
             'Profil berhasil diperbarui',
-            title: 'Update Berhasil',
+            title: 'Berhasil',
             isSuccess: true,
           );
           Navigator.pop(context);
         } else {
-          // NOTIFIKASI BARU: ERROR
           GlobalSnackBar.show(
             authProvider.error ?? 'Gagal memperbarui profil',
-            title: 'Update Gagal',
+            title: 'Gagal',
             isError: true,
           );
         }
@@ -191,15 +188,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _showImageSourceDialog() {
-    // Implementasi Image Picker nanti
     GlobalSnackBar.show(
       'Fitur ganti foto akan segera tersedia',
       title: 'Info',
       isInfo: true,
     );
   }
-
-  // FIX: Hapus method unused _pickImageFromGallery dan _takePhotoFromCamera
 
   Widget _buildProfilePicture(bool isDarkMode) {
     if (_selectedImage != null) {
@@ -232,9 +226,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
             title,
             style: TextStyle(
               fontSize: 18,
@@ -242,17 +236,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               color: isDarkMode
                   ? AppThemes.darkTextPrimary
                   : AppThemes.onSurfaceColor,
-              ),
+            ),
           ),
-              Container(
+          Container(
             margin: const EdgeInsets.only(top: 4),
             width: 40,
             height: 3,
-                  color:
+            color:
                 isDarkMode ? AppThemes.darkAccentBlue : AppThemes.primaryColor,
-              ),
-            ],
           ),
+        ],
+      ),
     );
   }
 
@@ -264,7 +258,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final isDarkMode = themeProvider.isDarkMode;
 
     return Scaffold(
-      appBar: CustomAppBar(title: 'Edit Profile', showBackButton: true),
+      appBar: CustomAppBar(title: 'Edit Profil', showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -274,34 +268,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             children: [
               Center(
                 child: Stack(
-                children: [
+                  children: [
                     _buildProfilePicture(isDarkMode),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
                       child: GestureDetector(
                         onTap: _showImageSourceDialog,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
                             color: AppThemes.primaryColor,
-                        shape: BoxShape.circle,
+                            shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
-                      ),
+                          ),
                           child: const Icon(
-                          Icons.camera_alt_rounded,
-                          size: 18,
-                          color: Colors.white,
+                            Icons.camera_alt_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
                 ),
               ),
               const SizedBox(height: 32),
-              _buildSectionTitle('Personal Info', isDarkMode),
+              _buildSectionTitle('Info Pribadi', isDarkMode),
               CustomTextField(
                 controller: _nameController,
                 label: 'Nama Lengkap',
@@ -319,7 +313,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 readOnly: true,
               ),
               const SizedBox(height: 20),
-              // --- ID Peserta Magang (NISN/NIM) ---
               if (isStudent)
                 CustomTextField(
                   controller: _idPesertaMagangController,
@@ -339,7 +332,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 32),
               if (isStudent) ...[
-                _buildSectionTitle('Internship Info', isDarkMode),
+                _buildSectionTitle('Info Magang', isDarkMode),
                 CustomTextField(
                   controller: _divisiController,
                   label: 'Divisi',
@@ -412,7 +405,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 const SizedBox(height: 20),
                 CustomTextField(
                   controller: _tanggalSelesaiController,
-                  label: 'Tanggal Selesai (Auto)',
+                  label: 'Tanggal Selesai (Otomatis)',
                   hint: 'Dihitung otomatis',
                   icon: Icons.event_available_rounded,
                   readOnly: true,
@@ -437,7 +430,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           elevation: 2,
                         ),
                         child: Text(
-                          'Update Profile',
+                          'Simpan Perubahan',
                           style: themeProvider.themeMode == ThemeMode.dark
                               ? null
                               : const TextStyle(fontWeight: FontWeight.w600),

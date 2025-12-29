@@ -1027,10 +1027,14 @@ const PengaturanPageContent = () => {
                   </span>
                   {/* =================================== */}
 
+                  {/* MODIFIED SECTION: Added Icons to Labels */}
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <p className="text-sm font-medium">Telat Check-in</p>
-                      <p className="text-xs text-gray-500">Izinkan absen meski terlambat</p>
+                      <p className="text-sm font-medium flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-orange-500" />
+                        <span>Telat Check-in</span>
+                      </p>
+                      <p className="text-xs text-gray-500 pl-6">Izinkan absen meski terlambat</p>
                     </div>
                     <Switch
                       checked={settings.attendance.allowLateCheckIn}
@@ -1042,8 +1046,11 @@ const PengaturanPageContent = () => {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <p className="text-sm font-medium">Wajib Lokasi</p>
-                      <p className="text-xs text-gray-500">Harus menyalakan GPS</p>
+                      <p className="text-sm font-medium flex items-center gap-2">
+                         <MapPin className="h-4 w-4 text-blue-500" />
+                         <span>Wajib Lokasi</span>
+                      </p>
+                      <p className="text-xs text-gray-500 pl-6">Harus menyalakan GPS</p>
                     </div>
                     <Switch
                       checked={settings.attendance.requireLocation}
@@ -1055,8 +1062,11 @@ const PengaturanPageContent = () => {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <p className="text-sm font-medium">Remote Work</p>
-                      <p className="text-xs text-gray-500">Absen dari mana saja</p>
+                       <p className="text-sm font-medium flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-green-500" />
+                          <span>Remote Work</span>
+                       </p>
+                      <p className="text-xs text-gray-500 pl-6">Absen dari mana saja</p>
                     </div>
                     <Switch
                       checked={settings.attendance.allowRemoteCheckIn}
@@ -1066,22 +1076,36 @@ const PengaturanPageContent = () => {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Toleransi Keterlambatan</label>
-                    <Select.Root
-                      value={settings.attendance.lateThreshold.toString()}
-                      onValueChange={(value) =>
-                        setSettings({ ...settings, attendance: { ...settings.attendance, lateThreshold: parseInt(value) } })
-                      }
-                    >
-                      <Select.Trigger className="w-full" />
-                      <Select.Content>
-                        <Select.Item value="5">5 menit</Select.Item>
-                        <Select.Item value="10">10 menit</Select.Item>
-                        <Select.Item value="15">15 menit</Select.Item>
-                        <Select.Item value="30">30 menit</Select.Item>
-                      </Select.Content>
-                    </Select.Root>
+                  {/* MODIFIED: Toleransi Keterlambatan Layout - Left Aligned */}
+                  <div className="space-y-3 pt-2">
+                     <div className="space-y-1">
+                        <p className="text-sm font-medium flex items-center gap-2">
+                           <AlertTriangle className="h-4 w-4 text-red-500" />
+                           <span>Toleransi Keterlambatan</span>
+                        </p>
+                        <p className="text-xs text-gray-500 pl-6">
+                           Batas waktu toleransi check-in
+                        </p>
+                     </div>
+
+                     <div className="pl-6">
+                        <Select.Root
+                           value={settings.attendance.lateThreshold.toString()}
+                           onValueChange={(value) =>
+                              setSettings({ ...settings, attendance: { ...settings.attendance, lateThreshold: parseInt(value) } })
+                           }
+                        >
+                           <Select.Trigger className="w-[180px]" placeholder="Pilih durasi..." />
+                           <Select.Content>
+                              <Select.Item value="5">5 menit</Select.Item>
+                              <Select.Item value="10">10 menit</Select.Item>
+                              <Select.Item value="15">15 menit</Select.Item>
+                              <Select.Item value="30">30 menit</Select.Item>
+                              <Select.Item value="45">45 menit</Select.Item>
+                              <Select.Item value="60">60 menit</Select.Item>
+                           </Select.Content>
+                        </Select.Root>
+                     </div>
                   </div>
                 </div>
               )}

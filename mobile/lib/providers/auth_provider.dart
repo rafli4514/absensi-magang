@@ -22,6 +22,7 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _user != null;
   bool get isAdmin => _user?.isAdmin ?? false;
   bool get isStudent => _user?.isStudent ?? false;
+  bool get isMentor => _user?.isPembimbing ?? false;
 
   AuthProvider() {
     _loadUserData();
@@ -83,7 +84,7 @@ class AuthProvider with ChangeNotifier {
       final response = await AuthService.getProfile();
       if (response.success && response.data != null) {
         _user = response.data;
-        
+
         // Also fetch raw data to preserve pesertaMagang in storage
         try {
           final token = await StorageService.getString(AppConstants.tokenKey);
@@ -92,12 +93,14 @@ class AuthProvider with ChangeNotifier {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $token',
             };
-            
-            final httpResponse = await http.get(
-              Uri.parse('${AppConstants.baseUrl}/auth/profile'),
-              headers: headers,
-            ).timeout(const Duration(seconds: 10));
-            
+
+            final httpResponse = await http
+                .get(
+                  Uri.parse('${AppConstants.baseUrl}/auth/profile'),
+                  headers: headers,
+                )
+                .timeout(const Duration(seconds: 10));
+
             if (httpResponse.statusCode == 200) {
               final rawData = jsonDecode(httpResponse.body);
               if (rawData['success'] == true && rawData['data'] != null) {
@@ -114,7 +117,7 @@ class AuthProvider with ChangeNotifier {
           if (kDebugMode) print('⚠️ Could not save raw profile data: $e');
           await _saveUserData(_user!);
         }
-        
+
         notifyListeners(); // Update UI
       } else if (response.statusCode == 401) {
         // Jika token expired (401), baru kita logout paksa

@@ -8,8 +8,8 @@ import '../../themes/app_themes.dart';
 
 class LogBookFormDialog extends StatefulWidget {
   final LogBook? existingLog;
-  final Function(String tanggal, String kegiatan, String deskripsi, String? durasi, ActivityType? type, ActivityStatus? status)
-  onSave;
+  final Function(String tanggal, String kegiatan, String deskripsi,
+      String? durasi, ActivityType? type, ActivityStatus? status) onSave;
 
   const LogBookFormDialog({super.key, this.existingLog, required this.onSave});
 
@@ -38,8 +38,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
     _durasiController = TextEditingController(
       text: widget.existingLog?.durasi ?? '',
     );
-    
-    // Parse tanggal dari existing log atau gunakan hari ini
+
     if (widget.existingLog != null && widget.existingLog!.tanggal.isNotEmpty) {
       try {
         _selectedDate = DateTime.parse(widget.existingLog!.tanggal);
@@ -49,8 +48,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
     } else {
       _selectedDate = DateTime.now();
     }
-    
-    // Set type dan status dari existing log atau default
+
     _selectedType = widget.existingLog?.type ?? ActivityType.other;
     _selectedStatus = widget.existingLog?.status ?? ActivityStatus.pending;
   }
@@ -86,8 +84,8 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
               children: [
                 Text(
                   widget.existingLog != null
-                      ? 'Edit Log Book'
-                      : 'Tambah Log Book',
+                      ? 'Edit Log Book' // Translate
+                      : 'Tambah Log Book', // Translate
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -97,12 +95,13 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                   ),
                 ),
                 const SizedBox(height: 24),
+
                 // Tanggal Picker
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Tanggal',
+                      'Tanggal', // Translate
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -161,14 +160,14 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                 ),
                 const SizedBox(height: 16),
                 _StyledTextField(
-                  label: 'Kegiatan',
+                  label: 'Kegiatan', // Translate
                   icon: Icons.event_note,
                   isDark: isDark,
                   controller: _kegiatanController,
                 ),
                 const SizedBox(height: 16),
                 _StyledTextField(
-                  label: 'Deskripsi',
+                  label: 'Deskripsi', // Translate
                   icon: Icons.description,
                   isDark: isDark,
                   maxLines: 4,
@@ -176,7 +175,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                 ),
                 const SizedBox(height: 16),
                 _StyledTextField(
-                  label: 'Durasi (opsional, contoh: 2 jam)',
+                  label: 'Durasi (opsional, contoh: 2 jam)', // Translate
                   icon: Icons.access_time,
                   isDark: isDark,
                   controller: _durasiController,
@@ -184,7 +183,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                 const SizedBox(height: 16),
                 // Type Dropdown
                 _buildDropdown<ActivityType>(
-                  label: 'Tipe Aktivitas',
+                  label: 'Tipe Aktivitas', // Translate
                   value: _selectedType,
                   items: ActivityType.values,
                   onChanged: (val) => setState(() => _selectedType = val),
@@ -194,7 +193,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                 const SizedBox(height: 16),
                 // Status Dropdown
                 _buildDropdown<ActivityStatus>(
-                  label: 'Status',
+                  label: 'Status', // Translate
                   value: _selectedStatus,
                   items: ActivityStatus.values,
                   onChanged: (val) => setState(() => _selectedStatus = val),
@@ -208,7 +207,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                     TextButton(
                       onPressed: () => Navigator.pop(context),
                       child: Text(
-                        'Batal',
+                        'Batal', // Translate
                         style: TextStyle(
                           color: isDark
                               ? AppThemes.darkTextSecondary
@@ -246,7 +245,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                           vertical: 12,
                         ),
                       ),
-                      child: const Text('Simpan'),
+                      child: const Text('Simpan'), // Translate
                     ),
                   ],
                 ),
@@ -291,9 +290,8 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
             child: DropdownButton<T>(
               value: value,
               isExpanded: true,
-              dropdownColor: isDark
-                  ? AppThemes.darkSurface
-                  : AppThemes.surfaceColor,
+              dropdownColor:
+                  isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
               items: items.map((e) {
                 return DropdownMenuItem<T>(
                   value: e,
@@ -357,15 +355,14 @@ class _StyledTextField extends StatelessWidget {
             controller: controller,
             maxLines: maxLines,
             style: TextStyle(
-              color: isDark
-                  ? AppThemes.darkTextPrimary
-                  : AppThemes.onSurfaceColor,
+              color:
+                  isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
             ),
             decoration: InputDecoration(
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(12),
               prefixIcon: Icon(icon, size: 20, color: AppThemes.hintColor),
-              hintText: 'Enter $label',
+              hintText: 'Masukkan $label', // Translate
               hintStyle: TextStyle(
                 color: isDark
                     ? AppThemes.darkTextTertiary

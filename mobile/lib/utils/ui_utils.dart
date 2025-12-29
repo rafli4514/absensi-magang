@@ -20,29 +20,25 @@ class GlobalSnackBar {
     bool isInfo = false,
     IconData? icon,
   }) {
-    // 1. Bersihkan overlay sebelumnya
     _removeCurrentOverlay();
 
-    // 2. Ambil Context untuk Cek Tema
     final context = GlobalContext.navigatorKey.currentContext;
     final isDark =
         context != null && Theme.of(context).brightness == Brightness.dark;
 
-    // 3. Tentukan Style Dasar (Default: Info)
     Color strokeColor = AppThemes.infoColor;
     Color iconBgColor =
         isDark ? AppThemes.infoColor.withOpacity(0.15) : AppThemes.infoLight;
     IconData defaultIcon = Icons.info_outline_rounded;
-    String defaultTitle = 'Information';
+    String defaultTitle = 'Informasi'; // Translate
 
-    // 4. Sesuaikan dengan Tipe Notifikasi
     if (isSuccess) {
       strokeColor = AppThemes.successColor;
       iconBgColor = isDark
           ? AppThemes.successColor.withOpacity(0.15)
           : AppThemes.successLight;
       defaultIcon = Icons.check_circle_outline_rounded;
-      defaultTitle = 'Success';
+      defaultTitle = 'Sukses'; // Translate
       HapticUtil.success();
     } else if (isError) {
       strokeColor = AppThemes.errorColor;
@@ -50,7 +46,7 @@ class GlobalSnackBar {
           ? AppThemes.errorColor.withOpacity(0.15)
           : AppThemes.errorLight;
       defaultIcon = Icons.error_outline_rounded;
-      defaultTitle = 'Error';
+      defaultTitle = 'Gagal'; // Translate
       HapticUtil.error();
     } else if (isWarning) {
       strokeColor = AppThemes.warningColor;
@@ -58,10 +54,9 @@ class GlobalSnackBar {
           ? AppThemes.warningColor.withOpacity(0.15)
           : AppThemes.warningLight;
       defaultIcon = Icons.warning_amber_rounded;
-      defaultTitle = 'Warning';
+      defaultTitle = 'Peringatan'; // Translate
       HapticUtil.medium();
     } else {
-      // Default / Info
       HapticUtil.light();
     }
 
@@ -69,7 +64,6 @@ class GlobalSnackBar {
     final navigatorState = GlobalContext.navigatorKey.currentState;
     if (navigatorState == null) return;
 
-    // 5. Buat Overlay Entry
     _overlayEntry = OverlayEntry(
       builder: (context) => _TopSnackBarWidget(
         title: title ?? defaultTitle,
@@ -81,10 +75,8 @@ class GlobalSnackBar {
       ),
     );
 
-    // 6. Tampilkan
     navigatorState.overlay?.insert(_overlayEntry!);
 
-    // 7. Timer auto-close
     _closeTimer = Timer(Duration(milliseconds: isError ? 4000 : 3000), () {
       _removeCurrentOverlay();
     });
@@ -98,7 +90,11 @@ class GlobalSnackBar {
   }
 }
 
-// --- WIDGET ANIMASI KHUSUS (Private) ---
+// ... (Kelas _TopSnackBarWidget, AppDialog, AppToast tetap sama)
+// Pastikan menyertakan kode sisanya jika menyalin file ini secara utuh.
+// Untuk mempersingkat, saya hanya menampilkan bagian yang berubah di atas.
+// Jika Anda copy-paste, pastikan bagian _TopSnackBarWidget ke bawah tetap ada.
+
 class _TopSnackBarWidget extends StatefulWidget {
   final String title;
   final String message;
@@ -133,8 +129,8 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
       vsync: this,
     );
     _offsetAnimation = Tween<Offset>(
-      begin: const Offset(0.0, -1.0), // Mulai dari atas layar
-      end: const Offset(0.0, 0.0), // Masuk ke posisi
+      begin: const Offset(0.0, -1.0),
+      end: const Offset(0.0, 0.0),
     ).animate(CurvedAnimation(
       parent: _controller,
       curve: Curves.elasticOut,
@@ -151,10 +147,8 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
 
   @override
   Widget build(BuildContext context) {
-    // DETEKSI TEMA DI SINI
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Warna Dinamis
     final backgroundColor =
         isDark ? AppThemes.darkSurfaceElevated : Colors.white;
     final titleColor =
@@ -174,7 +168,7 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: backgroundColor, // Background menyesuaikan tema
+              color: backgroundColor,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: borderColor, width: 0.5),
               boxShadow: [
@@ -190,7 +184,6 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ICON
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
@@ -204,8 +197,6 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
                   ),
                 ),
                 const SizedBox(width: 16),
-
-                // TEKS
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,7 +207,7 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: titleColor, // Warna judul dinamis
+                          color: titleColor,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -224,7 +215,7 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
                         widget.message,
                         style: TextStyle(
                           fontSize: 14,
-                          color: messageColor, // Warna pesan dinamis
+                          color: messageColor,
                           height: 1.4,
                         ),
                         maxLines: 3,
@@ -233,17 +224,14 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
                     ],
                   ),
                 ),
-
-                // CLOSE BUTTON
                 InkWell(
                   onTap: widget.onDismiss,
                   child: Padding(
                     padding: const EdgeInsets.only(left: 8, top: 2),
                     child: Icon(
                       Icons.close,
-                      color: isDark
-                          ? AppThemes.darkTextTertiary
-                          : Colors.black45, // Icon close dinamis
+                      color:
+                          isDark ? AppThemes.darkTextTertiary : Colors.black45,
                       size: 20,
                     ),
                   ),
@@ -257,7 +245,6 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
   }
 }
 
-// ... (AppDialog & AppToast Tetap Sama, karena mereka sudah adaptif) ...
 class AppDialog {
   static void show(
     BuildContext? context, {

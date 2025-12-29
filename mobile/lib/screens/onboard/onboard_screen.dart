@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../models/onboard_model.dart'; // Pastikan import model ada
+import '../../models/onboard_model.dart';
 import '../../navigation/route_names.dart';
 import '../../themes/app_themes.dart';
 import '../../widgets/onboard/onboard_button.dart';
 import '../../widgets/onboard/onboard_indicator.dart';
-import '../../widgets/onboard/onboard_page_widget.dart'; // Gunakan widget generic
+import '../../widgets/onboard/onboard_page_widget.dart';
 
 class OnboardScreen extends StatefulWidget {
   const OnboardScreen({super.key});
@@ -18,14 +18,13 @@ class _OnboardScreenState extends State<OnboardScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  // Data Onboarding didefinisikan di sini (atau bisa dari Service)
-  // Tidak perlu lagi file widget terpisah untuk setiap halaman
+  // Data Onboarding Bahasa Indonesia
   final List<OnboardPage> _pages = [
     OnboardPage(
       id: '1',
       title: 'Selamat Datang di MyInternPlus!',
       description:
-          'Bikin magang jadi lebih mudah dan terorganisir! Kelola absensi, pantau aktivitas, dan catat progress belajarmu dalam satu aplikasi',
+          'Bikin magang jadi lebih mudah dan terorganisir! Kelola absensi, pantau aktivitas, dan catat progres belajarmu dalam satu aplikasi.',
       imageUrl: 'assets/images/Mascot1.png',
       order: 1,
     ),
@@ -39,7 +38,7 @@ class _OnboardScreenState extends State<OnboardScreen> {
     ),
     OnboardPage(
       id: '3',
-      title: 'Pantau Progress Magangmu!',
+      title: 'Pantau Progres Magangmu!',
       description:
           'Lihat riwayat absensi, aktivitas harian, dan perkembangan skill-mu secara real-time.',
       imageUrl: 'assets/images/Mascot3.png',
@@ -64,8 +63,7 @@ class _OnboardScreenState extends State<OnboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor:
@@ -73,7 +71,6 @@ class _OnboardScreenState extends State<OnboardScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Skip Button
             if (_currentPage < _pages.length - 1)
               Align(
                 alignment: Alignment.topRight,
@@ -82,7 +79,7 @@ class _OnboardScreenState extends State<OnboardScreen> {
                   child: TextButton(
                     onPressed: _onSkip,
                     child: Text(
-                      'Skip',
+                      'Lewati', // Translate
                       style: TextStyle(
                         color: isDark
                             ? AppThemes.darkTextSecondary
@@ -93,9 +90,7 @@ class _OnboardScreenState extends State<OnboardScreen> {
                 ),
               )
             else
-              const SizedBox(height: 64), // Spacer agar layout konsisten
-
-            // Page View dengan Builder
+              const SizedBox(height: 64),
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -110,16 +105,11 @@ class _OnboardScreenState extends State<OnboardScreen> {
                 },
               ),
             ),
-
-            // Indicators
             OnboardIndicator(
               currentPage: _currentPage,
               pageCount: _pages.length,
             ),
-
             const SizedBox(height: 24),
-
-            // Next Button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: OnboardButton(
@@ -129,7 +119,6 @@ class _OnboardScreenState extends State<OnboardScreen> {
                 onSkip: _onSkip,
               ),
             ),
-
             const SizedBox(height: 32),
           ],
         ),

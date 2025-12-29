@@ -5,7 +5,7 @@ import '../models/activity.dart';
 import '../models/enum/activity_status.dart';
 import '../models/enum/activity_type.dart';
 import '../themes/app_themes.dart';
-import 'custom_text_field.dart'; // Import CustomTextField
+import 'custom_text_field.dart';
 
 class ActivityFormDialog extends StatefulWidget {
   final Activity? existingActivity;
@@ -31,7 +31,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _kegiatanController;
   late TextEditingController _deskripsiController;
-  late TextEditingController _dateController; // Controller untuk tanggal
+  late TextEditingController _dateController;
   late DateTime _selectedDate;
   late ActivityType _selectedType;
   late ActivityStatus _selectedStatus;
@@ -56,7 +56,6 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
       _selectedDate = DateTime.now();
     }
 
-    // Init controller tanggal untuk ditampilkan di CustomTextField
     _dateController = TextEditingController(
       text: DateFormat('yyyy-MM-dd').format(_selectedDate),
     );
@@ -120,8 +119,8 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                 children: [
                   Text(
                     widget.existingActivity == null
-                        ? 'Tambah Aktivitas'
-                        : 'Edit Aktivitas',
+                        ? 'Tambah Aktivitas' // Translate
+                        : 'Edit Aktivitas', // Translate
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -135,8 +134,8 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                   // 1. Nama Kegiatan
                   CustomTextField(
                     controller: _kegiatanController,
-                    label: 'Nama Kegiatan',
-                    hint: 'Contoh: Meeting Proyek A',
+                    label: 'Nama Kegiatan', // Translate
+                    hint: 'Contoh: Meeting Proyek A', // Translate
                     icon: Icons.task_alt_rounded,
                     validator: (val) =>
                         val == null || val.isEmpty ? 'Wajib diisi' : null,
@@ -146,18 +145,18 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                   // 2. Deskripsi
                   CustomTextField(
                     controller: _deskripsiController,
-                    label: 'Deskripsi Singkat',
-                    hint: 'Jelaskan detail aktivitas...',
+                    label: 'Deskripsi Singkat', // Translate
+                    hint: 'Jelaskan detail aktivitas...', // Translate
                     icon: Icons.short_text_rounded,
                     maxLines: 2,
                   ),
                   const SizedBox(height: 16),
 
-                  // 3. Date Picker (via CustomTextField ReadOnly)
+                  // 3. Date Picker
                   CustomTextField(
                     controller: _dateController,
-                    label: 'Tanggal',
-                    hint: 'Pilih tanggal',
+                    label: 'Tanggal', // Translate
+                    hint: 'Pilih tanggal', // Translate
                     icon: Icons.calendar_today_rounded,
                     readOnly: true,
                     onTap: _pickDate,
@@ -166,7 +165,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
 
                   // 4. Dropdown Type
                   _buildDropdown<ActivityType>(
-                    label: "Tipe Aktivitas",
+                    label: "Tipe Aktivitas", // Translate
                     value: _selectedType,
                     items: ActivityType.values,
                     onChanged: (val) => setState(() => _selectedType = val!),
@@ -178,7 +177,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
 
                   // 5. Dropdown Status
                   _buildDropdown<ActivityStatus>(
-                    label: "Status",
+                    label: "Status", // Translate
                     value: _selectedStatus,
                     items: ActivityStatus.values,
                     onChanged: (val) => setState(() => _selectedStatus = val!),
@@ -200,7 +199,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                               ? AppThemes.darkTextSecondary
                               : AppThemes.hintColor,
                         ),
-                        child: const Text('Batal'),
+                        child: const Text('Batal'), // Translate
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
@@ -227,7 +226,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                             Navigator.pop(context);
                           }
                         },
-                        child: const Text('Simpan'),
+                        child: const Text('Simpan'), // Translate
                       ),
                     ],
                   ),
@@ -240,7 +239,6 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     );
   }
 
-  // Helper untuk Dropdown agar style-nya mirip CustomTextField
   Widget _buildDropdown<T>({
     required String label,
     required T value,

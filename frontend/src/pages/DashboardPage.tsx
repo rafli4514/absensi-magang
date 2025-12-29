@@ -318,7 +318,7 @@ export default function DashboardPage() {
           <Card className="shadow-sm border border-gray-100 py-2">
             <Flex direction="column" gap="1">
               <Flex justify="between" align="start">
-                <Text size="1" weight="medium" color="gray" className="uppercase tracking-wider">Check In</Text>
+                <Text size="1" weight="medium" color="gray" className="uppercase tracking-wider">Clock In</Text>
                 <div className="p-1 bg-orange-50 rounded text-orange-600"><LogIn className="h-3.5 w-3.5" /></div>
               </Flex>
               <Text size="6" weight="bold" className="text-gray-900 leading-none">{stats.absensiMasukHariIni}</Text>
@@ -330,7 +330,7 @@ export default function DashboardPage() {
           <Card className="shadow-sm border border-gray-100 py-2">
             <Flex direction="column" gap="1">
               <Flex justify="between" align="start">
-                <Text size="1" weight="medium" color="gray" className="uppercase tracking-wider">Check Out</Text>
+                <Text size="1" weight="medium" color="gray" className="uppercase tracking-wider">Clock Out</Text>
                 <div className="p-1 bg-purple-50 rounded text-purple-600"><LogOut className="h-3.5 w-3.5" /></div>
               </Flex>
               <Text size="6" weight="bold" className="text-gray-900 leading-none">{stats.absensiKeluarHariIni}</Text>

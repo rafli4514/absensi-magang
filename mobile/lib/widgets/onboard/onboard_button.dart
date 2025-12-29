@@ -23,21 +23,19 @@ class OnboardButton extends StatelessWidget {
 
     return Row(
       children: [
-        // Skip Button (hanya muncul di page pertama dan kedua)
+        // Skip Button
         if (currentPage < pageCount - 1)
           TextButton(
             onPressed: onSkip,
             style: TextButton.styleFrom(
-              foregroundColor: isDark
-                  ? AppThemes.darkTextSecondary
-                  : AppThemes.hintColor,
+              foregroundColor:
+                  isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
             ),
             child: Text(
-              'Skip',
+              'Lewati', // Translate
               style: TextStyle(
-                color: isDark
-                    ? AppThemes.darkTextSecondary
-                    : AppThemes.hintColor,
+                color:
+                    isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
@@ -60,7 +58,9 @@ class OnboardButton extends StatelessWidget {
               shadowColor: Colors.black.withOpacity(isDark ? 0.4 : 0.2),
             ),
             child: Text(
-              currentPage == pageCount - 1 ? 'Get Started' : 'Next',
+              currentPage == pageCount - 1
+                  ? 'Mulai Sekarang'
+                  : 'Lanjut', // Translate
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),

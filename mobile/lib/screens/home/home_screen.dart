@@ -1,7 +1,9 @@
+import 'dart:async'; // PENTING: Untuk Timer
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // Untuk format tanggal
 import 'package:provider/provider.dart';
 
 import '../../models/performance_stats.dart';
@@ -10,20 +12,23 @@ import '../../providers/attendance_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/attendance_service.dart';
 import '../../services/dashboard_service.dart';
+import '../../services/leave_service.dart';
 import '../../services/location_service.dart';
 import '../../services/permission_service.dart';
+import '../../services/settings_service.dart'; // PENTING: Import SettingsService
 import '../../services/storage_service.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/constants.dart';
 import '../../utils/indonesian_time.dart';
 import '../../utils/navigation_helper.dart';
-import '../../utils/ui_utils.dart'; // Pastikan import ini ada
+import '../../utils/ui_utils.dart';
 import '../../widgets/announcement_card.dart';
 import '../../widgets/attendance_card.dart';
 import '../../widgets/attendance_status_card.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/floating_bottom_nav.dart';
+import '../../widgets/leave_form_dialog.dart';
 import '../../widgets/performance_card.dart';
 import '../../widgets/welcome_header_widget.dart';
 
@@ -38,25 +43,87 @@ class _HomeScreenState extends State<HomeScreen> {
   PerformanceStats? _performanceStats;
   bool _isLoadingPerformance = false;
 
+  // VARIABEL BARU UNTUK VALIDASI JAM PULANG
+  String _workEndTime = "17:00"; // Default fallback
+  bool _canClockOut = false;
+  Timer? _timer;
+
   @override
   void initState() {
     super.initState();
     _loadPerformanceData();
-    // Pastikan status absensi hari ini selalu di-refresh saat masuk Home,
-    // terutama setelah login dengan akun berbeda.
+    _loadSettings(); // Ambil jam pulang dari backend
+
+    // Cek waktu setiap 1 menit agar tombol otomatis aktif saat jamnya tiba
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      _checkClockOutTime();
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final attendanceProvider =
             Provider.of<AttendanceProvider>(context, listen: false);
 
-        // Jika sudah login (ada user), refresh status absensi hari ini dari backend
-        // TANPA mereset paksa state lokal (biarkan backend yang menentukan).
         if (authProvider.user != null) {
           attendanceProvider.refreshTodayAttendance(preserveLocalState: true);
         }
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel(); // Bersihkan timer saat widget didestroy
+    super.dispose();
+  }
+
+  // --- LOGIC BARU: Ambil Setting & Cek Waktu ---
+  Future<void> _loadSettings() async {
+    try {
+      final response = await SettingsService.getSettings();
+      if (response.success && response.data != null) {
+        if (mounted) {
+          setState(() {
+            // Ambil workEndTime dari JSON backend (sesuai struktur controller backend)
+            // Struktur: { schedule: { workEndTime: "17:00", ... }, ... }
+            final schedule = response.data!['schedule'];
+            if (schedule != null && schedule['workEndTime'] != null) {
+              _workEndTime = schedule['workEndTime'];
+            }
+            // Panggil cek waktu segera setelah data didapat
+            _checkClockOutTime();
+          });
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) print("Gagal load settings: $e");
+    }
+  }
+
+  void _checkClockOutTime() {
+    // Gunakan IndonesianTime.now jika sudah ada utilitasnya, atau DateTime.now()
+    final now = DateTime.now();
+
+    // Parsing jam pulang (Format HH:mm dari backend)
+    final parts = _workEndTime.split(':');
+    if (parts.length == 2) {
+      final endHour = int.parse(parts[0]);
+      final endMinute = int.parse(parts[1]);
+
+      // Buat DateTime hari ini dengan jam pulang target
+      final endTime =
+          DateTime(now.year, now.month, now.day, endHour, endMinute);
+
+      // Bandingkan: Apakah sekarang >= jam pulang?
+      final canOut = now.isAfter(endTime) || now.isAtSameMomentAs(endTime);
+
+      if (mounted && _canClockOut != canOut) {
+        setState(() {
+          _canClockOut = canOut;
+        });
+      }
+    }
   }
 
   Future<void> _loadPerformanceData() async {
@@ -73,7 +140,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // Get pesertaMagangId
       String? pesertaMagangId;
       try {
         final userDataStr =
@@ -87,7 +153,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
-        // Try to refresh profile
         await authProvider.refreshProfile();
         final refreshedUserDataStr =
             await StorageService.getString(AppConstants.userDataKey);
@@ -109,16 +174,13 @@ class _HomeScreenState extends State<HomeScreen> {
             _isLoadingPerformance = false;
           });
         } else {
-          // [FIXED] Tambahkan notifikasi warning/error jika gagal load performa
           if (mounted) {
             setState(() {
               _performanceStats = PerformanceStats.empty();
               _isLoadingPerformance = false;
             });
-            GlobalSnackBar.show(
-              'Gagal memuat statistik performa',
-              isWarning: true,
-            );
+            GlobalSnackBar.show('Gagal memuat statistik performa',
+                isWarning: true);
           }
         }
       } else {
@@ -129,93 +191,60 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       if (kDebugMode) print('Error loading performance: $e');
-      // [FIXED] Tambahkan notifikasi error koneksi
       if (mounted) {
         setState(() {
           _performanceStats = PerformanceStats.empty();
           _isLoadingPerformance = false;
         });
-        GlobalSnackBar.show(
-          'Koneksi error saat memuat statistik',
-          isError: true,
-        );
+        GlobalSnackBar.show('Koneksi error saat memuat statistik',
+            isError: true);
       }
     }
   }
 
-  // Method untuk handle attendance result
   Future<void> _handleAttendanceResult(
       BuildContext context, dynamic result) async {
     if (result != null && result is Map<String, dynamic> && mounted) {
-      if (kDebugMode) {
-        print('匠 HOME: Received result from QR: $result');
-      }
-
       final attendanceProvider =
           Provider.of<AttendanceProvider>(context, listen: false);
       final attendanceType = result['type'] as String? ?? '';
       final time = result['time'] as String? ?? '';
 
-      if (kDebugMode) {
-        print(
-            '匠 HOME: Processing attendance type: $attendanceType, time: $time');
-      }
-
       if (attendanceType == 'CLOCK_IN' && time.isNotEmpty) {
         attendanceProvider.clockIn(time);
-
-        if (kDebugMode) {
-          print('匠 HOME: Clock in processed, waiting before refresh...');
-        }
-
-        // Wait a bit for backend to process
         await Future.delayed(const Duration(milliseconds: 500));
-
-        // Refresh today attendance after clock in, preserve local state if API doesn't have it yet
         await attendanceProvider.refreshTodayAttendance(
             preserveLocalState: true);
 
-        if (kDebugMode) {
-          print('匠 HOME: Clock in processed successfully');
-        }
-
-        // Menampilkan notifikasi sukses di Home juga (optional, karena QR screen mungkin sudah close)
         GlobalSnackBar.show(
-          'Berhasil melakukan Clock In pada $time',
+          'Berhasil melakukan Absen Masuk pada $time',
           title: 'Presensi Sukses',
           isSuccess: true,
         );
       } else if (attendanceType.isEmpty) {
-        if (kDebugMode) {
-          print(
-              '匠 HOME: Warning - attendance type is empty in result, refreshing from API...');
-        }
-        // Wait a bit for backend to process
         await Future.delayed(const Duration(milliseconds: 500));
-        // Try to refresh from API anyway
         await attendanceProvider.refreshTodayAttendance(
             preserveLocalState: true);
-      }
-
-      if (kDebugMode) {
-        print(
-          '匠 HOME: After - isClockedIn: ${attendanceProvider.isClockedIn}, clockInTime: ${attendanceProvider.clockInTime}',
-        );
       }
     }
   }
 
-  // Method untuk handle clock out langsung tanpa scan QR
   Future<void> _handleClockOut(BuildContext context) async {
+    // VALIDASI TAMBAHAN: Cek lagi saat tombol ditekan
+    if (!_canClockOut) {
+      GlobalSnackBar.show('Belum waktunya absen pulang (Jadwal: $_workEndTime)',
+          isWarning: true);
+      return;
+    }
+
     if (!mounted) return;
 
-    // Tampilkan dialog konfirmasi terlebih dahulu (User Decision -> Tetap Dialog)
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => CustomDialog(
-        title: 'Konfirmasi Clock Out',
-        content: 'Apakah Anda yakin ingin melakukan clock out?',
-        primaryButtonText: 'Ya, Clock Out',
+        title: 'Konfirmasi Pulang',
+        content: 'Apakah Anda yakin ingin melakukan absen pulang?',
+        primaryButtonText: 'Ya, Pulang',
         secondaryButtonText: 'Batal',
         primaryButtonColor: AppThemes.warningColor,
         onPrimaryButtonPressed: () => Navigator.pop(context, true),
@@ -224,13 +253,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
 
-    // Jika user membatalkan, return tanpa melakukan apa-apa
     if (confirmed != true || !mounted) {
       return;
     }
 
-    // Tampilkan loading indicator (bisa pakai AppLoadingOverlay atau Dialog sederhana)
-    // Disini kita pakai Dialog simple agar memblokir interaksi
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -240,12 +266,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     try {
-      // Request location permission
       final hasPermission = await PermissionService.requestLocationPermission();
       if (!hasPermission) {
         if (mounted) {
-          Navigator.pop(context); // Close loading
-          // REPLACED: CustomDialog -> GlobalSnackBar
+          Navigator.pop(context);
           GlobalSnackBar.show(
             'Harap berikan akses lokasi untuk melakukan presensi.',
             title: 'Izin Diperlukan',
@@ -255,12 +279,10 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // Get current location
       final currentLocation = await LocationService.getCurrentLocation();
       if (currentLocation == null) {
         if (mounted) {
-          Navigator.pop(context); // Close loading
-          // REPLACED: CustomDialog -> GlobalSnackBar
+          Navigator.pop(context);
           GlobalSnackBar.show(
             'Tidak dapat mendeteksi lokasi Anda. Pastikan GPS aktif.',
             title: 'Lokasi Tidak Ditemukan',
@@ -270,14 +292,12 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // Get pesertaMagangId
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.user;
 
       if (user == null) {
         if (mounted) {
-          Navigator.pop(context); // Close loading
-          // REPLACED: CustomDialog -> GlobalSnackBar
+          Navigator.pop(context);
           GlobalSnackBar.show(
             'Data user tidak ditemukan. Silakan login ulang.',
             title: 'Sesi Invalid',
@@ -300,7 +320,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
-        // Try to refresh profile
         await authProvider.refreshProfile();
         final refreshedUserDataStr =
             await StorageService.getString(AppConstants.userDataKey);
@@ -313,8 +332,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
         if (mounted) {
-          Navigator.pop(context); // Close loading
-          // REPLACED: CustomDialog -> GlobalSnackBar
+          Navigator.pop(context);
           GlobalSnackBar.show(
             'ID Peserta Magang tidak ditemukan. Hubungi admin.',
             title: 'Data Tidak Lengkap',
@@ -324,8 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // Submit clock out
-      final nowTime = IndonesianTime.now; // Use Indonesian time
+      final nowTime = IndonesianTime.now;
       final attendanceResponse = await AttendanceService.createAttendance(
         pesertaMagangId: pesertaMagangId,
         tipe: 'KELUAR',
@@ -340,7 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
       if (mounted) {
-        Navigator.pop(context); // Close loading
+        Navigator.pop(context);
 
         if (attendanceResponse.success) {
           final attendanceProvider =
@@ -350,26 +367,23 @@ class _HomeScreenState extends State<HomeScreen> {
           await attendanceProvider.refreshTodayAttendance(
               preserveLocalState: true);
 
-          // SUKSES
           GlobalSnackBar.show(
-            'Clock out berhasil dilakukan',
+            'Absen pulang berhasil dilakukan',
             title: 'Berhasil',
             isSuccess: true,
             icon: Icons.check_circle_outline_rounded,
           );
         } else {
-          // REPLACED: CustomDialog -> GlobalSnackBar (API Error)
           GlobalSnackBar.show(
             attendanceResponse.message,
-            title: 'Gagal Clock Out',
+            title: 'Gagal Absen Pulang',
             isError: true,
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Close loading
-        // REPLACED: CustomDialog -> GlobalSnackBar (Exception)
+        Navigator.pop(context);
         GlobalSnackBar.show(
           'Terjadi kesalahan: ${e.toString()}',
           title: 'System Error',
@@ -379,13 +393,99 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Helper untuk notifikasi "Sudah Absen" (digunakan di tombol & FAB)
   void _showAlreadyClockedInNotification() {
     GlobalSnackBar.show(
-      'Anda sudah melakukan clock in hari ini.',
+      'Anda sudah melakukan absen masuk hari ini.',
       title: 'Info Presensi',
-      isWarning: true, // Warning kuning lebih cocok daripada dialog blocking
+      isWarning: true,
       icon: Icons.info_outline_rounded,
+    );
+  }
+
+  // --- LOGIC PENGAJUAN IZIN ---
+  void _handleRequestLeave() {
+    showDialog(
+      context: context,
+      builder: (context) => LeaveFormDialog(
+        onSubmit: (tipe, alasan, start, end) async {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const Center(child: CircularProgressIndicator()),
+          );
+
+          try {
+            final authProvider =
+                Provider.of<AuthProvider>(context, listen: false);
+            final user = authProvider.user;
+
+            String? pesertaMagangId;
+            try {
+              final userDataStr =
+                  await StorageService.getString(AppConstants.userDataKey);
+              if (userDataStr != null) {
+                final userData = jsonDecode(userDataStr);
+                pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
+              }
+            } catch (_) {}
+
+            if (pesertaMagangId == null && user != null) {
+              await authProvider.refreshProfile();
+              final updatedStr =
+                  await StorageService.getString(AppConstants.userDataKey);
+              if (updatedStr != null) {
+                final u = jsonDecode(updatedStr);
+                pesertaMagangId = u['pesertaMagang']?['id']?.toString();
+              }
+            }
+
+            if (pesertaMagangId == null) {
+              if (mounted) {
+                Navigator.pop(context);
+                GlobalSnackBar.show(
+                    'ID Peserta tidak ditemukan. Hubungi admin.',
+                    isError: true);
+              }
+              return;
+            }
+
+            final dateFormat = DateFormat('yyyy-MM-dd');
+            final startDateStr = dateFormat.format(start);
+            final endDateStr = dateFormat.format(end);
+
+            final response = await LeaveService.createLeave(
+              pesertaMagangId: pesertaMagangId,
+              tipe: tipe,
+              alasan: alasan,
+              tanggalMulai: startDateStr,
+              tanggalSelesai: endDateStr,
+            );
+
+            if (mounted) {
+              Navigator.pop(context);
+
+              if (response.success) {
+                GlobalSnackBar.show(
+                  'Pengajuan berhasil dikirim. Menunggu persetujuan mentor.',
+                  title: 'Sukses',
+                  isSuccess: true,
+                );
+              } else {
+                GlobalSnackBar.show(
+                  response.message,
+                  title: 'Gagal',
+                  isError: true,
+                );
+              }
+            }
+          } catch (e) {
+            if (mounted) {
+              Navigator.pop(context);
+              GlobalSnackBar.show('Terjadi kesalahan: $e', isError: true);
+            }
+          }
+        },
+      ),
     );
   }
 
@@ -393,8 +493,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
-    // DETEKSI KEYBOARD
     final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
     return Scaffold(
@@ -424,12 +522,19 @@ class _HomeScreenState extends State<HomeScreen> {
               SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const WelcomeHeaderWidget(),
                     const SizedBox(height: 24),
                     AttendanceCard(
+                      isClockedIn: attendanceProvider.isClockedIn,
+                      isClockedOut: attendanceProvider.isClockedOut,
+
+                      // --- PASSING DATA VALIDASI PULANG ---
+                      canClockOut: _canClockOut,
+                      workEndTime: _workEndTime,
+
                       onClockIn: () async {
-                        // Jika sudah pernah clock in hari ini, jangan izinkan scan lagi
                         if (attendanceProvider.isClockedIn) {
                           _showAlreadyClockedInNotification();
                           return;
@@ -445,8 +550,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onClockOut: () async {
                         await _handleClockOut(context);
                       },
-                      isClockedIn: attendanceProvider.isClockedIn,
-                      isClockedOut: attendanceProvider.isClockedOut,
+                      onRequestLeave: _handleRequestLeave,
                     ),
                     const SizedBox(height: 16),
                     AttendanceStatusCard(
@@ -457,7 +561,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Performance',
+                      'Performa',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -467,7 +571,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Performance Card - data dari API
                     _isLoadingPerformance
                         ? const Center(
                             child: Padding(
@@ -475,16 +578,19 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: CircularProgressIndicator(),
                             ),
                           )
-                        : PerformanceCard(
-                            presentDays: _performanceStats?.presentDays ?? 0,
-                            totalDays: _performanceStats?.totalDays ?? 0,
+                        : SizedBox(
+                            width: double.infinity,
+                            child: PerformanceCard(
+                              presentDays: _performanceStats?.presentDays ?? 0,
+                              totalDays: _performanceStats?.totalDays ?? 0,
+                            ),
                           ),
                     const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Announcements',
+                          'Pengumuman',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
@@ -503,7 +609,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            'Documents',
+                            'Dokumen',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -516,42 +622,42 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    AnnouncementCard(
-                      onDownload: (item) {
-                        showDialog(
-                          context: context,
-                          builder: (context) => CustomDialog.download(
-                            fileName: item.title,
-                            onDownload: () {
-                              Navigator.pop(context);
-                              GlobalSnackBar.show(
-                                '${item.title} berhasil didownload',
-                                title: 'Download Selesai',
-                                isSuccess: true,
-                                icon: Icons.file_download_done_rounded,
-                              );
-                            },
-                          ),
-                        );
-                      },
-                      onViewDetail: (item) {
-                        showDialog(
-                          context: context,
-                          builder: (context) => CustomDialog.detail(
-                            title: item.title,
-                            description: item.body,
-                            onClose: () => Navigator.pop(context),
-                          ),
-                        );
-                      },
+                    SizedBox(
+                      width: double.infinity,
+                      child: AnnouncementCard(
+                        onDownload: (item) {
+                          showDialog(
+                            context: context,
+                            builder: (context) => CustomDialog.download(
+                              fileName: item.title,
+                              onDownload: () {
+                                Navigator.pop(context);
+                                GlobalSnackBar.show(
+                                  '${item.title} berhasil diunduh',
+                                  title: 'Unduhan Selesai',
+                                  isSuccess: true,
+                                  icon: Icons.file_download_done_rounded,
+                                );
+                              },
+                            ),
+                          );
+                        },
+                        onViewDetail: (item) {
+                          showDialog(
+                            context: context,
+                            builder: (context) => CustomDialog.detail(
+                              title: item.title,
+                              description: item.body,
+                              onClose: () => Navigator.pop(context),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                    // Beri padding bawah ekstra JIKA keyboard tidak buka (untuk navbar)
                     SizedBox(height: isKeyboardOpen ? 20 : 100),
                   ],
                 ),
               ),
-
-              // HANYA TAMPILKAN NAVBAR JIKA KEYBOARD TERTUTUP
               if (!isKeyboardOpen)
                 Positioned(
                   left: 0,
@@ -560,7 +666,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: FloatingBottomNav(
                     currentRoute: RouteNames.home,
                     onQRScanTap: () {
-                      // Cegah scan langsung dari FAB jika sudah clock in hari ini
                       if (attendanceProvider.isClockedIn) {
                         _showAlreadyClockedInNotification();
                         return;

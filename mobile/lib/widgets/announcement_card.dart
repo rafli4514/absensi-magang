@@ -52,7 +52,7 @@ class AnnouncementCard extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  Icons.announcement_rounded,
+                  Icons.campaign_rounded,
                   size: 20,
                   color: isDark
                       ? AppThemes.darkAccentBlue
@@ -60,7 +60,7 @@ class AnnouncementCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Pengumuman',
+                  'Pengumuman Terbaru', // Translate
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -73,7 +73,7 @@ class AnnouncementCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Empty state atau List semua announcement dalam 1 card
+            // Empty state atau List semua announcement
             if (items.isEmpty)
               Center(
                 child: Padding(
@@ -82,7 +82,7 @@ class AnnouncementCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Icons.announcement_outlined,
+                        Icons.notifications_off_outlined,
                         size: 48,
                         color: isDark
                             ? AppThemes.darkTextSecondary.withOpacity(0.5)
@@ -90,7 +90,7 @@ class AnnouncementCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Tidak ada pengumuman',
+                        'Tidak ada pengumuman', // Translate
                         style: TextStyle(
                           fontSize: 14,
                           color: isDark
@@ -174,6 +174,8 @@ class _AnnouncementItem extends StatelessWidget {
             color: isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
             height: 1.5,
           ),
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 8),
 
@@ -198,7 +200,7 @@ class _AnnouncementItem extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: () => onDownload?.call(item),
                   icon: const Icon(Icons.download_rounded, size: 16),
-                  label: const Text('Download'),
+                  label: const Text('Unduh'), // Translate
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(
                       color: isDark
@@ -212,13 +214,14 @@ class _AnnouncementItem extends StatelessWidget {
                       horizontal: 12,
                       vertical: 6,
                     ),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
               if (onViewDetail != null)
                 TextButton.icon(
                   onPressed: () => onViewDetail?.call(item),
                   icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                  label: const Text('Lihat selengkapnya'),
+                  label: const Text('Selengkapnya'), // Translate
                   style: TextButton.styleFrom(
                     foregroundColor: isDark
                         ? AppThemes.darkAccentBlue
@@ -227,6 +230,7 @@ class _AnnouncementItem extends StatelessWidget {
                       horizontal: 12,
                       vertical: 6,
                     ),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
             ],

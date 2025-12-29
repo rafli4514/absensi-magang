@@ -1,15 +1,16 @@
 const { Router } = require('express');
 import {
-  getAllPengajuanIzin,
-  getPengajuanIzinById,
-  createPengajuanIzin,
-  updatePengajuanIzin,
-  deletePengajuanIzin,
-  approvePengajuanIzin,
-  rejectPengajuanIzin,
-  getStatistics,
+    getAllPengajuanIzin,
+getPengajuanIzinById,
+createPengajuanIzin,
+updatePengajuanIzin,
+deletePengajuanIzin,
+approvePengajuanIzin,
+rejectPengajuanIzin,
+getStatistics,
 } from '../controllers/pengajuanIzinController';
-import { authenticateToken, requireAdmin } from '../middleware/auth';
+// FIX: Import requireAdminOrPembimbing
+import { authenticateToken, requireAdmin, requireAdminOrPembimbing } from '../middleware/auth';
 
 const router = Router();
 
@@ -20,12 +21,14 @@ router.use(authenticateToken);
 router.get('/', getAllPengajuanIzin);
 router.get('/statistics', getStatistics);
 router.get('/:id', getPengajuanIzinById);
-router.post('/', createPengajuanIzin); // Students can create their own requests
+router.post('/', createPengajuanIzin);
 
-// Admin only routes
+// Admin only routes (Update & Delete tetap Admin only jika diinginkan)
 router.put('/:id', requireAdmin, updatePengajuanIzin);
 router.delete('/:id', requireAdmin, deletePengajuanIzin);
-router.patch('/:id/approve', requireAdmin, approvePengajuanIzin);
-router.patch('/:id/reject', requireAdmin, rejectPengajuanIzin);
+
+// FIX: Gunakan requireAdminOrPembimbing agar Mentor bisa Approve/Reject
+router.patch('/:id/approve', requireAdminOrPembimbing, approvePengajuanIzin);
+router.patch('/:id/reject', requireAdminOrPembimbing, rejectPengajuanIzin);
 
 module.exports = router;

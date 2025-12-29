@@ -1,4 +1,3 @@
-// lib/widgets/profile_widgets.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -61,6 +60,9 @@ class ProfileSection extends StatelessWidget {
   }
 }
 
+// ... (Widget ProfileInfoRow, MiniStat, ModernSettingItem, ProfileDivider tetap sama strukturnya, hanya perlu dipakai dengan teks Indo) ...
+// Kita sertakan kembali agar lengkap dan tidak error import
+
 class ProfileInfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -85,11 +87,10 @@ class ProfileInfoRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color:
-                  (isDarkMode
-                          ? AppThemes.darkAccentBlue
-                          : AppThemes.primaryColor)
-                      .withOpacity(0.1),
+              color: (isDarkMode
+                      ? AppThemes.darkAccentBlue
+                      : AppThemes.primaryColor)
+                  .withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -160,8 +161,8 @@ class MiniStat extends StatelessWidget {
             color: isHighlight
                 ? AppThemes.errorColor
                 : (isDarkMode
-                      ? AppThemes.darkAccentBlue
-                      : AppThemes.primaryColor),
+                    ? AppThemes.darkAccentBlue
+                    : AppThemes.primaryColor),
           ),
         ),
         const SizedBox(height: 4),
@@ -201,9 +202,8 @@ class ModernSettingItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primaryColor = isDarkMode
-        ? AppThemes.darkAccentBlue
-        : AppThemes.primaryColor;
+    final primaryColor =
+        isDarkMode ? AppThemes.darkAccentBlue : AppThemes.primaryColor;
     final leadingColor = iconColor ?? primaryColor;
 
     return ListTile(
@@ -220,8 +220,7 @@ class ModernSettingItem extends StatelessWidget {
         title,
         style: theme.textTheme.bodyMedium?.copyWith(
           fontWeight: FontWeight.w500,
-          color:
-              titleColor ??
+          color: titleColor ??
               (isDarkMode
                   ? AppThemes.darkTextPrimary
                   : theme.textTheme.bodyMedium?.color),
@@ -237,7 +236,6 @@ class ModernSettingItem extends StatelessWidget {
 
 class ProfileDivider extends StatelessWidget {
   final bool isDarkMode;
-
   const ProfileDivider({super.key, required this.isDarkMode});
 
   @override
@@ -266,12 +264,8 @@ class UserProfileCard extends StatelessWidget {
 
   static String getInitials(String name) {
     if (name.trim().isEmpty) return 'U';
-
     final parts = name.trim().split(' ');
-    if (parts.length == 1) {
-      return parts[0].substring(0, 1).toUpperCase();
-    }
-
+    if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
     return '${parts[0].substring(0, 1)}${parts.last.substring(0, 1)}'
         .toUpperCase();
   }
@@ -279,9 +273,8 @@ class UserProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final avatarColor = isDarkMode
-        ? AppThemes.darkAccentBlue
-        : AppThemes.primaryColor;
+    final avatarColor =
+        isDarkMode ? AppThemes.darkAccentBlue : AppThemes.primaryColor;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -304,11 +297,9 @@ class UserProfileCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- HEADER: PHOTO, NAME, USERNAME, ROLE ---
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Foto Profil
               Stack(
                 children: [
                   Container(
@@ -317,9 +308,7 @@ class UserProfileCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: avatarColor.withOpacity(0.3),
-                        width: 2,
-                      ),
+                          color: avatarColor.withOpacity(0.3), width: 2),
                     ),
                     child: CircleAvatar(
                       radius: 36,
@@ -344,23 +333,17 @@ class UserProfileCard extends StatelessWidget {
                           color: AppThemes.successColor,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          Icons.check,
-                          color: Colors.white,
-                          size: 12,
-                        ),
+                        child: const Icon(Icons.check,
+                            color: Colors.white, size: 12),
                       ),
                     ),
                 ],
               ),
               const SizedBox(width: 16),
-
-              // Detail Nama & Username
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 1. Nama Lengkap (Wajib Tampil)
                     Text(
                       user?.nama ?? '-',
                       style: theme.textTheme.titleLarge?.copyWith(
@@ -372,8 +355,6 @@ class UserProfileCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-
-                    // 2. Username (Wajib Tampil dengan @)
                     Text(
                       '@${user?.username ?? '-'}',
                       style: theme.textTheme.bodyMedium?.copyWith(
@@ -384,19 +365,15 @@ class UserProfileCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-
-                    // 3. Role Badge
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: avatarColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        user?.displayRole ?? 'User',
+                        user?.displayRole ?? 'Pengguna', // Translate fallback
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -409,14 +386,11 @@ class UserProfileCard extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 16),
-
-          // --- INFORMASI KONTAK ---
           Text(
-            'Informasi Kontak',
+            'Informasi Kontak', // Translate
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
               fontSize: 15,
@@ -426,22 +400,18 @@ class UserProfileCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-
-          // 5. Nomor HP
           ProfileInfoRow(
             icon: Icons.phone_rounded,
             label: "Nomor HP",
             value: user?.nomorHp ?? '-',
             isDarkMode: isDarkMode,
           ),
-
           ProfileDivider(isDarkMode: isDarkMode),
-
-          // 6. Status Akun
           ProfileInfoRow(
             icon: Icons.verified_user_rounded,
             label: "Status Akun",
-            value: (user?.isActive == true) ? 'Aktif' : 'Tidak Aktif',
+            value:
+                (user?.isActive == true) ? 'Aktif' : 'Tidak Aktif', // Translate
             isDarkMode: isDarkMode,
           ),
         ],
@@ -455,7 +425,7 @@ class InternshipInfoCard extends StatelessWidget {
   final bool isStudent;
   final String displayInstansi;
   final String displayDivisi;
-  final String? idPesertaMagang; // NISN/NIM
+  final String? idPesertaMagang;
   final bool hasValidInternshipDates;
   final DateTime? startDate;
   final DateTime? endDate;
@@ -481,8 +451,6 @@ class InternshipInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    // Pastikan card ini hanya muncul untuk student
     if (!isStudent) return const SizedBox.shrink();
 
     return Container(
@@ -518,7 +486,7 @@ class InternshipInfoCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                "Detail Magang",
+                "Detail Magang", // Translate
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: isDarkMode ? AppThemes.darkTextPrimary : null,
@@ -527,24 +495,18 @@ class InternshipInfoCard extends StatelessWidget {
             ],
           ),
           const Divider(height: 24),
-
-          // 7. Instansi / Asal Kampus
           ProfileInfoRow(
             icon: Icons.business_rounded,
             label: "Asal Instansi / Kampus",
             value: displayInstansi,
             isDarkMode: isDarkMode,
           ),
-
-          // 8. Divisi Penempatan
           ProfileInfoRow(
             icon: Icons.work_outline_rounded,
             label: "Divisi Penempatan",
             value: displayDivisi,
             isDarkMode: isDarkMode,
           ),
-
-          // ID Peserta Magang (NISN/NIM)
           if (idPesertaMagang != null && idPesertaMagang!.isNotEmpty)
             ProfileInfoRow(
               icon: Icons.badge_rounded,
@@ -552,18 +514,15 @@ class InternshipInfoCard extends StatelessWidget {
               value: idPesertaMagang!,
               isDarkMode: isDarkMode,
             ),
-
           const SizedBox(height: 16),
           Text(
-            "Periode Magang",
+            "Periode Magang", // Translate
             style: theme.textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: isDarkMode ? AppThemes.darkTextSecondary : theme.hintColor,
             ),
           ),
           const SizedBox(height: 12),
-
-          // 9. Statistik Tanggal (Bergabung s/d Berakhir)
           if (hasValidInternshipDates)
             Container(
               padding: const EdgeInsets.all(12),
@@ -573,39 +532,33 @@ class InternshipInfoCard extends StatelessWidget {
                     : AppThemes.neutralLight,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isDarkMode
-                      ? AppThemes.darkOutline
-                      : Colors.transparent,
+                  color:
+                      isDarkMode ? AppThemes.darkOutline : Colors.transparent,
                 ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  // Tanggal Mulai
                   MiniStat(
-                    label: "Mulai",
+                    label: "Mulai", // Translate
                     value: DateFormat('dd MMM yyyy').format(startDate!),
                     isDarkMode: isDarkMode,
                   ),
                   Container(
-                    height: 30,
-                    width: 1,
-                    color: Colors.grey.withOpacity(0.3),
-                  ),
-                  // Tanggal Selesai
+                      height: 30,
+                      width: 1,
+                      color: Colors.grey.withOpacity(0.3)),
                   MiniStat(
-                    label: "Selesai",
+                    label: "Selesai", // Translate
                     value: DateFormat('dd MMM yyyy').format(endDate!),
                     isDarkMode: isDarkMode,
                   ),
                   Container(
-                    height: 30,
-                    width: 1,
-                    color: Colors.grey.withOpacity(0.3),
-                  ),
-                  // Sisa Hari
+                      height: 30,
+                      width: 1,
+                      color: Colors.grey.withOpacity(0.3)),
                   MiniStat(
-                    label: "Sisa Hari",
+                    label: "Sisa Hari", // Translate
                     value: "$remainingDays Hari",
                     isDarkMode: isDarkMode,
                     isHighlight: true,
@@ -614,27 +567,26 @@ class InternshipInfoCard extends StatelessWidget {
               ),
             )
           else if (displayStartDate != '-')
-            // Fallback jika tanggal belum lengkap
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ProfileInfoRow(
-                  icon: Icons.date_range,
-                  label: "Tanggal Mulai",
-                  value: displayStartDate,
-                  isDarkMode: isDarkMode,
-                ),
-                const SizedBox(height: 8),
-                ProfileInfoRow(
-                  icon: Icons.event_available,
-                  label: "Tanggal Selesai",
-                  value: displayEndDate,
-                  isDarkMode: isDarkMode,
-                ),
-              ],
-            ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ProfileInfoRow(
+                    icon: Icons.date_range,
+                    label: "Tanggal Mulai",
+                    value: displayStartDate,
+                    isDarkMode: isDarkMode,
+                  ),
+                  const SizedBox(height: 8),
+                  ProfileInfoRow(
+                    icon: Icons.event_available,
+                    label: "Tanggal Selesai",
+                    value: displayEndDate,
+                    isDarkMode: isDarkMode,
+                  ),
+                ],
+              ),
             ),
         ],
       ),

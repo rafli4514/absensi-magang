@@ -59,10 +59,18 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     // Check if user is authenticated
+    // Check if user is authenticated
     final isAuthenticated = await authProvider.checkAuthentication();
 
     if (isAuthenticated) {
-      Navigator.pushReplacementNamed(context, RouteNames.home);
+      // LOGIKA REDIRECT
+      if (authProvider.isAdmin) {
+        Navigator.pushReplacementNamed(context, RouteNames.adminHome);
+      } else if (authProvider.isMentor) {
+        Navigator.pushReplacementNamed(context, RouteNames.mentorHome);
+      } else {
+        Navigator.pushReplacementNamed(context, RouteNames.home);
+      }
     } else {
       Navigator.pushReplacementNamed(context, RouteNames.login);
     }
@@ -74,9 +82,8 @@ class _SplashScreenState extends State<SplashScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark
-          ? AppThemes.darkBackground
-          : AppThemes.surfaceColor,
+      backgroundColor:
+          isDark ? AppThemes.darkBackground : AppThemes.surfaceColor,
       body: SafeArea(
         child: Stack(
           children: [

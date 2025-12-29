@@ -1,4 +1,3 @@
-// screens/profile/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -11,6 +10,7 @@ import '../../utils/navigation_helper.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/floating_bottom_nav.dart';
+import '../../widgets/mentor_bottom_nav.dart';
 import '../../widgets/profile_widgets.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -20,9 +20,9 @@ class ProfileScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => CustomDialog(
-        title: 'Logout',
-        content: 'Are you sure you want to logout?',
-        primaryButtonText: 'Logout',
+        title: 'Keluar',
+        content: 'Apakah Anda yakin ingin keluar dari aplikasi?',
+        primaryButtonText: 'Keluar',
         primaryButtonColor: AppThemes.errorColor,
         onPrimaryButtonPressed: () async {
           await authProvider.logout();
@@ -34,7 +34,7 @@ class ProfileScreen extends StatelessWidget {
             );
           }
         },
-        secondaryButtonText: 'Cancel',
+        secondaryButtonText: 'Batal',
       ),
     );
   }
@@ -47,7 +47,7 @@ class ProfileScreen extends StatelessWidget {
     final isDarkMode = themeProvider.isDarkMode;
     final user = authProvider.user;
 
-    // --- EXTRACT DATA USING LOGIC CLASSES ---
+    // Logic Profile
     final (:displayDivisi, :displayInstansi, :isStudent) =
         ProfileLogic.extractUserData(user, authProvider);
 
@@ -60,19 +60,16 @@ class ProfileScreen extends StatelessWidget {
       :displayStartDate,
       :displayEndDate,
       :hasValidInternshipDates,
-    ) = ProfileLogic.parseUserDates(
-      user,
-    );
+    ) = ProfileLogic.parseUserDates(user);
 
     return Scaffold(
-      appBar: CustomAppBar(title: 'Profile', showBackButton: false),
+      appBar: CustomAppBar(title: 'Profil', showBackButton: false),
       body: Stack(
         children: [
           SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                // --- USER PROFILE CARD (GABUNGAN) ---
                 UserProfileCard(
                   user: user,
                   isDarkMode: isDarkMode,
@@ -81,29 +78,29 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // --- INTERNSHIP INFO ---
-                InternshipInfoCard(
-                  isDarkMode: isDarkMode,
-                  isStudent: isStudent,
-                  displayInstansi: displayInstansi,
-                  displayDivisi: displayDivisi,
-                  idPesertaMagang: user?.idPesertaMagang,
-                  hasValidInternshipDates: hasValidInternshipDates,
-                  startDate: startDate,
-                  endDate: endDateTime,
-                  remainingDays: remainingDays,
-                  displayStartDate: displayStartDate,
-                  displayEndDate: displayEndDate,
-                ),
+                // Hanya tampilkan detail magang jika user adalah STUDENT (Peserta)
+                if (isStudent)
+                  InternshipInfoCard(
+                    isDarkMode: isDarkMode,
+                    isStudent: isStudent,
+                    displayInstansi: displayInstansi,
+                    displayDivisi: displayDivisi,
+                    idPesertaMagang: user?.idPesertaMagang,
+                    hasValidInternshipDates: hasValidInternshipDates,
+                    startDate: startDate,
+                    endDate: endDateTime,
+                    remainingDays: remainingDays,
+                    displayStartDate: displayStartDate,
+                    displayEndDate: displayEndDate,
+                  ),
 
-                // --- SETTINGS ---
                 ProfileSection(
                   title: 'Pengaturan',
                   isDarkMode: isDarkMode,
                   children: [
                     ModernSettingItem(
                       icon: Icons.edit_rounded,
-                      title: 'Edit Profile',
+                      title: 'Edit Profil',
                       trailing: Icon(
                         Icons.chevron_right_rounded,
                         color: isDarkMode
@@ -122,7 +119,7 @@ class ProfileScreen extends StatelessWidget {
                     ProfileDivider(isDarkMode: isDarkMode),
                     ModernSettingItem(
                       icon: Icons.dark_mode_rounded,
-                      title: 'Dark Mode',
+                      title: 'Mode Gelap',
                       trailing: Switch(
                         value: themeProvider.themeMode == ThemeMode.dark,
                         onChanged: (value) {
@@ -139,7 +136,7 @@ class ProfileScreen extends StatelessWidget {
                     ProfileDivider(isDarkMode: isDarkMode),
                     ModernSettingItem(
                       icon: Icons.logout_rounded,
-                      title: 'Logout',
+                      title: 'Keluar',
                       trailing: const SizedBox.shrink(),
                       onTap: () => _showLogoutDialog(context, authProvider),
                       isDarkMode: isDarkMode,
@@ -151,9 +148,8 @@ class ProfileScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // --- ACTIONS ---
                 ProfileSection(
-                  title: 'Tindakan Akun',
+                  title: 'Keamanan Akun',
                   isDarkMode: isDarkMode,
                   children: [
                     SizedBox(
@@ -170,7 +166,7 @@ class ProfileScreen extends StatelessWidget {
                           color: AppThemes.infoColor,
                         ),
                         label: const Text(
-                          'Change Password',
+                          'Ganti Kata Sandi',
                           style: TextStyle(color: AppThemes.infoColor),
                         ),
                         style: OutlinedButton.styleFrom(
@@ -189,17 +185,25 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
+
+          // Pilih Bottom Nav Sesuai Role
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: FloatingBottomNav(
-              currentRoute: RouteNames.profile,
-              onQRScanTap: () => NavigationHelper.navigateWithoutAnimation(
-                context,
-                RouteNames.qrScan,
-              ),
-            ),
+            child: authProvider.isMentor
+                ? MentorBottomNav(currentRoute: RouteNames.profile)
+                : authProvider.isAdmin
+                    ? const SizedBox
+                        .shrink() // Admin tidak punya bottom nav di profile (bisa pakai back button)
+                    : FloatingBottomNav(
+                        currentRoute: RouteNames.profile,
+                        onQRScanTap: () =>
+                            NavigationHelper.navigateWithoutAnimation(
+                          context,
+                          RouteNames.qrScan,
+                        ),
+                      ),
           ),
         ],
       ),

@@ -19,11 +19,11 @@ class AttendanceStatusCard extends StatelessWidget {
 
   String _getClockOutStatus(bool isClockedOut, bool canClockOut) {
     if (isClockedOut) {
-      return 'Completed';
+      return 'Selesai';
     } else if (canClockOut) {
-      return 'Available';
+      return 'Tersedia';
     } else {
-      return 'Not Available';
+      return 'Belum Tersedia';
     }
   }
 
@@ -65,10 +65,10 @@ class AttendanceStatusCard extends StatelessWidget {
               // Check In Card
               Expanded(
                 child: ModernStatusCard(
-                  title: 'Clock In',
+                  title: 'Jam Masuk',
                   time: clockInTime,
                   icon: Icons.login_rounded,
-                  status: isClockedIn ? 'Completed' : 'Not Clocked In',
+                  status: isClockedIn ? 'Valid' : 'Belum Absen',
                   isCompleted: isClockedIn,
                   isDark: isDark,
                 ),
@@ -77,7 +77,7 @@ class AttendanceStatusCard extends StatelessWidget {
               // Check Out Card
               Expanded(
                 child: ModernStatusCard(
-                  title: 'Clock Out',
+                  title: 'Jam Pulang',
                   time: clockOutTime ?? '--:--',
                   icon: Icons.logout_rounded,
                   status: clockOutStatus,
@@ -88,7 +88,7 @@ class AttendanceStatusCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          // Progress Bar - Dinamis berdasarkan status
+          // Progress Bar
           Container(
             height: 6,
             width: double.infinity,
@@ -98,7 +98,7 @@ class AttendanceStatusCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                // Bagian yang sudah selesai (hijau)
+                // Selesai (Hijau)
                 Expanded(
                   flex: isClockedIn ? 1 : 0,
                   child: Container(
@@ -113,7 +113,7 @@ class AttendanceStatusCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Bagian yang sedang berjalan (biru)
+                // Sedang Berjalan (Biru)
                 Expanded(
                   flex: isClockedIn && !isClockedOut ? 1 : 0,
                   child: Container(
@@ -124,7 +124,7 @@ class AttendanceStatusCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Bagian yang belum (abu-abu)
+                // Belum (Abu-abu)
                 Expanded(
                   flex: !isClockedIn ? 1 : (isClockedOut ? 0 : 0),
                   child: Container(
@@ -163,7 +163,7 @@ class AttendanceStatusCard extends StatelessWidget {
                 ),
               ),
               Text(
-                'Office Hours: 08:00 - 17:00',
+                'Jam Kerja: 08:00 - 17:00',
                 style: TextStyle(
                   fontSize: 12,
                   color: isDark
@@ -180,11 +180,11 @@ class AttendanceStatusCard extends StatelessWidget {
 
   String _getProgressText(bool isClockedIn, bool isClockedOut) {
     if (!isClockedIn) {
-      return 'Not Clocked In';
+      return 'Belum Absen Masuk';
     } else if (isClockedIn && !isClockedOut) {
-      return 'Working...';
+      return 'Sedang Bekerja...';
     } else {
-      return 'Workday Complete';
+      return 'Pekerjaan Selesai';
     }
   }
 }

@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -17,11 +16,10 @@ import '../../services/storage_service.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/constants.dart';
 import '../../utils/indonesian_time.dart';
-import '../../utils/ui_utils.dart'; // IMPORTED FOR GlobalSnackBar
+import '../../utils/ui_utils.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/floating_bottom_nav.dart';
 
-// --- WIDGET JAM DIGITAL TERISOLASI ---
 class DigitalClockWidget extends StatefulWidget {
   final TextStyle? style;
   const DigitalClockWidget({super.key, this.style});
@@ -62,7 +60,6 @@ class _DigitalClockWidgetState extends State<DigitalClockWidget> {
     );
   }
 }
-// -------------------------------------------
 
 class QrScanScreen extends StatefulWidget {
   const QrScanScreen({super.key});
@@ -138,20 +135,9 @@ class _QrScanScreenState extends State<QrScanScreen>
     super.didChangeDependencies();
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    _attendanceType =
-        args?['type'] ?? 'CLOCK_IN'; // Default to CLOCK_IN for QR scan
+    _attendanceType = args?['type'] ?? 'CLOCK_IN';
 
-    if (kDebugMode) {
-      print(
-          '📱 QR SCAN: didChangeDependencies - attendanceType: $_attendanceType');
-    }
-
-    // QR scan is only for check-in, so ensure it's CLOCK_IN
     if (_attendanceType != 'CLOCK_IN') {
-      if (kDebugMode) {
-        print(
-            '⚠️ QR SCAN: Invalid attendance type $_attendanceType, forcing to CLOCK_IN');
-      }
       _attendanceType = 'CLOCK_IN';
     }
 
@@ -172,7 +158,7 @@ class _QrScanScreenState extends State<QrScanScreen>
       });
     } else {
       setState(() {
-        _locationStatus = 'Gagal memuat setting lokasi';
+        _locationStatus = 'Gagal memuat lokasi';
       });
     }
 
@@ -208,8 +194,6 @@ class _QrScanScreenState extends State<QrScanScreen>
     if (mounted) setState(() => _isLocationLoading = false);
   }
 
-  // --- LOGIC HELPER ---
-
   bool _isValidClockOutTime() {
     final now = IndonesianTime.now;
     return now.hour >= 17;
@@ -230,7 +214,6 @@ class _QrScanScreenState extends State<QrScanScreen>
     );
   }
 
-  // Used for Location/Radius errors where we might want "Retry" or "Back" options
   void _showLocationErrorDialog(String message) {
     showDialog(
       context: context,
@@ -253,14 +236,12 @@ class _QrScanScreenState extends State<QrScanScreen>
     );
   }
 
-  // NEW: Helper for Network/API errors using GlobalSnackBar
   void _showErrorNotification(String message) {
     GlobalSnackBar.show(
       message,
       title: 'Gagal Presensi',
       isError: true,
     );
-    // Important: Reset processing state if strictly used for errors
     if (mounted) setState(() => _isProcessing = false);
   }
 
@@ -271,7 +252,6 @@ class _QrScanScreenState extends State<QrScanScreen>
       context: context,
       barrierDismissible: false,
       builder: (context) => CustomDialog(
-        // Gunakan CustomDialog
         title: title,
         content: message,
         primaryButtonText: 'Buka Pengaturan',
@@ -340,12 +320,12 @@ class _QrScanScreenState extends State<QrScanScreen>
     setState(() => _isProcessing = true);
 
     try {
-      // Get pesertaMagangId from user data
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.user;
 
       if (user == null) {
-        _showErrorNotification('User data not found. Please login again.');
+        _showErrorNotification(
+            'Data user tidak ditemukan. Silakan login ulang.');
         return;
       }
 
@@ -365,7 +345,6 @@ class _QrScanScreenState extends State<QrScanScreen>
       }
 
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
-        // Try to refresh profile
         await authProvider.refreshProfile();
         final refreshedUserDataStr =
             await StorageService.getString(AppConstants.userDataKey);
@@ -378,36 +357,23 @@ class _QrScanScreenState extends State<QrScanScreen>
 
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
         _showErrorNotification(
-            'Peserta magang ID not found. Please ensure you are registered as a student.');
+            'ID Peserta magang tidak ditemukan. Pastikan Anda terdaftar.');
         return;
       }
 
-      // QR scan is now only for check-in (CLOCK_IN -> MASUK)
-      // Validate attendance type
       if (_attendanceType.isEmpty) {
-        if (kDebugMode) {
-          print('⚠️ QR SCAN: _attendanceType is empty, defaulting to CLOCK_IN');
-        }
         _attendanceType = 'CLOCK_IN';
       }
 
-      // Only allow CLOCK_IN for QR scan (check-in only)
       if (_attendanceType != 'CLOCK_IN') {
         _showErrorNotification(
-            'QR scan hanya untuk check-in. Silakan gunakan tombol clock out untuk checkout.');
+            'QR scan hanya untuk check-in. Gunakan tombol pulang untuk checkout.');
         return;
       }
 
-      // Map CLOCK_IN to MASUK
       final tipe = 'MASUK';
-      final now = IndonesianTime.now; // Use Indonesian time
+      final now = IndonesianTime.now;
 
-      if (kDebugMode) {
-        print(
-            '📤 QR SCAN: Submitting attendance - type: $_attendanceType, tipe: $tipe, timestamp: $now');
-      }
-
-      // Create attendance using AttendanceService
       final attendanceResponse = await AttendanceService.createAttendance(
         pesertaMagangId: pesertaMagangId,
         tipe: tipe,
@@ -422,7 +388,6 @@ class _QrScanScreenState extends State<QrScanScreen>
       );
 
       if (attendanceResponse.success) {
-        // QR scan is only for CLOCK_IN (check-in)
         final resultType = 'CLOCK_IN';
         final result = {
           'time': IndonesianTime.formatTime(IndonesianTime.now),
@@ -431,16 +396,12 @@ class _QrScanScreenState extends State<QrScanScreen>
           'success': true,
         };
 
-        if (kDebugMode) {
-          print('📤 QR SCAN: Sending result with type: $resultType');
-        }
-
         _safePop(result);
       } else {
         _showErrorNotification(attendanceResponse.message);
       }
     } catch (e) {
-      _showErrorNotification('Terjadi kesalahan jaringan: ${e.toString()}');
+      _showErrorNotification('Kesalahan jaringan: ${e.toString()}');
     }
   }
 
@@ -465,8 +426,6 @@ class _QrScanScreenState extends State<QrScanScreen>
       );
     }
   }
-
-  // --- CAMERA CONTROLS ---
 
   void _startScan() {
     if (_isScanning || _isProcessing) return;
@@ -536,7 +495,7 @@ class _QrScanScreenState extends State<QrScanScreen>
     } catch (e) {
       if (mounted) {
         GlobalSnackBar.show(
-          'Gagal mengambil gambar dari galeri',
+          'Gagal mengambil gambar',
           title: 'Error Galeri',
           isError: true,
         );
@@ -544,8 +503,6 @@ class _QrScanScreenState extends State<QrScanScreen>
       }
     }
   }
-
-  // --- UI BUILDER ---
 
   @override
   Widget build(BuildContext context) {
@@ -577,21 +534,14 @@ class _QrScanScreenState extends State<QrScanScreen>
             ),
       body: Stack(
         children: [
-          // 1. Camera Layer
           Positioned.fill(child: _buildScannerView()),
-
-          // 2. Overlay Layer (Info Badges di Atas + Scanner Box)
           Positioned.fill(child: _buildScannerOverlay(context)),
-
-          // 3. Bottom Controls Layer (KEMBALI KE 3 TOMBOL)
           Positioned(
             left: 0,
             right: 0,
             bottom: _showBottomNav ? 90 : 30,
             child: _buildFloatingButtons(),
           ),
-
-          // 4. Bottom Nav (Optional)
           if (_showBottomNav)
             Positioned(
               left: 0,
@@ -625,13 +575,11 @@ class _QrScanScreenState extends State<QrScanScreen>
 
     return Stack(
       children: [
-        // --- INFO SECTION (TOP) - Layout Baru ---
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Column(
               children: [
-                // Row untuk Time (Kanan Atas)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -649,7 +597,6 @@ class _QrScanScreenState extends State<QrScanScreen>
                   ],
                 ),
                 const SizedBox(height: 12),
-                // Location Status (Tengah Atas)
                 _buildInfoBadge(
                   icon: _isLocationLoading
                       ? Icons.location_searching_rounded
@@ -673,13 +620,10 @@ class _QrScanScreenState extends State<QrScanScreen>
             ),
           ),
         ),
-
-        // --- CENTER SCANNER ---
         Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Scanner Box
               Container(
                 width: scannerSize,
                 height: scannerSize,
@@ -729,9 +673,8 @@ class _QrScanScreenState extends State<QrScanScreen>
                 ),
               ),
               const SizedBox(height: 32),
-              // Instructions
               Text(
-                'Scan QR Code Presensi',
+                'Pindai QR Code Presensi', // Translate
                 style: theme.textTheme.titleLarge?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -748,7 +691,7 @@ class _QrScanScreenState extends State<QrScanScreen>
               Text(
                 _isProcessing
                     ? 'Memproses data...'
-                    : 'Posisikan kode QR di dalam bingkai',
+                    : 'Posisikan kode QR di dalam bingkai', // Translate
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: Colors.white.withOpacity(0.9),
                   shadows: [
@@ -764,8 +707,6 @@ class _QrScanScreenState extends State<QrScanScreen>
             ],
           ),
         ),
-
-        // --- LOADING OVERLAY ---
         if (_isProcessing)
           Container(
             color: Colors.black.withOpacity(0.7),
@@ -793,7 +734,6 @@ class _QrScanScreenState extends State<QrScanScreen>
     );
   }
 
-  // Widget Helper untuk Badge Informasi
   Widget _buildInfoBadge({
     required IconData icon,
     required Widget child,
@@ -817,7 +757,6 @@ class _QrScanScreenState extends State<QrScanScreen>
     );
   }
 
-  // --- TOMBOL BAWAH: KEMBALI KE 3 TOMBOL (Flash - Scan - Gallery) ---
   Widget _buildFloatingButtons() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -826,20 +765,20 @@ class _QrScanScreenState extends State<QrScanScreen>
         children: [
           _buildFloatingButton(
             icon: _isFlashOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-            label: _isFlashOn ? 'Flash On' : 'Flash Off',
+            label: _isFlashOn ? 'Senter' : 'Senter', // Translate
             color: _isFlashOn ? AppThemes.warningColor : AppThemes.primaryColor,
             onPressed: _isProcessing ? () {} : _toggleFlash,
           ),
           _buildFloatingButton(
             icon: Icons.qr_code_scanner_rounded,
-            label: 'Scan',
+            label: 'Pindai', // Translate
             color: AppThemes.primaryColor,
             onPressed: _isProcessing ? () {} : _startScan,
             isLarge: true,
           ),
           _buildFloatingButton(
             icon: Icons.photo_library_rounded,
-            label: 'Gallery',
+            label: 'Galeri', // Translate
             color: AppThemes.infoColor,
             onPressed: _isProcessing ? () {} : _pickImageFromGallery,
           ),

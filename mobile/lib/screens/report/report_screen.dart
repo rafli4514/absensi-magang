@@ -28,8 +28,6 @@ class ReportScreen extends StatefulWidget {
 
 class _ReportScreenState extends State<ReportScreen> {
   DateTime _selectedMonth = DateTime.now();
-
-  // State to hold the data for the UI
   List<AttendanceRecord> _attendanceRecords = [];
   bool _isLoading = true;
 
@@ -39,46 +37,32 @@ class _ReportScreenState extends State<ReportScreen> {
     _loadData();
   }
 
-  // Method to fetch data from service and map it to UI model
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
-    // 1. Calculate Start and End Date for the selected month
     final start = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
     final end =
         DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0, 23, 59, 59);
 
     try {
-      // 2. Get current user's pesertaMagangId from auth provider
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.user;
 
       if (user == null) {
-        _showError('User data not found. Please login again.');
+        _showError('Data user tidak ditemukan. Silakan login ulang.');
         return;
       }
 
-      // Get pesertaMagangId from multiple sources
       String? pesertaMagangId;
-
       try {
-        // Method 1: Try from stored user data (pesertaMagang.id)
         final userDataStr =
             await StorageService.getString(AppConstants.userDataKey);
         if (userDataStr != null) {
           final userData = jsonDecode(userDataStr);
           pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
-          if (kDebugMode && pesertaMagangId != null) {
-            debugPrint(
-                '✅ Got pesertaMagangId from stored data: $pesertaMagangId');
-          }
         }
 
-        // Method 2: If not found, refresh profile from API (most reliable)
         if ((pesertaMagangId == null || pesertaMagangId.isEmpty) && mounted) {
-          if (kDebugMode) {
-            debugPrint('🔄 Refreshing profile to get pesertaMagangId...');
-          }
           await authProvider.refreshProfile();
           final refreshedUserDataStr =
               await StorageService.getString(AppConstants.userDataKey);
@@ -86,21 +70,12 @@ class _ReportScreenState extends State<ReportScreen> {
             final refreshedUserData = jsonDecode(refreshedUserDataStr);
             pesertaMagangId =
                 refreshedUserData['pesertaMagang']?['id']?.toString();
-            if (kDebugMode && pesertaMagangId != null) {
-              debugPrint(
-                  '✅ Got pesertaMagangId from refreshed profile: $pesertaMagangId');
-            }
           }
         }
 
-        // Method 3: If still not found, try to get from API using userId endpoint
         if ((pesertaMagangId == null || pesertaMagangId.isEmpty) &&
             user.id.isNotEmpty) {
           try {
-            if (kDebugMode) {
-              debugPrint(
-                  '🔄 Trying to get pesertaMagangId from API endpoint...');
-            }
             final token = await StorageService.getString(AppConstants.tokenKey);
             if (token != null) {
               final headers = {
@@ -121,78 +96,35 @@ class _ReportScreenState extends State<ReportScreen> {
                 if (responseData['success'] == true &&
                     responseData['data'] != null) {
                   pesertaMagangId = responseData['data']['id']?.toString();
-                  if (kDebugMode && pesertaMagangId != null) {
-                    debugPrint(
-                        '✅ Got pesertaMagangId from API endpoint: $pesertaMagangId');
-                  }
                 }
-              } else if (kDebugMode) {
-                debugPrint(
-                    '⚠️ API returned status ${response.statusCode}: ${response.body}');
               }
             }
-          } catch (apiError) {
-            if (kDebugMode) {
-              debugPrint(
-                  '⚠️ Error fetching pesertaMagangId from API: $apiError');
-            }
-          }
-        }
-
-        // Method 4: Last resort - try to get from first attendance record
-        if ((pesertaMagangId == null || pesertaMagangId.isEmpty)) {
-          if (kDebugMode) {
-            debugPrint(
-                '🔄 Trying to get pesertaMagangId from attendance records...');
-          }
-          final tempResponse = await AttendanceService.getAllAttendance(
-            limit: 1,
-          );
-
-          if (tempResponse.success &&
-              tempResponse.data != null &&
-              tempResponse.data!.isNotEmpty) {
-            pesertaMagangId = tempResponse.data!.first.pesertaMagangId;
-            if (kDebugMode && pesertaMagangId != null) {
-              debugPrint(
-                  '✅ Got pesertaMagangId from attendance: $pesertaMagangId');
-            }
-          }
+          } catch (_) {}
         }
       } catch (e) {
-        if (kDebugMode) {
-          debugPrint('❌ Error getting pesertaMagangId: $e');
-        }
+        if (kDebugMode) print('Error getting pesertaMagangId: $e');
       }
 
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
         if (mounted) {
           _showError(
-              'Peserta magang ID not found. Please ensure you are logged in as a student and have completed registration. If the issue persists, please contact support.');
-          if (kDebugMode) {
-            debugPrint('❌ Final check: pesertaMagangId is still null or empty');
-            debugPrint('User ID: ${user.id}');
-            debugPrint('User Role: ${user.role}');
-          }
+              'ID Peserta Magang tidak ditemukan. Pastikan Anda terdaftar sebagai peserta magang.');
         }
         return;
       }
 
-      // 3. Fetch all attendance records for the user
       final response = await AttendanceService.getAllAttendance(
         pesertaMagangId: pesertaMagangId,
-        limit: 500, // Fetch enough records to cover the month
+        limit: 500,
       );
 
       if (response.success && response.data != null) {
-        // 4. Filter by date range (client-side since backend doesn't support it)
         final filteredData = response.data!.where((item) {
           final itemDate = item.timestamp;
           return itemDate.isAfter(start.subtract(const Duration(days: 1))) &&
               itemDate.isBefore(end.add(const Duration(days: 1)));
         }).toList();
 
-        // 5. Group attendance by date and combine MASUK/KELUAR
         final Map<String, AttendanceRecord> recordsByDate = {};
 
         for (final item in filteredData) {
@@ -200,7 +132,6 @@ class _ReportScreenState extends State<ReportScreen> {
               '${item.timestamp.year}-${item.timestamp.month.toString().padLeft(2, '0')}-${item.timestamp.day.toString().padLeft(2, '0')}';
 
           if (!recordsByDate.containsKey(dateKey)) {
-            // Create new record for this date
             final dateOnly = DateTime(
                 item.timestamp.year, item.timestamp.month, item.timestamp.day);
             recordsByDate[dateKey] = AttendanceRecord(
@@ -227,7 +158,6 @@ class _ReportScreenState extends State<ReportScreen> {
 
           final record = recordsByDate[dateKey]!;
 
-          // Set check-in or check-out based on tipe
           if (item.tipe.toUpperCase() == 'MASUK') {
             recordsByDate[dateKey] = AttendanceRecord(
               id: record.id,
@@ -238,7 +168,7 @@ class _ReportScreenState extends State<ReportScreen> {
               timestamp: record.timestamp,
               checkIn: item.timestamp,
               checkOut: record.checkOut,
-              status: _mapStatus(item.status), // Use status from MASUK record
+              status: _mapStatus(item.status),
               catatan: record.catatan,
               lokasi: record.lokasi,
               selfieUrl: record.selfieUrl,
@@ -259,7 +189,7 @@ class _ReportScreenState extends State<ReportScreen> {
               timestamp: record.timestamp,
               checkIn: record.checkIn,
               checkOut: item.timestamp,
-              status: record.status, // Keep status from MASUK
+              status: record.status,
               catatan: record.catatan,
               lokasi: record.lokasi,
               selfieUrl: record.selfieUrl,
@@ -273,7 +203,6 @@ class _ReportScreenState extends State<ReportScreen> {
           }
         }
 
-        // 6. Convert map to sorted list
         final mappedRecords = recordsByDate.values.toList()
           ..sort((a, b) => b.date.compareTo(a.date));
 
@@ -281,10 +210,10 @@ class _ReportScreenState extends State<ReportScreen> {
           _attendanceRecords = mappedRecords;
         });
       } else {
-        _showError(response.message ?? 'Failed to load data');
+        _showError(response.message ?? 'Gagal memuat data');
       }
     } catch (e) {
-      _showError('Error loading attendance: ${e.toString()}');
+      _showError('Terjadi kesalahan: ${e.toString()}');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -306,22 +235,12 @@ class _ReportScreenState extends State<ReportScreen> {
 
   void _showError(String message) {
     if (mounted) {
-      // UPDATED: Using GlobalSnackBar instead of ScaffoldMessenger
       GlobalSnackBar.show(
         message,
-        title: 'Gagal Memuat Data',
+        title: 'Gagal Memuat',
         isError: true,
       );
     }
-  }
-
-  void _exportReport() {
-    // UPDATED: Ensuring export also uses GlobalSnackBar
-    GlobalSnackBar.show(
-      'Laporan berhasil diexport ke PDF',
-      title: 'Export Berhasil',
-      isSuccess: true,
-    );
   }
 
   @override
@@ -331,7 +250,6 @@ class _ReportScreenState extends State<ReportScreen> {
     final isDark = themeProvider.isDarkMode;
     final isDarkMode = isDark;
 
-    // Definisikan warna primary yang konsisten
     final primaryColor =
         isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor;
 
@@ -347,7 +265,7 @@ class _ReportScreenState extends State<ReportScreen> {
 
     return Scaffold(
       appBar: CustomAppBar(
-        title: 'Attendance Report',
+        title: 'Laporan Absensi', // Translate
         showBackButton: false,
       ),
       body: SafeArea(
@@ -366,12 +284,11 @@ class _ReportScreenState extends State<ReportScreen> {
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         children: [
-                          // Summary Cards - Modern Style
                           Row(
                             children: [
                               Expanded(
                                 child: _buildSimpleSummaryCard(
-                                  'Valid',
+                                  'Hadir', // Translate
                                   validCount.toString(),
                                   AppThemes.successColor,
                                   Icons.check_circle_rounded,
@@ -381,7 +298,7 @@ class _ReportScreenState extends State<ReportScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: _buildSimpleSummaryCard(
-                                  'Terlambat',
+                                  'Terlambat', // Translate
                                   terlambatCount.toString(),
                                   AppThemes.warningColor,
                                   Icons.schedule_rounded,
@@ -391,7 +308,7 @@ class _ReportScreenState extends State<ReportScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: _buildSimpleSummaryCard(
-                                  'Invalid',
+                                  'Invalid', // Translate
                                   invalidCount.toString(),
                                   AppThemes.errorColor,
                                   Icons.cancel_rounded,
@@ -402,7 +319,7 @@ class _ReportScreenState extends State<ReportScreen> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Date Filter - Modern Style
+                          // Date Filter
                           Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
@@ -451,7 +368,7 @@ class _ReportScreenState extends State<ReportScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Selected Date',
+                                        'Pilih Tanggal', // Translate
                                         style:
                                             theme.textTheme.bodySmall?.copyWith(
                                           color: isDarkMode
@@ -497,7 +414,7 @@ class _ReportScreenState extends State<ReportScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Attendance History',
+                                  'Riwayat Absensi', // Translate
                                   style: theme.textTheme.titleLarge?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: isDarkMode
@@ -518,7 +435,7 @@ class _ReportScreenState extends State<ReportScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
-                                    '${_attendanceRecords.length} Records',
+                                    '${_attendanceRecords.length} Data', // Translate
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: isDarkMode
                                           ? AppThemes.darkAccentBlue
@@ -532,7 +449,6 @@ class _ReportScreenState extends State<ReportScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Attendance List - Modern Cards
                           if (_attendanceRecords.isEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 40),
@@ -568,7 +484,6 @@ class _ReportScreenState extends State<ReportScreen> {
                       ),
                     ),
             ),
-            // Bottom Navigation Bar
             FloatingBottomNav(
               currentRoute: RouteNames.report,
               onQRScanTap: () {
@@ -654,7 +569,6 @@ class _ReportScreenState extends State<ReportScreen> {
       ),
       child: Row(
         children: [
-          // Date Circle
           Container(
             width: 60,
             height: 60,
@@ -683,8 +597,6 @@ class _ReportScreenState extends State<ReportScreen> {
             ),
           ),
           const SizedBox(width: 16),
-
-          // Attendance Details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -708,7 +620,7 @@ class _ReportScreenState extends State<ReportScreen> {
                 if (record.checkIn != null)
                   _buildTimeRow(
                     Icons.login_rounded,
-                    'Clock In: ${_formatTime(record.checkIn!)}',
+                    'Masuk: ${_formatTime(record.checkIn!)}', // Translate
                     record.status == AttendanceStatus.terlambat
                         ? AppThemes.warningColor
                         : AppThemes.successColor,
@@ -717,14 +629,14 @@ class _ReportScreenState extends State<ReportScreen> {
                 if (record.checkOut != null)
                   _buildTimeRow(
                     Icons.logout_rounded,
-                    'Clock Out: ${_formatTime(record.checkOut!)}',
+                    'Keluar: ${_formatTime(record.checkOut!)}', // Translate
                     AppThemes.infoColor,
                     isDarkMode,
                   ),
                 if (record.checkIn == null && record.checkOut == null)
                   _buildTimeRow(
                     Icons.close_rounded,
-                    'No attendance record',
+                    'Tidak ada catatan', // Translate
                     AppThemes.errorColor,
                     isDarkMode,
                   ),
@@ -782,7 +694,7 @@ class _ReportScreenState extends State<ReportScreen> {
         'lightColor': AppThemes.errorLight,
       },
       AttendanceStatus.pending: {
-        'label': 'Pending',
+        'label': 'Proses',
         'color': AppThemes.infoColor,
         'lightColor': AppThemes.infoLight,
       },
@@ -814,20 +726,20 @@ class _ReportScreenState extends State<ReportScreen> {
       'FEB',
       'MAR',
       'APR',
-      'MAY',
+      'MEI', // Translate
       'JUN',
       'JUL',
-      'AUG',
+      'AGU', // Translate
       'SEP',
-      'OCT',
+      'OKT', // Translate
       'NOV',
-      'DEC'
+      'DES' // Translate
     ];
     return months[month - 1];
   }
 
   String _getDayName(int weekday) {
-    const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    const days = ['SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB', 'MIN']; // Translate
     return days[weekday - 1];
   }
 
@@ -840,7 +752,6 @@ class _ReportScreenState extends State<ReportScreen> {
     final DateTime maxDate = DateTime(now.year + 1, 12, 31);
     final DateTime minDate = DateTime(2023, 1, 1);
 
-    // Ensure initialDate is within valid range
     DateTime initialDate = _selectedMonth;
     if (initialDate.isAfter(maxDate)) {
       initialDate = maxDate;
@@ -852,7 +763,7 @@ class _ReportScreenState extends State<ReportScreen> {
       context: context,
       initialDate: initialDate,
       firstDate: minDate,
-      lastDate: maxDate, // Allow up to next year
+      lastDate: maxDate,
       builder: (context, child) {
         final theme = Theme.of(context);
         final isDark = theme.brightness == Brightness.dark;
@@ -882,25 +793,25 @@ class _ReportScreenState extends State<ReportScreen> {
         setState(() {
           _selectedMonth = newMonth;
         });
-        _loadData(); // Reload data for the new month
+        _loadData();
       }
     }
   }
 
   String _formatMonth(DateTime date) {
     const months = [
-      'January',
-      'February',
-      'March',
+      'Januari',
+      'Februari',
+      'Maret',
       'April',
-      'May',
-      'June',
-      'July',
-      'August',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
       'September',
-      'October',
+      'Oktober',
       'November',
-      'December',
+      'Desember',
     ];
     return '${months[date.month - 1]} ${date.year}';
   }

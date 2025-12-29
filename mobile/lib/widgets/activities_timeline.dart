@@ -26,7 +26,7 @@ class ActivitiesTimeline extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Today's Timeline",
+            "Timeline Hari Ini",
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
@@ -35,6 +35,7 @@ class ActivitiesTimeline extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+          // ... (sisa kode ListView.builder tetap sama)
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),

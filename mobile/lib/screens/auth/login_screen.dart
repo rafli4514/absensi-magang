@@ -43,16 +43,25 @@ class _LoginScreenState extends State<LoginScreen> {
       if (success) {
         final user = authProvider.user;
         final name = user?.nama ?? user?.username ?? 'User';
+
         GlobalSnackBar.show(
           'Selamat datang, $name!',
           title: 'Login Berhasil',
           isSuccess: true,
         );
-        Navigator.pushReplacementNamed(context, RouteNames.home);
+
+        // LOGIKA REDIRECT BERDASARKAN ROLE
+        if (authProvider.isAdmin) {
+          Navigator.pushReplacementNamed(context, RouteNames.adminHome);
+        } else if (authProvider.isMentor) {
+          Navigator.pushReplacementNamed(context, RouteNames.mentorHome);
+        } else {
+          Navigator.pushReplacementNamed(context, RouteNames.home);
+        }
       } else {
         final errorMsg = authProvider.error;
         GlobalSnackBar.show(
-          errorMsg ?? 'Cek kembali username dan password Anda.',
+          errorMsg ?? 'Periksa kembali username dan password Anda.',
           title: 'Login Gagal',
           isError: true,
         );
@@ -75,17 +84,13 @@ class _LoginScreenState extends State<LoginScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // Jurus Anti Berantakan: LayoutBuilder + SingleChildScrollView + ConstrainedBox
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      // resizeToAvoidBottomInset: true (Default) membiarkan keyboard mendorong konten
       body: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
-            // physics: const ClampingScrollPhysics(), // Opsional
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                // Pastikan minimal setinggi layar agar bisa di-center saat keyboard tutup
                 minHeight: constraints.maxHeight,
               ),
               child: IntrinsicHeight(
@@ -93,11 +98,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment
-                        .center, // Center vertikal saat keyboard tutup
+                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Spacer atas (opsional, agar tidak terlalu mepet status bar)
                       const SizedBox(height: 40),
 
                       Hero(
@@ -111,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'Welcome Back',
+                        'Selamat Datang Kembali', // Translate
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: theme.colorScheme.onSurface,
@@ -120,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Sign in to continue your journey',
+                        'Masuk untuk melanjutkan aktivitasmu', // Translate
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontSize: 14,
                           color: isDark
@@ -138,15 +141,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             CustomTextField(
                               controller: _usernameController,
                               label: 'Username',
-                              hint: 'Enter your username',
+                              hint: 'Masukkan username', // Translate
                               icon: Icons.person_rounded,
                               validator: Validators.validateUsername,
                             ),
                             const SizedBox(height: 16),
                             CustomTextField(
                               controller: _passwordController,
-                              label: 'Password',
-                              hint: 'Enter your password',
+                              label: 'Kata Sandi', // Translate
+                              hint: 'Masukkan kata sandi', // Translate
                               icon: Icons.lock_outline_rounded,
                               validator: Validators.validatePassword,
                               isPassword: true,
@@ -157,8 +160,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: TextButton(
                                 onPressed: () {
                                   GlobalSnackBar.show(
-                                    'Fitur ini akan segera tersedia.',
-                                    title: 'Coming Soon',
+                                    'Fitur reset password akan segera tersedia.',
+                                    title: 'Info',
                                     isWarning: true,
                                   );
                                 },
@@ -169,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       MaterialTapTargetSize.shrinkWrap,
                                 ),
                                 child: Text(
-                                  'Forgot Password?',
+                                  'Lupa Kata Sandi?', // Translate
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -188,8 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             const SizedBox(height: 24),
                             SizedBox(
                               width: double.infinity,
-                              height:
-                                  50, // Tinggi tombol diperbesar sedikit biar enak ditekan
+                              height: 50,
                               child: authProvider.isLoading
                                   ? const Center(child: LoadingIndicator())
                                   : ElevatedButton(
@@ -204,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         elevation: 2,
                                       ),
                                       child: const Text(
-                                        'Sign In',
+                                        'Masuk', // Translate
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
@@ -229,7 +231,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
-                              'or',
+                              'atau', // Translate
                               style: TextStyle(
                                 fontSize: 12,
                                 color: isDark
@@ -250,7 +252,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            "Don't have an account?",
+                            "Belum punya akun?", // Translate
                             style: TextStyle(
                               fontSize: 14,
                               color: isDark
@@ -263,7 +265,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               Navigator.pushNamed(context, RouteNames.register);
                             },
                             child: const Text(
-                              'Sign Up',
+                              'Daftar Sekarang', // Translate
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
@@ -273,7 +275,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20), // Spacer bawah
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),

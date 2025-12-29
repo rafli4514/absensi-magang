@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../models/enum/activity_status.dart';
-import '../../models/enum/activity_type.dart';
 import '../../models/logbook.dart';
 import '../../themes/app_themes.dart';
 
@@ -24,11 +22,9 @@ class LogBookCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        // Integrasi Theme: Background Card
         color: isDark ? AppThemes.darkSurfaceElevated : AppThemes.surfaceColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          // Integrasi Theme: Border
           color: isDark ? AppThemes.darkOutline : Colors.grey.shade200,
         ),
         boxShadow: isDark
@@ -69,7 +65,6 @@ class LogBookCard extends StatelessWidget {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        // Integrasi Theme
                         color: isDark
                             ? AppThemes.darkTextPrimary
                             : AppThemes.onSurfaceColor,
@@ -80,7 +75,6 @@ class LogBookCard extends StatelessWidget {
                       log.tanggal,
                       style: TextStyle(
                         fontSize: 12,
-                        // Integrasi Theme
                         color: isDark
                             ? AppThemes.darkTextSecondary
                             : AppThemes.hintColor,
@@ -101,7 +95,8 @@ class LogBookCard extends StatelessWidget {
                   ],
                 ),
               ),
-              // Type dan Status badges
+
+              // Badges Type & Status
               if (log.type != null || log.status != null) ...[
                 const SizedBox(width: 8),
                 Wrap(
@@ -109,53 +104,25 @@ class LogBookCard extends StatelessWidget {
                   runSpacing: 6,
                   children: [
                     if (log.type != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Color(log.type!.color).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: Color(log.type!.color).withOpacity(0.3),
-                          ),
-                        ),
-                        child: Text(
-                          log.type!.displayName,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: Color(log.type!.color),
-                          ),
-                        ),
+                      _buildBadge(
+                        text: log.type!.displayName,
+                        color: Color(log.type!.color),
                       ),
                     if (log.status != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Color(log.status!.color).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: Color(log.status!.color).withOpacity(0.3),
-                          ),
-                        ),
-                        child: Text(
-                          log.status!.displayName,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: Color(log.status!.color),
-                          ),
-                        ),
+                      _buildBadge(
+                        text: log.status!.displayName,
+                        color: Color(log.status!.color),
                       ),
                   ],
                 ),
               ],
+
+              // Popup Menu
               PopupMenuButton<String>(
-                // Integrasi Theme: Icon Color
                 icon: Icon(Icons.more_vert,
                     color: isDark
                         ? AppThemes.darkTextSecondary
                         : AppThemes.hintColor),
-                // Integrasi Theme: Popup Background
                 color: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
                 onSelected: (value) {
                   if (value == 'edit') onEdit();
@@ -170,7 +137,7 @@ class LogBookCard extends StatelessWidget {
                             size: 18,
                             color: isDark ? AppThemes.darkTextPrimary : null),
                         const SizedBox(width: 8),
-                        Text('Edit',
+                        Text('Ubah', // Translate
                             style: TextStyle(
                                 color:
                                     isDark ? AppThemes.darkTextPrimary : null)),
@@ -184,7 +151,7 @@ class LogBookCard extends StatelessWidget {
                         Icon(Icons.delete,
                             size: 18, color: AppThemes.errorColor),
                         SizedBox(width: 8),
-                        Text('Delete',
+                        Text('Hapus', // Translate
                             style: TextStyle(color: AppThemes.errorColor)),
                       ],
                     ),
@@ -197,7 +164,6 @@ class LogBookCard extends StatelessWidget {
           Text(
             log.deskripsi,
             style: TextStyle(
-              // Integrasi Theme
               color: isDark
                   ? AppThemes.darkTextSecondary
                   : AppThemes.onSurfaceColor.withOpacity(0.8),
@@ -209,52 +175,22 @@ class LogBookCard extends StatelessWidget {
       ),
     );
   }
-}
 
-class _InfoBadge extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  final bool isDark;
-
-  const _InfoBadge({
-    required this.icon,
-    required this.text,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (text.isEmpty) return const SizedBox.shrink();
-
+  Widget _buildBadge({required String text, required Color color}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        // Integrasi Theme: Badge Background
-        color: isDark ? AppThemes.darkSurfaceVariant : Colors.grey.shade100,
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
-        ),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon,
-              size: 12,
-              // Integrasi Theme: Icon Color
-              color:
-                  isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              // Integrasi Theme: Text Color
-              color: isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
-            ),
-          ),
-        ],
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
       ),
     );
   }

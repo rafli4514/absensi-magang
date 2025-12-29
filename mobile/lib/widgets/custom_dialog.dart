@@ -38,10 +38,10 @@ class CustomDialog extends StatelessWidget {
     VoidCallback? onCancel,
   }) {
     return CustomDialog(
-      title: 'Download $fileName',
-      content: 'Apakah Anda yakin ingin mendownload $fileName?',
-      primaryButtonText: 'Download',
-      secondaryButtonText: 'Batal',
+      title: 'Unduh File', // Translate
+      content: 'Apakah Anda ingin mengunduh $fileName?', // Translate
+      primaryButtonText: 'Unduh', // Translate
+      secondaryButtonText: 'Batal', // Translate
       primaryButtonColor: AppThemes.primaryColor,
       onPrimaryButtonPressed: onDownload,
       onSecondaryButtonPressed: onCancel,
@@ -59,7 +59,7 @@ class CustomDialog extends StatelessWidget {
     return CustomDialog(
       title: title,
       content: description,
-      primaryButtonText: 'Tutup',
+      primaryButtonText: 'Tutup', // Translate
       onPrimaryButtonPressed: onClose,
       primaryButtonColor: AppThemes.primaryColor,
       icon: Icons.info_outline_rounded,
