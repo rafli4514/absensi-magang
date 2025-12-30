@@ -25,6 +25,7 @@ import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/floating_bottom_nav.dart';
+import '../../widgets/loading_indicator.dart'; // Pastikan import LoadingIndicator
 import '../../widgets/logbook_card.dart';
 import '../../widgets/logbook_form_dialog.dart';
 
@@ -565,8 +566,16 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       context: context,
       builder: (context) => LogBookFormDialog(
         existingLog: existingLog,
-        onSave: (tanggal, kegiatan, deskripsi, durasi, type, status) async {
-          // ... (Logic save tetap sama)
+        // Update callback onSave untuk menerima foto
+        onSave:
+            (tanggal, kegiatan, deskripsi, durasi, type, status, foto) async {
+          // Tampilkan loading
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const Center(child: LoadingIndicator()),
+          );
+
           try {
             final authProvider =
                 Provider.of<AuthProvider>(context, listen: false);
@@ -574,6 +583,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
 
             if (user == null) {
               if (mounted) {
+                Navigator.pop(context); // Tutup loading
                 GlobalSnackBar.show(
                   'User tidak ditemukan. Silakan login kembali.', // Translate
                   title: 'Auth Error',
@@ -583,7 +593,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               return;
             }
 
-            // ... (Logic get ID tetap sama)
+            // ... (Logic get ID)
             String? pesertaMagangId;
             try {
               final userDataStr =
@@ -594,30 +604,63 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               }
               if (pesertaMagangId == null && user.id.isNotEmpty) {
                 await authProvider.refreshProfile(); // Refresh if missing
-                // Retry logic... (disederhanakan untuk brevity, asumsikan auth_provider handle)
+                final refreshedUserDataStr =
+                    await StorageService.getString(AppConstants.userDataKey);
+                if (refreshedUserDataStr != null) {
+                  final refreshedUserData = jsonDecode(refreshedUserDataStr);
+                  pesertaMagangId =
+                      refreshedUserData['pesertaMagang']?['id']?.toString();
+                }
               }
             } catch (e) {}
 
-            // Fallback sederhana jika ID masih null, gunakan refresh profile di AuthProvider
             if (pesertaMagangId == null) {
-              await authProvider.refreshProfile();
-              // Re-fetch logic or assume it worked.
-              // Untuk keamanan, sebaiknya cek lagi authProvider.user
-              final refreshedUser = authProvider.user;
-              // Asumsi user model punya field helper atau kita ambil dari storage lagi
-              // Di sini kita skip detail retry logic yang panjang agar fokus ke translasi UI
+              if (mounted) {
+                Navigator.pop(context); // Tutup loading
+                GlobalSnackBar.show(
+                  'ID Peserta tidak ditemukan',
+                  title: 'Error',
+                  isError: true,
+                );
+              }
+              return;
             }
 
-            // Note: Pastikan logika pengambilan ID sama robustnya dengan file sebelumnya
-            // Saya singkat di sini untuk fokus ke translasi UI
+            // Panggil Service dengan Foto
+            final response = await LogbookService.createLogbook(
+              pesertaMagangId: pesertaMagangId,
+              tanggal: tanggal,
+              kegiatan: kegiatan,
+              deskripsi: deskripsi,
+              durasi: durasi,
+              type: type?.value,
+              status: status?.value,
+              foto: foto, // Kirim foto
+            );
 
-            // ...
-
-            // Contoh response handling (Translated)
-            // GlobalSnackBar.show('Logbook berhasil disimpan', title: 'Sukses', isSuccess: true);
+            if (mounted) {
+              Navigator.pop(context); // Tutup loading
+              if (response.success) {
+                _loadLogbooks(); // Refresh data
+                GlobalSnackBar.show(
+                  'Logbook berhasil disimpan',
+                  title: 'Sukses',
+                  isSuccess: true,
+                );
+              } else {
+                GlobalSnackBar.show(
+                  response.message,
+                  title: 'Gagal',
+                  isError: true,
+                );
+              }
+            }
           } catch (e) {
-            GlobalSnackBar.show('Terjadi kesalahan: $e',
-                title: 'Error', isError: true);
+            if (mounted) {
+              Navigator.pop(context); // Tutup loading
+              GlobalSnackBar.show('Terjadi kesalahan: $e',
+                  title: 'Error', isError: true);
+            }
           }
         },
       ),
@@ -659,17 +702,25 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
           final itemToDelete = _filteredLogBooks[index];
           Navigator.pop(context);
 
+          // Tampilkan loading
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const Center(child: LoadingIndicator()),
+          );
+
           final response = await LogbookService.deleteLogbook(itemToDelete.id);
 
-          if (response.success && mounted) {
-            await _loadLogbooks();
-            GlobalSnackBar.show(
-              'Logbook berhasil dihapus', // Translate
-              title: 'Sukses',
-              isSuccess: true,
-            );
-          } else {
-            if (mounted) {
+          if (mounted) {
+            Navigator.pop(context); // Tutup loading
+            if (response.success) {
+              await _loadLogbooks();
+              GlobalSnackBar.show(
+                'Logbook berhasil dihapus', // Translate
+                title: 'Sukses',
+                isSuccess: true,
+              );
+            } else {
               GlobalSnackBar.show(
                 response.message ?? 'Gagal menghapus logbook', // Translate
                 title: 'Gagal',

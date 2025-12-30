@@ -43,11 +43,10 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final theme = Theme.of(context);
     final isDarkMode = themeProvider.isDarkMode;
     final user = authProvider.user;
 
-    // Logic Profile (Destructuring diperbaiki)
+    // Logic Extract Data
     final (:displayDivisi, :displayInstansi, :mentorName, :isStudent) =
         ProfileLogic.extractUserData(user, authProvider);
 
@@ -70,23 +69,23 @@ class ProfileScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                UserProfileCard(
+                // 1. IDENTITY CARD (Header + Info Diri dalam satu card)
+                // Menggabungkan Nama, Username, Role dengan NIM, HP, Instansi
+                IdentityCard(
                   user: user,
                   isDarkMode: isDarkMode,
-                  joinDate: joinDate,
-                  endDate: endDate,
+                  displayInstansi: displayInstansi,
                 ),
                 const SizedBox(height: 24),
 
-                // Hanya tampilkan detail magang jika user adalah STUDENT
-                if (isStudent)
-                  InternshipInfoCard(
+                // 2. DETAIL MAGANG (Mentor, Divisi, Status, Periode)
+                if (isStudent) ...[
+                  InternshipDetailCard(
                     isDarkMode: isDarkMode,
-                    isStudent: isStudent,
-                    displayInstansi: displayInstansi,
-                    displayDivisi: displayDivisi,
-                    idPesertaMagang: user?.idPesertaMagang,
                     mentorName: mentorName,
+                    divisi: displayDivisi,
+                    isActive: user?.isActive ?? false,
+                    // Data Tanggal
                     hasValidInternshipDates: hasValidInternshipDates,
                     startDate: startDate,
                     endDate: endDateTime,
@@ -94,7 +93,10 @@ class ProfileScreen extends StatelessWidget {
                     displayStartDate: displayStartDate,
                     displayEndDate: displayEndDate,
                   ),
+                  const SizedBox(height: 24),
+                ],
 
+                // 3. PENGATURAN
                 ProfileSection(
                   title: 'Pengaturan',
                   isDarkMode: isDarkMode,
@@ -106,7 +108,7 @@ class ProfileScreen extends StatelessWidget {
                         Icons.chevron_right_rounded,
                         color: isDarkMode
                             ? AppThemes.darkTextSecondary
-                            : theme.hintColor,
+                            : AppThemes.hintColor,
                       ),
                       onTap: () async {
                         await Navigator.pushNamed(
@@ -136,6 +138,24 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     ProfileDivider(isDarkMode: isDarkMode),
                     ModernSettingItem(
+                      icon: Icons.lock_rounded,
+                      title: 'Ganti Kata Sandi',
+                      trailing: Icon(
+                        Icons.chevron_right_rounded,
+                        color: isDarkMode
+                            ? AppThemes.darkTextSecondary
+                            : AppThemes.hintColor,
+                      ),
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          RouteNames.changePassword,
+                        );
+                      },
+                      isDarkMode: isDarkMode,
+                    ),
+                    ProfileDivider(isDarkMode: isDarkMode),
+                    ModernSettingItem(
                       icon: Icons.logout_rounded,
                       title: 'Keluar',
                       trailing: const SizedBox.shrink(),
@@ -147,47 +167,12 @@ class ProfileScreen extends StatelessWidget {
                   ],
                 ),
 
-                const SizedBox(height: 24),
-
-                ProfileSection(
-                  title: 'Keamanan Akun',
-                  isDarkMode: isDarkMode,
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pushNamed(
-                            context,
-                            RouteNames.changePassword,
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.lock_rounded,
-                          color: AppThemes.infoColor,
-                        ),
-                        label: const Text(
-                          'Ganti Kata Sandi',
-                          style: TextStyle(color: AppThemes.infoColor),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppThemes.infoColor,
-                          side: const BorderSide(color: AppThemes.infoColor),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 100),
               ],
             ),
           ),
 
-          // Pilih Bottom Nav Sesuai Role
+          // BOTTOM NAV SESUAI ROLE
           Positioned(
             left: 0,
             right: 0,

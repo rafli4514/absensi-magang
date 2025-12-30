@@ -1,15 +1,21 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
-import '../models/logbook.dart';
 import '../models/api_response.dart';
+import '../models/logbook.dart';
 import '../services/storage_service.dart';
 import '../utils/constants.dart';
+// Import ApiService untuk akses singleton dan method multipart
+import 'api_service.dart';
 
 class LogbookService {
   static const String baseUrl = AppConstants.baseUrl;
   static const Duration timeout = Duration(seconds: 30);
+
+  // Gunakan ApiService instance
+  static final ApiService _apiService = ApiService();
 
   static Future<Map<String, String>> _getHeaders() async {
     final token = await StorageService.getString(AppConstants.tokenKey);
@@ -30,13 +36,13 @@ class LogbookService {
       final params = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
-        if (pesertaMagangId != null && pesertaMagangId.isNotEmpty) 
+        if (pesertaMagangId != null && pesertaMagangId.isNotEmpty)
           'pesertaMagangId': pesertaMagangId,
         if (tanggal != null && tanggal.isNotEmpty) 'tanggal': tanggal,
       };
 
-      final uri = Uri.parse('$baseUrl/logbook')
-          .replace(queryParameters: params);
+      final uri =
+          Uri.parse('$baseUrl/logbook').replace(queryParameters: params);
       final response = await http.get(uri, headers: headers).timeout(timeout);
 
       final data = jsonDecode(response.body);
@@ -74,41 +80,71 @@ class LogbookService {
     String? durasi,
     String? type,
     String? status,
+    File? foto, // Parameter file opsional
   }) async {
     try {
-      final headers = await _getHeaders();
-      final body = {
-        'pesertaMagangId': pesertaMagangId,
-        'tanggal': tanggal,
-        'kegiatan': kegiatan,
-        'deskripsi': deskripsi,
-        if (durasi != null && durasi.isNotEmpty) 'durasi': durasi,
-        if (type != null && type.isNotEmpty) 'type': type,
-        if (status != null && status.isNotEmpty) 'status': status,
-      };
+      // Jika ada foto, gunakan multipart request
+      if (foto != null) {
+        final fields = {
+          'pesertaMagangId': pesertaMagangId,
+          'tanggal': tanggal,
+          'kegiatan': kegiatan,
+          'deskripsi': deskripsi,
+          if (durasi != null && durasi.isNotEmpty) 'durasi': durasi,
+          if (type != null && type.isNotEmpty) 'type': type,
+          if (status != null && status.isNotEmpty) 'status': status,
+        };
 
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/logbook'),
-            headers: headers,
-            body: jsonEncode(body),
-          )
-          .timeout(timeout);
+        // Baca bytes dari file
+        final bytes = await foto.readAsBytes();
+        final fileName = foto.path.split('/').last;
 
-      final data = jsonDecode(response.body);
-
-      if (data['success'] == true && data['data'] != null) {
-        final logbook = LogBook.fromJson(data['data']);
-        return ApiResponse(
-          success: true,
-          data: logbook,
-          message: data['message'],
+        return await _apiService.multipartPost<LogBook>(
+          '/logbook', // Endpoint relative ke base URL ApiService
+          fields,
+          bytes,
+          fileName,
+          'foto', // Nama field file di backend (sesuaikan dengan backend Anda)
+          fromJson: (data) => LogBook.fromJson(data),
         );
-      } else {
-        return ApiResponse(
-          success: false,
-          message: data['message'] ?? 'Failed to create logbook',
-        );
+      }
+
+      // Jika tidak ada foto, gunakan JSON post biasa
+      else {
+        final headers = await _getHeaders();
+        final body = {
+          'pesertaMagangId': pesertaMagangId,
+          'tanggal': tanggal,
+          'kegiatan': kegiatan,
+          'deskripsi': deskripsi,
+          if (durasi != null && durasi.isNotEmpty) 'durasi': durasi,
+          if (type != null && type.isNotEmpty) 'type': type,
+          if (status != null && status.isNotEmpty) 'status': status,
+        };
+
+        final response = await http
+            .post(
+              Uri.parse('$baseUrl/logbook'),
+              headers: headers,
+              body: jsonEncode(body),
+            )
+            .timeout(timeout);
+
+        final data = jsonDecode(response.body);
+
+        if (data['success'] == true && data['data'] != null) {
+          final logbook = LogBook.fromJson(data['data']);
+          return ApiResponse(
+            success: true,
+            data: logbook,
+            message: data['message'],
+          );
+        } else {
+          return ApiResponse(
+            success: false,
+            message: data['message'] ?? 'Failed to create logbook',
+          );
+        }
       }
     } catch (e) {
       return ApiResponse(
@@ -130,7 +166,7 @@ class LogbookService {
     try {
       final headers = await _getHeaders();
       final body = <String, dynamic>{};
-      
+
       if (tanggal != null) body['tanggal'] = tanggal;
       if (kegiatan != null) body['kegiatan'] = kegiatan;
       if (deskripsi != null) body['deskripsi'] = deskripsi;

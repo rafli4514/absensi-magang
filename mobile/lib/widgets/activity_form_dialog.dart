@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart'; // Pastikan package ini ada
 import 'package:intl/intl.dart';
 
 import '../models/activity.dart';
@@ -9,12 +12,14 @@ import 'custom_text_field.dart';
 
 class ActivityFormDialog extends StatefulWidget {
   final Activity? existingActivity;
+  // Update callback untuk menerima File foto
   final Function(
     String kegiatan,
     String deskripsi,
     DateTime tanggal,
     ActivityType type,
     ActivityStatus status,
+    File? foto, // Parameter baru
   ) onSave;
 
   const ActivityFormDialog({
@@ -35,6 +40,10 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
   late DateTime _selectedDate;
   late ActivityType _selectedType;
   late ActivityStatus _selectedStatus;
+
+  // State untuk foto
+  File? _selectedImage;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -94,6 +103,69 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     }
   }
 
+  // Fungsi ambil gambar
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        imageQuality: 70, // Kompresi ringan
+      );
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImage = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+    }
+  }
+
+  void _showImageSourceDialog(BuildContext context, bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: Icon(Icons.camera_alt_rounded,
+                  color: isDark
+                      ? AppThemes.darkTextPrimary
+                      : AppThemes.onSurfaceColor),
+              title: Text('Ambil Foto',
+                  style: TextStyle(
+                      color: isDark
+                          ? AppThemes.darkTextPrimary
+                          : AppThemes.onSurfaceColor)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.photo_library_rounded,
+                  color: isDark
+                      ? AppThemes.darkTextPrimary
+                      : AppThemes.onSurfaceColor),
+              title: Text('Pilih dari Galeri',
+                  style: TextStyle(
+                      color: isDark
+                          ? AppThemes.darkTextPrimary
+                          : AppThemes.onSurfaceColor)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -119,8 +191,8 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                 children: [
                   Text(
                     widget.existingActivity == null
-                        ? 'Tambah Aktivitas' // Translate
-                        : 'Edit Aktivitas', // Translate
+                        ? 'Tambah Aktivitas'
+                        : 'Edit Aktivitas',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -134,8 +206,8 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                   // 1. Nama Kegiatan
                   CustomTextField(
                     controller: _kegiatanController,
-                    label: 'Nama Kegiatan', // Translate
-                    hint: 'Contoh: Meeting Proyek A', // Translate
+                    label: 'Nama Kegiatan',
+                    hint: 'Contoh: Meeting Proyek A',
                     icon: Icons.task_alt_rounded,
                     validator: (val) =>
                         val == null || val.isEmpty ? 'Wajib diisi' : null,
@@ -145,8 +217,8 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                   // 2. Deskripsi
                   CustomTextField(
                     controller: _deskripsiController,
-                    label: 'Deskripsi Singkat', // Translate
-                    hint: 'Jelaskan detail aktivitas...', // Translate
+                    label: 'Deskripsi Singkat',
+                    hint: 'Jelaskan detail aktivitas...',
                     icon: Icons.short_text_rounded,
                     maxLines: 2,
                   ),
@@ -155,35 +227,128 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                   // 3. Date Picker
                   CustomTextField(
                     controller: _dateController,
-                    label: 'Tanggal', // Translate
-                    hint: 'Pilih tanggal', // Translate
+                    label: 'Tanggal',
+                    hint: 'Pilih tanggal',
                     icon: Icons.calendar_today_rounded,
                     readOnly: true,
                     onTap: _pickDate,
                   ),
                   const SizedBox(height: 16),
 
-                  // 4. Dropdown Type
-                  _buildDropdown<ActivityType>(
-                    label: "Tipe Aktivitas", // Translate
-                    value: _selectedType,
-                    items: ActivityType.values,
-                    onChanged: (val) => setState(() => _selectedType = val!),
-                    isDark: isDark,
-                    itemLabel: (e) =>
-                        e.toString().split('.').last.toUpperCase(),
+                  // --- AREA FOTO ---
+                  Text(
+                    'Dokumentasi (Opsional)',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppThemes.darkTextPrimary
+                          : AppThemes.onSurfaceColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => _showImageSourceDialog(context, isDark),
+                    child: Container(
+                      height: 150,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppThemes.darkSurfaceElevated
+                            : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isDark
+                              ? AppThemes.darkOutline
+                              : Colors.grey.shade300,
+                          style: BorderStyle.solid,
+                        ),
+                      ),
+                      child: _selectedImage != null
+                          ? Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.file(
+                                    _selectedImage!,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: GestureDetector(
+                                    onTap: () =>
+                                        setState(() => _selectedImage = null),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.close,
+                                          color: Colors.white, size: 16),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.add_a_photo_rounded,
+                                  size: 32,
+                                  color:
+                                      AppThemes.primaryColor.withOpacity(0.5),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Tap untuk ambil foto',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark
+                                        ? AppThemes.darkTextSecondary
+                                        : AppThemes.hintColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
                   ),
                   const SizedBox(height: 16),
 
-                  // 5. Dropdown Status
-                  _buildDropdown<ActivityStatus>(
-                    label: "Status", // Translate
-                    value: _selectedStatus,
-                    items: ActivityStatus.values,
-                    onChanged: (val) => setState(() => _selectedStatus = val!),
-                    isDark: isDark,
-                    itemLabel: (e) =>
-                        e.toString().split('.').last.toUpperCase(),
+                  // 4. Dropdown Type & Status (Sama seperti sebelumnya)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildDropdown<ActivityType>(
+                          label: "Tipe",
+                          value: _selectedType,
+                          items: ActivityType.values,
+                          onChanged: (val) =>
+                              setState(() => _selectedType = val!),
+                          isDark: isDark,
+                          itemLabel: (e) =>
+                              e.toString().split('.').last.toUpperCase(),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildDropdown<ActivityStatus>(
+                          label: "Status",
+                          value: _selectedStatus,
+                          items: ActivityStatus.values,
+                          onChanged: (val) =>
+                              setState(() => _selectedStatus = val!),
+                          isDark: isDark,
+                          itemLabel: (e) =>
+                              e.toString().split('.').last.toUpperCase(),
+                        ),
+                      ),
+                    ],
                   ),
 
                   const SizedBox(height: 32),
@@ -199,7 +364,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                               ? AppThemes.darkTextSecondary
                               : AppThemes.hintColor,
                         ),
-                        child: const Text('Batal'), // Translate
+                        child: const Text('Batal'),
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
@@ -222,11 +387,12 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                               _selectedDate,
                               _selectedType,
                               _selectedStatus,
+                              _selectedImage, // Kirim foto
                             );
                             Navigator.pop(context);
                           }
                         },
-                        child: const Text('Simpan'), // Translate
+                        child: const Text('Simpan'),
                       ),
                     ],
                   ),
@@ -239,6 +405,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     );
   }
 
+  // Helper _buildDropdown sama seperti sebelumnya...
   Widget _buildDropdown<T>({
     required String label,
     required T value,
@@ -286,7 +453,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                   child: Text(
                     itemLabel(e),
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12, // Font sedikit lebih kecil agar muat
                       color: isDark
                           ? AppThemes.darkTextPrimary
                           : AppThemes.onSurfaceColor,
