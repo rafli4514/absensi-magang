@@ -17,7 +17,7 @@ import BarcodePage from "./pages/BarcodePage";
 
 function App() {
   return (
-    <Theme>
+    <Theme> 
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />

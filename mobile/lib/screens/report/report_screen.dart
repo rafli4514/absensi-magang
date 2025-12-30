@@ -28,8 +28,6 @@ class ReportScreen extends StatefulWidget {
 
 class _ReportScreenState extends State<ReportScreen> {
   DateTime _selectedMonth = DateTime.now();
-  
-  // State to hold the data for the UI
   List<AttendanceRecord> _attendanceRecords = [];
   bool _isLoading = true;
 
@@ -39,150 +37,103 @@ class _ReportScreenState extends State<ReportScreen> {
     _loadData();
   }
 
-  // Method to fetch data from service and map it to UI model
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
-    // 1. Calculate Start and End Date for the selected month
     final start = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
-    final end = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0, 23, 59, 59);
+    final end =
+        DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0, 23, 59, 59);
 
     try {
-      // 2. Get current user's pesertaMagangId from auth provider
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.user;
 
       if (user == null) {
-        _showError('User data not found. Please login again.');
+        _showError('Data user tidak ditemukan. Silakan login ulang.');
         return;
       }
 
-      // Get pesertaMagangId from multiple sources
       String? pesertaMagangId;
-      
       try {
-        // Method 1: Try from stored user data (pesertaMagang.id)
-        final userDataStr = await StorageService.getString(AppConstants.userDataKey);
+        final userDataStr =
+            await StorageService.getString(AppConstants.userDataKey);
         if (userDataStr != null) {
           final userData = jsonDecode(userDataStr);
           pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
-          if (kDebugMode && pesertaMagangId != null) {
-            debugPrint('✅ Got pesertaMagangId from stored data: $pesertaMagangId');
-          }
         }
-        
-        // Method 2: If not found, refresh profile from API (most reliable)
+
         if ((pesertaMagangId == null || pesertaMagangId.isEmpty) && mounted) {
-          if (kDebugMode) {
-            debugPrint('🔄 Refreshing profile to get pesertaMagangId...');
-          }
           await authProvider.refreshProfile();
-          final refreshedUserDataStr = await StorageService.getString(AppConstants.userDataKey);
+          final refreshedUserDataStr =
+              await StorageService.getString(AppConstants.userDataKey);
           if (refreshedUserDataStr != null) {
             final refreshedUserData = jsonDecode(refreshedUserDataStr);
-            pesertaMagangId = refreshedUserData['pesertaMagang']?['id']?.toString();
-            if (kDebugMode && pesertaMagangId != null) {
-              debugPrint('✅ Got pesertaMagangId from refreshed profile: $pesertaMagangId');
-            }
+            pesertaMagangId =
+                refreshedUserData['pesertaMagang']?['id']?.toString();
           }
         }
-        
-        // Method 3: If still not found, try to get from API using userId endpoint
-        if ((pesertaMagangId == null || pesertaMagangId.isEmpty) && user.id.isNotEmpty) {
+
+        // Fallback fetch manual jika storage kosong
+        if ((pesertaMagangId == null || pesertaMagangId.isEmpty) &&
+            user.id.isNotEmpty) {
           try {
-            if (kDebugMode) {
-              debugPrint('🔄 Trying to get pesertaMagangId from API endpoint...');
-            }
             final token = await StorageService.getString(AppConstants.tokenKey);
             if (token != null) {
               final headers = {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer $token',
               };
-              
-              final response = await http.get(
-                Uri.parse('${AppConstants.baseUrl}/peserta-magang/user/${user.id}'),
-                headers: headers,
-              ).timeout(const Duration(seconds: 10));
-              
+
+              final response = await http
+                  .get(
+                    Uri.parse(
+                        '${AppConstants.baseUrl}/peserta-magang/user/${user.id}'),
+                    headers: headers,
+                  )
+                  .timeout(const Duration(seconds: 10));
+
               if (response.statusCode == 200) {
                 final responseData = jsonDecode(response.body);
-                if (responseData['success'] == true && responseData['data'] != null) {
+                if (responseData['success'] == true &&
+                    responseData['data'] != null) {
                   pesertaMagangId = responseData['data']['id']?.toString();
-                  if (kDebugMode && pesertaMagangId != null) {
-                    debugPrint('✅ Got pesertaMagangId from API endpoint: $pesertaMagangId');
-                  }
                 }
-              } else if (kDebugMode) {
-                debugPrint('⚠️ API returned status ${response.statusCode}: ${response.body}');
               }
             }
-          } catch (apiError) {
-            if (kDebugMode) {
-              debugPrint('⚠️ Error fetching pesertaMagangId from API: $apiError');
-            }
-          }
-        }
-        
-        // Method 4: Last resort - try to get from first attendance record
-        if ((pesertaMagangId == null || pesertaMagangId.isEmpty)) {
-          if (kDebugMode) {
-            debugPrint('🔄 Trying to get pesertaMagangId from attendance records...');
-          }
-          final tempResponse = await AttendanceService.getAllAttendance(
-            limit: 1,
-          );
-          
-          if (tempResponse.success && 
-              tempResponse.data != null && 
-              tempResponse.data!.isNotEmpty) {
-            pesertaMagangId = tempResponse.data!.first.pesertaMagangId;
-            if (kDebugMode && pesertaMagangId != null) {
-              debugPrint('✅ Got pesertaMagangId from attendance: $pesertaMagangId');
-            }
-          }
+          } catch (_) {}
         }
       } catch (e) {
-        if (kDebugMode) {
-          debugPrint('❌ Error getting pesertaMagangId: $e');
-        }
+        if (kDebugMode) print('Error getting pesertaMagangId: $e');
       }
 
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
         if (mounted) {
-          _showError('Peserta magang ID not found. Please ensure you are logged in as a student and have completed registration. If the issue persists, please contact support.');
-          if (kDebugMode) {
-            debugPrint('❌ Final check: pesertaMagangId is still null or empty');
-            debugPrint('User ID: ${user.id}');
-            debugPrint('User Role: ${user.role}');
-          }
+          _showError('ID Peserta Magang tidak ditemukan.');
         }
         return;
       }
 
-      // 3. Fetch all attendance records for the user
       final response = await AttendanceService.getAllAttendance(
         pesertaMagangId: pesertaMagangId,
-        limit: 500, // Fetch enough records to cover the month
+        limit: 500,
       );
 
       if (response.success && response.data != null) {
-        // 4. Filter by date range (client-side since backend doesn't support it)
         final filteredData = response.data!.where((item) {
           final itemDate = item.timestamp;
           return itemDate.isAfter(start.subtract(const Duration(days: 1))) &&
-                 itemDate.isBefore(end.add(const Duration(days: 1)));
+              itemDate.isBefore(end.add(const Duration(days: 1)));
         }).toList();
 
-        // 5. Group attendance by date and combine MASUK/KELUAR
         final Map<String, AttendanceRecord> recordsByDate = {};
 
         for (final item in filteredData) {
-          final dateKey = '${item.timestamp.year}-${item.timestamp.month.toString().padLeft(2, '0')}-${item.timestamp.day.toString().padLeft(2, '0')}';
-          
+          final dateKey =
+              '${item.timestamp.year}-${item.timestamp.month.toString().padLeft(2, '0')}-${item.timestamp.day.toString().padLeft(2, '0')}';
+
           if (!recordsByDate.containsKey(dateKey)) {
-            // Create new record for this date
-            final dateOnly = DateTime(item.timestamp.year, item.timestamp.month, item.timestamp.day);
+            final dateOnly = DateTime(
+                item.timestamp.year, item.timestamp.month, item.timestamp.day);
             recordsByDate[dateKey] = AttendanceRecord(
               id: item.id,
               userId: user?.id ?? '',
@@ -206,54 +157,23 @@ class _ReportScreenState extends State<ReportScreen> {
           }
 
           final record = recordsByDate[dateKey]!;
-          
-          // Set check-in or check-out based on tipe
+
           if (item.tipe.toUpperCase() == 'MASUK') {
-            recordsByDate[dateKey] = AttendanceRecord(
-              id: record.id,
-              userId: record.userId,
-              pesertaMagangId: record.pesertaMagangId,
-              tipe: record.tipe,
-              date: record.date,
-              timestamp: record.timestamp,
+            recordsByDate[dateKey] = record.copyWith(
               checkIn: item.timestamp,
-              checkOut: record.checkOut,
-              status: _mapStatus(item.status), // Use status from MASUK record
-              catatan: record.catatan,
-              lokasi: record.lokasi,
-              selfieUrl: record.selfieUrl,
-              qrCodeData: record.qrCodeData,
-              ipAddress: record.ipAddress,
-              device: record.device,
-              createdAt: record.createdAt,
-              updatedAt: record.updatedAt,
-              pesertaMagang: record.pesertaMagang,
+              status: _mapStatus(item.status),
             );
           } else if (item.tipe.toUpperCase() == 'KELUAR') {
-            recordsByDate[dateKey] = AttendanceRecord(
-              id: record.id,
-              userId: record.userId,
-              pesertaMagangId: record.pesertaMagangId,
-              tipe: record.tipe,
-              date: record.date,
-              timestamp: record.timestamp,
-              checkIn: record.checkIn,
+            recordsByDate[dateKey] = record.copyWith(
               checkOut: item.timestamp,
-              status: record.status, // Keep status from MASUK
-              catatan: record.catatan,
-              lokasi: record.lokasi,
-              selfieUrl: record.selfieUrl,
-              qrCodeData: record.qrCodeData,
-              ipAddress: record.ipAddress,
-              device: record.device,
-              createdAt: record.createdAt,
-              updatedAt: record.updatedAt,
-              pesertaMagang: record.pesertaMagang,
+            );
+          } else {
+            recordsByDate[dateKey] = record.copyWith(
+              status: _mapStatus(item.status),
             );
           }
         }
 
-        // 6. Convert map to sorted list
         final mappedRecords = recordsByDate.values.toList()
           ..sort((a, b) => b.date.compareTo(a.date));
 
@@ -261,10 +181,10 @@ class _ReportScreenState extends State<ReportScreen> {
           _attendanceRecords = mappedRecords;
         });
       } else {
-        _showError(response.message ?? 'Failed to load data');
+        _showError(response.message ?? 'Gagal memuat data');
       }
     } catch (e) {
-      _showError('Error loading attendance: ${e.toString()}');
+      _showError('Terjadi kesalahan: ${e.toString()}');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -279,6 +199,14 @@ class _ReportScreenState extends State<ReportScreen> {
         return AttendanceStatus.terlambat;
       case 'INVALID':
         return AttendanceStatus.invalid;
+      case 'SAKIT':
+        return AttendanceStatus.sakit;
+      case 'IZIN':
+        return AttendanceStatus.izin;
+      case 'ALPHA':
+      case 'ABSENT':
+      case 'TANPA KETERANGAN':
+        return AttendanceStatus.alpha;
       default:
         return AttendanceStatus.pending;
     }
@@ -286,34 +214,15 @@ class _ReportScreenState extends State<ReportScreen> {
 
   void _showError(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: AppThemes.errorColor,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      );
+      GlobalSnackBar.show(message, title: 'Gagal Memuat', isError: true);
     }
   }
-  
-  
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-    final isDarkMode = isDark;
-
-    // Definisikan warna primary yang konsisten
-    final primaryColor =
-        isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor;
-    final onSurfaceColor =
-        isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor;
-    final hintColor =
-        isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor;
 
     final validCount = _attendanceRecords
         .where((r) => r.status == AttendanceStatus.valid)
@@ -321,13 +230,22 @@ class _ReportScreenState extends State<ReportScreen> {
     final terlambatCount = _attendanceRecords
         .where((r) => r.status == AttendanceStatus.terlambat)
         .length;
+    final sakitCount = _attendanceRecords
+        .where((r) => r.status == AttendanceStatus.sakit)
+        .length;
+    final izinCount = _attendanceRecords
+        .where((r) => r.status == AttendanceStatus.izin)
+        .length;
+    final alphaCount = _attendanceRecords
+        .where((r) => r.status == AttendanceStatus.alpha)
+        .length;
     final invalidCount = _attendanceRecords
         .where((r) => r.status == AttendanceStatus.invalid)
         .length;
 
     return Scaffold(
       appBar: CustomAppBar(
-        title: 'Attendance Report',
+        title: 'Laporan Absensi',
         showBackButton: false,
       ),
       body: SafeArea(
@@ -337,7 +255,7 @@ class _ReportScreenState extends State<ReportScreen> {
               child: _isLoading
                   ? Center(
                       child: CircularProgressIndicator(
-                        color: isDarkMode
+                        color: isDark
                             ? AppThemes.darkAccentBlue
                             : AppThemes.primaryColor,
                       ),
@@ -346,60 +264,78 @@ class _ReportScreenState extends State<ReportScreen> {
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         children: [
-                          // Summary Cards - Modern Style
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildSimpleSummaryCard(
-                                  'Valid',
-                                  validCount.toString(),
-                                  AppThemes.successColor,
-                                  Icons.check_circle_rounded,
-                                  isDarkMode,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildSimpleSummaryCard(
-                                  'Terlambat',
-                                  terlambatCount.toString(),
-                                  AppThemes.warningColor,
-                                  Icons.schedule_rounded,
-                                  isDarkMode,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildSimpleSummaryCard(
-                                  'Invalid',
-                                  invalidCount.toString(),
-                                  AppThemes.errorColor,
-                                  Icons.cancel_rounded,
-                                  isDarkMode,
-                                ),
-                              ),
-                            ],
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final itemWidth = (constraints.maxWidth - 24) / 3;
+                              return Wrap(
+                                spacing: 12,
+                                runSpacing: 12,
+                                children: [
+                                  _buildSummaryItem(
+                                      'Hadir',
+                                      validCount.toString(),
+                                      AppThemes.successColor,
+                                      Icons.check_circle_rounded,
+                                      isDark,
+                                      itemWidth),
+                                  _buildSummaryItem(
+                                      'Terlambat',
+                                      terlambatCount.toString(),
+                                      AppThemes.warningColor,
+                                      Icons.schedule_rounded,
+                                      isDark,
+                                      itemWidth),
+                                  _buildSummaryItem(
+                                      'Sakit',
+                                      sakitCount.toString(),
+                                      AppThemes.infoColor,
+                                      Icons.medical_services_rounded,
+                                      isDark,
+                                      itemWidth),
+                                  _buildSummaryItem(
+                                      'Izin',
+                                      izinCount.toString(),
+                                      Colors.orange,
+                                      Icons.assignment_turned_in_rounded,
+                                      isDark,
+                                      itemWidth),
+                                  _buildSummaryItem(
+                                      'Tanpa Ket.',
+                                      alphaCount.toString(),
+                                      AppThemes.errorColor,
+                                      Icons.person_off_rounded,
+                                      isDark,
+                                      itemWidth),
+                                  _buildSummaryItem(
+                                      'Invalid',
+                                      invalidCount.toString(),
+                                      Colors.grey,
+                                      Icons.cancel_rounded,
+                                      isDark,
+                                      itemWidth),
+                                ],
+                              );
+                            },
                           ),
                           const SizedBox(height: 24),
 
-                          // Date Filter - Modern Style
+                          // Date Filter
                           Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: isDarkMode
+                              color: isDark
                                   ? AppThemes.darkSurface
                                   : AppThemes.surfaceColor,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: isDarkMode
+                                color: isDark
                                     ? AppThemes.darkOutline
                                     : Colors.grey.withOpacity(0.2),
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(
-                                    isDarkMode ? 0.2 : 0.05,
-                                  ),
+                                  color: Colors.black
+                                      .withOpacity(isDark ? 0.2 : 0.05),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
                                 ),
@@ -410,17 +346,16 @@ class _ReportScreenState extends State<ReportScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color:
-                                        (isDarkMode
-                                                ? AppThemes.darkAccentBlue
-                                                : AppThemes.primaryColor)
-                                            .withOpacity(0.1),
+                                    color: (isDark
+                                            ? AppThemes.darkAccentBlue
+                                            : AppThemes.primaryColor)
+                                        .withOpacity(0.1),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
                                     Icons.calendar_today_outlined,
                                     size: 20,
-                                    color: isDarkMode
+                                    color: isDark
                                         ? AppThemes.darkAccentBlue
                                         : AppThemes.primaryColor,
                                   ),
@@ -428,12 +363,14 @@ class _ReportScreenState extends State<ReportScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Selected Date',
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: isDarkMode
+                                        'Pilih Tanggal',
+                                        style:
+                                            theme.textTheme.bodySmall?.copyWith(
+                                          color: isDark
                                               ? AppThemes.darkTextSecondary
                                               : theme.hintColor,
                                           fontWeight: FontWeight.w500,
@@ -442,11 +379,13 @@ class _ReportScreenState extends State<ReportScreen> {
                                       const SizedBox(height: 2),
                                       Text(
                                         _formatMonth(_selectedMonth),
-                                        style: theme.textTheme.bodyMedium?.copyWith(
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
                                           fontWeight: FontWeight.w600,
-                                          color: isDarkMode
+                                          color: isDark
                                               ? AppThemes.darkTextPrimary
-                                              : theme.textTheme.bodyMedium?.color,
+                                              : theme
+                                                  .textTheme.bodyMedium?.color,
                                         ),
                                       ),
                                     ],
@@ -455,7 +394,7 @@ class _ReportScreenState extends State<ReportScreen> {
                                 IconButton(
                                   icon: Icon(
                                     Icons.arrow_drop_down_rounded,
-                                    color: isDarkMode
+                                    color: isDark
                                         ? AppThemes.darkTextPrimary
                                         : theme.iconTheme.color,
                                     size: 24,
@@ -474,31 +413,28 @@ class _ReportScreenState extends State<ReportScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Attendance History',
+                                  'Riwayat Absensi',
                                   style: theme.textTheme.titleLarge?.copyWith(
                                     fontWeight: FontWeight.w700,
-                                    color: isDarkMode
+                                    color: isDark
                                         ? AppThemes.darkTextPrimary
                                         : theme.textTheme.titleLarge?.color,
                                   ),
                                 ),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
+                                      horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color:
-                                        (isDarkMode
-                                                ? AppThemes.darkAccentBlue
-                                                : AppThemes.primaryColor)
-                                            .withOpacity(0.1),
+                                    color: (isDark
+                                            ? AppThemes.darkAccentBlue
+                                            : AppThemes.primaryColor)
+                                        .withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
-                                    '${_attendanceRecords.length} Records',
+                                    '${_attendanceRecords.length} Data',
                                     style: theme.textTheme.bodySmall?.copyWith(
-                                      color: isDarkMode
+                                      color: isDark
                                           ? AppThemes.darkAccentBlue
                                           : AppThemes.primaryColor,
                                       fontWeight: FontWeight.w600,
@@ -510,23 +446,46 @@ class _ReportScreenState extends State<ReportScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Attendance List - Modern Cards
-                          ..._attendanceRecords.map(
-                            (record) => _buildModernAttendanceItem(record, isDarkMode),
-                          ),
+                          if (_attendanceRecords.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 40),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.history_toggle_off_rounded,
+                                    size: 48,
+                                    color: isDark
+                                        ? AppThemes.darkTextSecondary
+                                            .withOpacity(0.5)
+                                        : AppThemes.hintColor.withOpacity(0.5),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Tidak ada riwayat absensi',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: isDark
+                                          ? AppThemes.darkTextSecondary
+                                          : AppThemes.hintColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            ..._attendanceRecords.map(
+                              (record) =>
+                                  _buildModernAttendanceItem(record, isDark),
+                            ),
                           const SizedBox(height: 20),
                         ],
                       ),
                     ),
             ),
-            // Bottom Navigation Bar
             FloatingBottomNav(
               currentRoute: RouteNames.report,
               onQRScanTap: () {
                 NavigationHelper.navigateWithoutAnimation(
-                  context,
-                  RouteNames.qrScan,
-                );
+                    context, RouteNames.qrScan);
               },
             ),
           ],
@@ -537,28 +496,31 @@ class _ReportScreenState extends State<ReportScreen> {
 
   // --- HELPER WIDGETS ---
 
-  Widget _buildSimpleSummaryCard(
+  Widget _buildSummaryItem(
     String title,
     String value,
     Color color,
     IconData icon,
     bool isDarkMode,
+    double width,
   ) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: width,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(
         color: isDarkMode ? color.withOpacity(0.15) : color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, color: color, size: 24),
           const SizedBox(height: 8),
           Text(
             value,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.w700,
               color: color,
             ),
@@ -566,13 +528,16 @@ class _ReportScreenState extends State<ReportScreen> {
           const SizedBox(height: 4),
           Text(
             title,
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
               color: isDarkMode
                   ? AppThemes.darkTextSecondary
                   : AppThemes.hintColor,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -605,7 +570,6 @@ class _ReportScreenState extends State<ReportScreen> {
       ),
       child: Row(
         children: [
-          // Date Circle
           Container(
             width: 60,
             height: 60,
@@ -634,8 +598,6 @@ class _ReportScreenState extends State<ReportScreen> {
             ),
           ),
           const SizedBox(width: 16),
-
-          // Attendance Details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -656,29 +618,44 @@ class _ReportScreenState extends State<ReportScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (record.checkIn != null)
+
+                // Logic Perbaikan Error: Cek Null sebelum akses .isNotEmpty
+                if (record.status == AttendanceStatus.sakit ||
+                    record.status == AttendanceStatus.izin ||
+                    record.status == AttendanceStatus.alpha)
                   _buildTimeRow(
-                    Icons.login_rounded,
-                    'Clock In: ${_formatTime(record.checkIn!)}',
-                    record.status == AttendanceStatus.terlambat
-                        ? AppThemes.warningColor
-                        : AppThemes.successColor,
+                    Icons.info_outline_rounded,
+                    (record.catatan != null && record.catatan!.isNotEmpty)
+                        ? record.catatan!
+                        : 'Tidak ada keterangan', // <--- FIX ERROR DI SINI
+                    isDarkMode ? AppThemes.darkTextPrimary : Colors.black87,
                     isDarkMode,
-                  ),
-                if (record.checkOut != null)
-                  _buildTimeRow(
-                    Icons.logout_rounded,
-                    'Clock Out: ${_formatTime(record.checkOut!)}',
-                    AppThemes.infoColor,
-                    isDarkMode,
-                  ),
-                if (record.checkIn == null && record.checkOut == null)
-                  _buildTimeRow(
-                    Icons.close_rounded,
-                    'No attendance record',
-                    AppThemes.errorColor,
-                    isDarkMode,
-                  ),
+                  )
+                else ...[
+                  if (record.checkIn != null)
+                    _buildTimeRow(
+                      Icons.login_rounded,
+                      'Masuk: ${_formatTime(record.checkIn!)}',
+                      record.status == AttendanceStatus.terlambat
+                          ? AppThemes.warningColor
+                          : AppThemes.successColor,
+                      isDarkMode,
+                    ),
+                  if (record.checkOut != null)
+                    _buildTimeRow(
+                      Icons.logout_rounded,
+                      'Keluar: ${_formatTime(record.checkOut!)}',
+                      AppThemes.infoColor,
+                      isDarkMode,
+                    ),
+                  if (record.checkIn == null && record.checkOut == null)
+                    _buildTimeRow(
+                      Icons.close_rounded,
+                      'Belum Absen',
+                      AppThemes.errorColor,
+                      isDarkMode,
+                    ),
+                ]
               ],
             ),
           ),
@@ -688,26 +665,25 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   Widget _buildTimeRow(
-    IconData icon,
-    String text,
-    Color color,
-    bool isDarkMode,
-  ) {
+      IconData icon, String text, Color color, bool isDarkMode) {
     final theme = Theme.of(context);
-
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 6),
-          Text(
-            text,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: isDarkMode
-                  ? AppThemes.darkTextSecondary
-                  : theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
-              fontWeight: FontWeight.w500,
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: isDarkMode
+                    ? AppThemes.darkTextSecondary
+                    : theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -718,7 +694,7 @@ class _ReportScreenState extends State<ReportScreen> {
   Widget _buildModernStatusChip(AttendanceStatus status, bool isDarkMode) {
     final Map<AttendanceStatus, Map<String, dynamic>> statusData = {
       AttendanceStatus.valid: {
-        'label': 'Valid',
+        'label': 'Hadir',
         'color': AppThemes.successColor,
         'lightColor': AppThemes.successLight,
       },
@@ -727,19 +703,34 @@ class _ReportScreenState extends State<ReportScreen> {
         'color': AppThemes.warningColor,
         'lightColor': AppThemes.warningLight,
       },
-      AttendanceStatus.invalid: {
-        'label': 'Invalid',
-        'color': AppThemes.errorColor,
-        'lightColor': AppThemes.errorLight,
-      },
-      AttendanceStatus.pending: {
-        'label': 'Pending',
+      AttendanceStatus.sakit: {
+        'label': 'Sakit',
         'color': AppThemes.infoColor,
         'lightColor': AppThemes.infoLight,
       },
+      AttendanceStatus.izin: {
+        'label': 'Izin',
+        'color': Colors.orange,
+        'lightColor': Colors.orange.shade100,
+      },
+      AttendanceStatus.alpha: {
+        'label': 'Alpha',
+        'color': AppThemes.errorColor,
+        'lightColor': AppThemes.errorLight,
+      },
+      AttendanceStatus.invalid: {
+        'label': 'Invalid',
+        'color': Colors.grey,
+        'lightColor': Colors.grey.shade200,
+      },
+      AttendanceStatus.pending: {
+        'label': 'Proses',
+        'color': Colors.blueGrey,
+        'lightColor': Colors.blueGrey.shade100,
+      },
     };
 
-    final data = statusData[status]!;
+    final data = statusData[status] ?? statusData[AttendanceStatus.pending]!;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -765,25 +756,21 @@ class _ReportScreenState extends State<ReportScreen> {
       'FEB',
       'MAR',
       'APR',
-      'MAY',
+      'MEI',
       'JUN',
       'JUL',
-      'AUG',
+      'AGU',
       'SEP',
-      'OCT',
+      'OKT',
       'NOV',
-      'DEC'
+      'DES'
     ];
     return months[month - 1];
   }
 
   String _getDayName(int weekday) {
-    const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    const days = ['SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB', 'MIN'];
     return days[weekday - 1];
-  }
-
-  String _formatDate(DateTime date) {
-    return '${_getDayName(date.weekday)}, ${date.day} ${_getMonthAbbreviation(date.month)} ${date.year}';
   }
 
   String _formatTime(DateTime time) {
@@ -794,24 +781,19 @@ class _ReportScreenState extends State<ReportScreen> {
     final DateTime now = DateTime.now();
     final DateTime maxDate = DateTime(now.year + 1, 12, 31);
     final DateTime minDate = DateTime(2023, 1, 1);
-    
-    // Ensure initialDate is within valid range
+
     DateTime initialDate = _selectedMonth;
-    if (initialDate.isAfter(maxDate)) {
-      initialDate = maxDate;
-    } else if (initialDate.isBefore(minDate)) {
-      initialDate = minDate;
-    }
-    
+    if (initialDate.isAfter(maxDate)) initialDate = maxDate;
+    if (initialDate.isBefore(minDate)) initialDate = minDate;
+
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
       firstDate: minDate,
-      lastDate: maxDate, // Allow up to next year
+      lastDate: maxDate,
       builder: (context, child) {
         final theme = Theme.of(context);
         final isDark = theme.brightness == Brightness.dark;
-
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
@@ -819,9 +801,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor,
               onPrimary: Colors.white,
               surface: isDark ? AppThemes.darkSurface : theme.cardColor,
-              onSurface: isDark
-                  ? AppThemes.darkTextPrimary
-                  : theme.textTheme.bodyLarge?.color ?? Colors.black,
+              onSurface: isDark ? AppThemes.darkTextPrimary : Colors.black,
             ),
             dialogBackgroundColor:
                 isDark ? AppThemes.darkSurface : theme.cardColor,
@@ -832,41 +812,61 @@ class _ReportScreenState extends State<ReportScreen> {
     );
     if (picked != null) {
       final newMonth = DateTime(picked.year, picked.month);
-      if (newMonth.year != _selectedMonth.year || 
+      if (newMonth.year != _selectedMonth.year ||
           newMonth.month != _selectedMonth.month) {
         setState(() {
           _selectedMonth = newMonth;
         });
-        _loadData(); // Reload data for the new month
+        _loadData();
       }
     }
   }
 
   String _formatMonth(DateTime date) {
     const months = [
-      'January',
-      'February',
-      'March',
+      'Januari',
+      'Februari',
+      'Maret',
       'April',
-      'May',
-      'June',
-      'July',
-      'August',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
       'September',
-      'October',
+      'Oktober',
       'November',
-      'December',
+      'Desember'
     ];
     return '${months[date.month - 1]} ${date.year}';
   }
+}
 
-  void _exportReport() {
-    // Simulasi export report
-    // NOTIFIKASI BARU: SUKSES
-    GlobalSnackBar.show(
-      'Laporan berhasil diexport ke PDF',
-      title: 'Export Berhasil',
-      isSuccess: true,
+// Extension sederhana untuk copyWith di AttendanceRecord agar coding lebih bersih
+extension AttendanceRecordExtension on AttendanceRecord {
+  AttendanceRecord copyWith({
+    DateTime? checkIn,
+    DateTime? checkOut,
+    AttendanceStatus? status,
+  }) {
+    return AttendanceRecord(
+      id: id,
+      userId: userId,
+      pesertaMagangId: pesertaMagangId,
+      tipe: tipe,
+      date: date,
+      timestamp: timestamp,
+      checkIn: checkIn ?? this.checkIn,
+      checkOut: checkOut ?? this.checkOut,
+      status: status ?? this.status,
+      catatan: catatan,
+      lokasi: lokasi,
+      selfieUrl: selfieUrl,
+      qrCodeData: qrCodeData,
+      ipAddress: ipAddress,
+      device: device,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      pesertaMagang: pesertaMagang,
     );
   }
 }

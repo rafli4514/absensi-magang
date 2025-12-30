@@ -1,8 +1,13 @@
 enum AttendanceStatus {
-  valid('VALID', 'Valid', 0xFF4CAF50),
-  terlambat('TERLAMBAT', 'Terlambat', 0xFFFF9800),
-  invalid('INVALID', 'Invalid', 0xFFF44336),
-  pending('PENDING', 'Pending', 0xFFFFC107);
+  valid('VALID', 'Hadir', 0xFF4CAF50), // Hijau
+  terlambat('TERLAMBAT', 'Terlambat', 0xFFFF9800), // Orange
+  invalid('INVALID', 'Invalid', 0xFFF44336), // Merah
+  pending('PENDING', 'Pending', 0xFF9E9E9E), // Abu-abu
+
+  // --- TAMBAHAN YANG BENAR ---
+  sakit('SAKIT', 'Sakit', 0xFF2196F3), // Biru (Info)
+  izin('IZIN', 'Izin', 0xFFFFC107), // Kuning/Amber
+  alpha('ALPHA', 'Tanpa Keterangan', 0xFFF44336); // Merah (Error)
 
   final String value;
   final String displayName;
@@ -12,7 +17,7 @@ enum AttendanceStatus {
 
   static AttendanceStatus fromString(String value) {
     return AttendanceStatus.values.firstWhere(
-      (status) => status.value == value,
+      (status) => status.value.toUpperCase() == value.toUpperCase(),
       orElse: () => AttendanceStatus.pending,
     );
   }

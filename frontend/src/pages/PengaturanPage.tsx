@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Fragment } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Clock,
   MapPin,
@@ -7,20 +7,37 @@ import {
   CheckCircle,
   AlertTriangle,
   Loader2,
+  ChevronDown,
+  ChevronUp,
+  Navigation,
+  Target,
+  Search,
+  Save,
+  X,
+  Building2,
+  Zap,
+  Briefcase,
+  Radio,
+  ScanFace,
+  Wifi,
+  Globe
 } from "lucide-react";
 import {
-  Box,
   Button,
   Card,
   Flex,
-  IconButton,
   Select,
   Switch,
   TextField,
   Spinner,
   AlertDialog,
+  Badge,
+  Separator,
+  Grid,
+  Box,
+  Text,
+  Tooltip
 } from "@radix-ui/themes";
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import pengaturanService, {
   type AppSettings,
 } from "../services/pengaturanService";
@@ -34,7 +51,6 @@ const PengaturanPageContent = () => {
       return pengaturanService.getLocalSettings();
     } catch (error) {
       console.error("Failed to load local settings:", error);
-      // Return default settings if local settings fail
       return {
         attendance: {
           allowLateCheckIn: true,
@@ -57,12 +73,12 @@ const PengaturanPageContent = () => {
           radius: 100,
           useRadius: true,
         },
-         security: {
-           faceVerification: false,
-           ipWhitelist: false,
-           sessionTimeout: 60,
-           allowedIps: [],
-         },
+        security: {
+          faceVerification: false,
+          ipWhitelist: false,
+          sessionTimeout: 60,
+          allowedIps: [],
+        },
       };
     }
   });
@@ -88,63 +104,59 @@ const PengaturanPageContent = () => {
   >([]);
   const [showLocationResults, setShowLocationResults] = useState(false);
 
-  // Quick location presets
-  const [showPresetLocations, setShowPresetLocations] = useState(false);
-  
   // IP Whitelist management
   const [newIpAddress, setNewIpAddress] = useState('');
   const [ipError, setIpError] = useState('');
 
-  // Preset locations for easy selection (with stable IDs)
+  // Accordion states
+  const [expandedSections, setExpandedSections] = useState({
+    attendance: true,
+    schedule: true,
+    location: true,
+    security: true,
+  });
+
+  // Toggle section
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  // --- PRESET LOCATIONS (KHUSUS ACEH - WITH ICONS) ---
   const presetLocations = [
     {
-      id: "pln-aceh",
-      name: "PLN Icon Plus Aceh",
-      address:
-        "PT PLN Icon Plus Kantor Perwakilan Aceh, Jl. Teuku Umar, Banda Aceh",
+      id: "icon-aceh",
+      name: "Icon Plus KP Aceh",
+      address: "Jl. Teuku Umar No. 426, Banda Aceh",
       latitude: 5.5454249,
       longitude: 95.3175582,
-      icon: "🏢",
+      IconComponent: Building2,
     },
     {
-      id: "pln-jakarta",
-      name: "PLN Pusat Jakarta",
-      address: "PT PLN (Persero) Kantor Pusat, Jl. Trunojoyo, Jakarta Selatan",
-      latitude: -6.2088,
-      longitude: 106.8456,
-      icon: "🏛️",
+      id: "pln-uid-aceh",
+      name: "PLN UID Aceh",
+      address: "Jl. Tgk. H. Daud Beureueh No. 172, Banda Aceh",
+      latitude: 5.5645,
+      longitude: 95.3389,
+      IconComponent: Zap,
     },
     {
-      id: "pln-medan",
-      name: "PLN Medan",
-      address: "PT PLN Wilayah Sumatera Utara, Medan",
-      latitude: 3.5952,
-      longitude: 98.6722,
-      icon: "⚡",
+      id: "pln-up3-bna",
+      name: "PLN UP3 Banda Aceh",
+      address: "Jl. Tentara Pelajar No. 18, Banda Aceh",
+      latitude: 5.5528,
+      longitude: 95.3135,
+      IconComponent: Briefcase,
     },
     {
-      id: "pln-surabaya",
-      name: "PLN Surabaya",
-      address: "PT PLN Wilayah Jawa Timur, Surabaya",
-      latitude: -7.2575,
-      longitude: 112.7521,
-      icon: "🔌",
-    },
-    {
-      id: "pln-makassar",
-      name: "PLN Makassar",
-      address: "PT PLN Wilayah Sulawesi Selatan, Makassar",
-      latitude: -5.1477,
-      longitude: 119.4327,
-      icon: "💡",
-    },
-    {
-      id: "pln-denpasar",
-      name: "PLN Denpasar",
-      address: "PT PLN Wilayah Bali, Denpasar",
-      latitude: -8.6705,
-      longitude: 115.2126,
-      icon: "🌴",
+      id: "pln-upt-bna",
+      name: "PLN UPT Banda Aceh",
+      address: "Jl. Tgk. H. Daud Beureueh, Banda Aceh",
+      latitude: 5.5610,
+      longitude: 95.3350,
+      IconComponent: Radio,
     },
   ];
 
@@ -249,7 +261,6 @@ const PengaturanPageContent = () => {
       setIsGettingLocation(true);
       setErrorMessage("");
 
-      // Check if geolocation is supported
       if (!navigator.geolocation) {
         throw new Error("Geolocation is not supported by this browser");
       }
@@ -292,7 +303,6 @@ const PengaturanPageContent = () => {
       setLocationTestResult(null);
 
       if (!settings.location.useRadius) {
-        // If radius is disabled, always return success
         setLocationTestResult({
           distance: 0,
           isWithinRange: true,
@@ -408,7 +418,6 @@ const PengaturanPageContent = () => {
     address: string;
     latitude: number;
     longitude: number;
-    icon: string;
   }) => {
     try {
       setSettings((prevSettings) => ({
@@ -420,7 +429,6 @@ const PengaturanPageContent = () => {
           longitude: location.longitude,
         },
       }));
-      setShowPresetLocations(false);
       setSuccessMessage(`Lokasi ${location.name} berhasil dipilih!`);
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
@@ -449,45 +457,6 @@ const PengaturanPageContent = () => {
       setErrorMessage("Gagal mengupdate koordinat dari peta");
     }
   };
-
-  // ===== Client-side distance feedback =====
-  const toRadians = (deg: number) => (deg * Math.PI) / 180;
-  const computeDistanceMeters = (
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ): number => {
-    const R = 6371000; // meters
-    const dLat = toRadians(lat2 - lat1);
-    const dLon = toRadians(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return Math.round(R * c);
-  };
-
-  const [clientDistance, setClientDistance] = useState<number | null>(null);
-
-  useEffect(() => {
-    try {
-      // compute distance from selected point to office center
-      // if office center is different, use it
-      const officeLat = settings.location.latitude;
-      const officeLng = settings.location.longitude;
-      const distToOffice = computeDistanceMeters(
-        settings.location.latitude,
-        settings.location.longitude,
-        officeLat,
-        officeLng
-      );
-      setClientDistance(distToOffice);
-    } catch (e) {
-      // ignore
-    }
-  }, [settings.location.latitude, settings.location.longitude]);
 
   // Validate coordinates
   const validateCoordinates = () => {
@@ -518,7 +487,6 @@ const PengaturanPageContent = () => {
     if (hasUnsavedChanges()) {
       setShowUnsavedDialog(true);
     } else {
-      // No changes, just reload original settings
       setSettings(originalSettings);
     }
   };
@@ -550,17 +518,17 @@ const PengaturanPageContent = () => {
       setIpError('Masukkan alamat IP');
       return;
     }
-    
+
     if (!validateIPAddress(trimmedIP)) {
       setIpError('Format IP tidak valid (contoh: 192.168.1.100)');
       return;
     }
-    
+
     if (settings.security.allowedIps.includes(trimmedIP)) {
       setIpError('IP sudah ada dalam daftar');
       return;
     }
-    
+
     setSettings(prev => ({
       ...prev,
       security: {
@@ -568,7 +536,7 @@ const PengaturanPageContent = () => {
         allowedIps: [...prev.security.allowedIps, trimmedIP]
       }
     }));
-    
+
     setNewIpAddress('');
     setIpError('');
     setSuccessMessage(`IP ${trimmedIP} berhasil ditambahkan`);
@@ -583,7 +551,7 @@ const PengaturanPageContent = () => {
         allowedIps: prev.security.allowedIps.filter(item => item !== ip)
       }
     }));
-    
+
     setSuccessMessage(`IP ${ip} berhasil dihapus`);
     setTimeout(() => setSuccessMessage(''), 3000);
   };
@@ -601,868 +569,767 @@ const PengaturanPageContent = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20"> {/* Padding bottom extra agar aman dari fixed footer */}
       {/* Page header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Pengaturan Absensi
+            {/* Added span to protect text */}
+            <span>Pengaturan Absensi</span>
           </h1>
           <p className="text-gray-600">
-            Kelola pengaturan sistem absensi dan kehadiran
+            <span>Kelola konfigurasi lokasi, jadwal, dan keamanan</span>
           </p>
         </div>
         {hasUnsavedChanges() && (
-          <div className="flex items-center gap-2 text-orange-600">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="text-sm">Ada perubahan yang belum disimpan</span>
-          </div>
+          <Badge color="orange" variant="soft" className="animate-pulse">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            <span>Ada perubahan belum disimpan</span>
+          </Badge>
         )}
       </div>
 
-      {/* Success Message */}
-      {successMessage && (
-        <Card>
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-center">
-              <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-              <p className="text-green-800 font-medium">{successMessage}</p>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Error Message */}
-      {errorMessage && (
-        <Card>
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+      {/* Messages */}
+      {(successMessage || errorMessage) && (
+        <Card className="mb-6">
+          <div className={`p-4 rounded-lg ${successMessage ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+                {successMessage ? (
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                ) : (
+                  <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+                )}
                 <div>
-                  <p className="text-red-800 font-medium">{errorMessage}</p>
+                  <p className={`font-medium ${successMessage ? 'text-green-800' : 'text-red-800'}`}>
+                    {/* Added span */}
+                    <span>{successMessage || errorMessage}</span>
+                  </p>
                   {validationErrors.length > 0 && (
                     <ul className="text-red-700 text-sm mt-2 list-disc list-inside">
                       {validationErrors.map((error, index) => (
-                        <li key={index}>{error}</li>
+                        <li key={index}><span>{error}</span></li>
                       ))}
                     </ul>
                   )}
                 </div>
               </div>
               <Button variant="ghost" size="1" onClick={clearMessages}>
-                ×
+                <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </Card>
       )}
 
-      {/* Attendance Settings */}
-      <Box>
-        <Card>
-          <Flex direction="column" p="4" gap="4">
-            <Flex align="center" gap="2">
-              <Clock className="h-5 w-5" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                Pengaturan Absensi
-              </h3>
-            </Flex>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900">
-                    Izinkan Check-in Terlambat
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    Peserta masih bisa check-in meskipun terlambat
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.attendance.allowLateCheckIn}
-                  onCheckedChange={(checked) =>
-                    setSettings({
-                      ...settings,
-                      attendance: {
-                        ...settings.attendance,
-                        allowLateCheckIn: checked,
-                      },
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900">
-                    Wajibkan Lokasi
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    Check-in memerlukan verifikasi lokasi GPS
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.attendance.requireLocation}
-                  onCheckedChange={(checked) =>
-                    setSettings({
-                      ...settings,
-                      attendance: {
-                        ...settings.attendance,
-                        requireLocation: checked,
-                      },
-                    })
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Batas Keterlambatan (menit)
-                  </label>
-                  <Select.Root
-                    value={settings.attendance.lateThreshold.toString()}
-                    onValueChange={(value) =>
-                      setSettings({
-                        ...settings,
-                        attendance: {
-                          ...settings.attendance,
-                          lateThreshold: parseInt(value),
-                        },
-                      })
-                    }
-                  >
-                    <Select.Trigger />
-                    <Select.Content>
-                      <Select.Item value="5">5 menit</Select.Item>
-                      <Select.Item value="10">10 menit</Select.Item>
-                      <Select.Item value="15">15 menit</Select.Item>
-                      <Select.Item value="30">30 menit</Select.Item>
-                    </Select.Content>
-                  </Select.Root>
-                </div>
-              </div>
-            </div>
-          </Flex>
-        </Card>
-      </Box>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-      {/* Work Schedule Settings */}
-      <Box>
-        <Card>
-          <Flex direction="column" p="4" gap="4">
-            <Flex align="center" gap="2">
-              <Calendar className="h-5 w-5" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                Jadwal Kerja
-              </h3>
-            </Flex>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Jam Masuk
-                  </label>
-                  <TextField.Root
-                    type="time"
-                    value={settings.schedule.workStartTime}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setSettings({
-                        ...settings,
-                        schedule: {
-                          ...settings.schedule,
-                          workStartTime: e.target.value,
-                        },
-                      })
-                    }
-                  />
+        {/* LEFT COLUMN */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="h-full shadow-sm">
+            <div className="p-5">
+
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-green-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Detail Parameter Lokasi
+                  </h3>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Jam Istirahat Mulai
-                  </label>
-                  <TextField.Root
-                    type="time"
-                    value={settings.schedule.breakStartTime}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setSettings({
-                        ...settings,
-                        schedule: {
-                          ...settings.schedule,
-                          breakStartTime: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                </div>
+
+                <Badge
+                  variant={settings.location.useRadius ? "solid" : "outline"}
+                  color={settings.location.useRadius ? "green" : "gray"}
+                  className="px-3 py-1.5"
+                >
+                  <span className="text-xs tracking-wide">
+                    {settings.location.useRadius
+                      ? `Radius: ${settings.location.radius} m`
+                      : "Tanpa Radius"}
+                  </span>
+                </Badge>
               </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Jam Pulang
-                  </label>
-                  <TextField.Root
-                    type="time"
-                    value={settings.schedule.workEndTime}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setSettings({
-                        ...settings,
-                        schedule: {
-                          ...settings.schedule,
-                          workEndTime: e.target.value,
-                        },
-                      })
-                    }
-                  />
+
+              {/* === MODIFIED: SEPARATOR WITH SPAN === */}
+              <span className="block w-full my-6">
+                <Separator size="4" />
+              </span>
+              {/* =================================== */}
+
+              <div className="space-y-8">
+
+                {/* --- PERUBAHAN UTAMA: SEARCH & PRESETS DIGABUNG DI SINI --- */}
+                <div className="bg-blue-50/50 p-5 rounded-xl border border-blue-100 space-y-4 relative">
+
+                  {/* Bagian Search */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-800 flex items-center gap-2 mb-2">
+                      <Search className="h-4 w-4 text-blue-600" />
+                      Cari Lokasi / Set Otomatis
+                    </label>
+                    <div className="flex gap-2">
+                      <TextField.Root
+                        placeholder="Contoh: Kantor PLN Banda Aceh..."
+                        value={locationQuery}
+                        onChange={(e) => setLocationQuery(e.target.value)}
+                        className="flex-1"
+                        size="2"
+                      />
+                      <Button
+                        size="3"
+                        onClick={searchLocation}
+                        disabled={isSearchingLocation}
+                        className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                      >
+                        {isSearchingLocation
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <Search className="h-4 w-4" />}
+                      </Button>
+                    </div>
+
+                    {/* Result Dropdown */}
+                    {showLocationResults && locationResults.length > 0 && (
+                       <div className="absolute top-[80px] left-5 right-5 z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                          {locationResults.map((result, idx) => (
+                             <div
+                                key={idx}
+                                className="p-3 hover:bg-gray-50 cursor-pointer text-sm border-b border-gray-100 last:border-0"
+                                onClick={() => selectLocation(result)}
+                             >
+                                <div className="font-medium text-gray-900">{result.address}</div>
+                                <div className="text-xs text-gray-500 mt-0.5">
+                                  Lat: {result.latitude.toFixed(6)}, Lng: {result.longitude.toFixed(6)}
+                                </div>
+                             </div>
+                          ))}
+                       </div>
+                    )}
+                  </div>
+
+                  {/* Bagian Presets (Digabung ke dalam blok yang sama) */}
+                  <div className="pt-2 border-t border-blue-100/50">
+                    <p className="text-xs font-semibold text-blue-800 mb-2 uppercase tracking-wider flex items-center gap-1">
+                      <Zap className="h-3 w-3" /> Lokasi Cepat (Aceh)
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {presetLocations.map((preset) => (
+                        <Button
+                          key={preset.id}
+                          variant="surface"
+                          color="blue"
+                          size="1"
+                          onClick={() => selectPresetLocation(preset)}
+                          className="text-xs cursor-pointer hover:bg-blue-100 transition-colors"
+                        >
+                          <preset.IconComponent className="h-3 w-3 mr-1" />
+                          {preset.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
+
+                 {/* === SEPARATOR SETELAH SEARCH === */}
+                <span className="block w-full my-6">
+                  <Separator size="4" />
+                </span>
+
+
+                {/* 1. DETAIL LOKASI (INPUT MANUAL) */}
+                {/* Note: Bagian Preset dihapus dari sini karena sudah pindah ke atas */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Jam Istirahat Selesai
-                  </label>
-                  <TextField.Root
-                    type="time"
-                    value={settings.schedule.breakEndTime}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setSettings({
-                        ...settings,
-                        schedule: {
-                          ...settings.schedule,
-                          breakEndTime: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Hari Kerja
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { key: "monday", label: "Senin" },
-                  { key: "tuesday", label: "Selasa" },
-                  { key: "wednesday", label: "Rabu" },
-                  { key: "thursday", label: "Kamis" },
-                  { key: "friday", label: "Jumat" },
-                  { key: "saturday", label: "Sabtu" },
-                  { key: "sunday", label: "Minggu" },
-                ].map((day) => (
-                  <label key={day.key} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={settings.schedule.workDays.includes(day.key)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
+                  <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-blue-500" />
+                    <span>Konfigurasi Manual</span>
+                  </h4>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        Alamat Lengkap Kantor
+                      </label>
+                      <TextField.Root
+                        placeholder="Masukkan alamat lengkap..."
+                        value={settings.location.officeAddress}
+                        onChange={(e) =>
                           setSettings({
                             ...settings,
-                            schedule: {
-                              ...settings.schedule,
-                              workDays: [
-                                ...settings.schedule.workDays,
-                                day.key,
-                              ],
+                            location: {
+                              ...settings.location,
+                              officeAddress: e.target.value,
                             },
-                          });
-                        } else {
-                          setSettings({
-                            ...settings,
-                            schedule: {
-                              ...settings.schedule,
-                              workDays: settings.schedule.workDays.filter(
-                                (d) => d !== day.key
-                              ),
-                            },
-                          });
+                          })
                         }
-                      }}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">
-                      {day.label}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </Flex>
-        </Card>
-      </Box>
-
-      {/* Location Settings */}
-      <Box>
-        <Card>
-          <Flex direction="column" p="4" gap="4">
-            <Flex align="center" gap="2">
-              <MapPin className="h-5 w-5" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                Pengaturan Lokasi
-              </h3>
-            </Flex>
-            <div className="space-y-6">
-              {/* Interactive Map Display */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Peta Interaktif - Klik untuk Set Lokasi
-                </label>
-                <InteractiveMap
-                  latitude={settings.location.latitude}
-                  longitude={settings.location.longitude}
-                  onLocationChange={handleMapLocationChange}
-                  height="350px"
-                  useRadius={settings.location.useRadius}
-                  radius={settings.location.radius}
-                />
-                <div className="text-xs text-gray-600 mt-2">
-                  {settings.location.useRadius ? (
-                    <>
-                      <span>
-                        Jarak ke pusat kantor: {clientDistance ?? 0}m (Radius: {settings.location.radius}m)
-                      </span>
-                    </>
-                  ) : (
-                    <span>Radius tidak digunakan</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Quick Location Selection */}
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <Button
-                    variant="ghost"
-                    size="1"
-                    onClick={() => setShowPresetLocations(!showPresetLocations)}
-                  >
-                    {showPresetLocations ? "Sembunyikan" : "Tampilkan Pilihan"}
-                  </Button>
-                </div>
-
-                <Fragment>
-                  {showPresetLocations && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4 p-4 bg-gray-50 rounded-lg border">
-                      {presetLocations.map((location) => (
-                        <div
-                          key={location.id}
-                          className="p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all duration-200 group"
-                          onClick={() => selectPresetLocation(location)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className="text-2xl group-hover:scale-110 transition-transform">
-                              {location.icon}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-medium text-gray-900 truncate">
-                                {location.name}
-                              </h4>
-                              <p className="text-xs text-gray-500 truncate">
-                                {location.address.split(",")[0]}
-                              </p>
-                              <div className="flex items-center text-xs text-gray-400 mt-1">
-                                <MapPin className="h-3 w-3 mr-1" />
-                                {location.latitude.toFixed(4)},{" "}
-                                {location.longitude.toFixed(4)}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                      />
                     </div>
-                  )}
-                </Fragment>
-              </div>
 
-              {/* Address Search */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cari Lokasi Manual
-                </label>
-                <div className="flex gap-2">
-                  <TextField.Root
-                    placeholder="Cari lokasi (contoh: PLN Icon Plus Aceh)"
-                    className="flex-1"
-                    value={locationQuery}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setLocationQuery(e.target.value)
-                    }
-                    onKeyPress={(e) => e.key === "Enter" && searchLocation()}
-                  />
-                  <IconButton
-                    onClick={searchLocation}
-                    disabled={isSearchingLocation}
-                  >
-                    {isSearchingLocation ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <MagnifyingGlassIcon />
-                    )}
-                  </IconButton>
-                </div>
-                {/* Location Search Results */}
-                <Fragment>
-                  {showLocationResults && locationResults.length > 0 && (
-                    <div className="mt-2 border border-gray-200 rounded-lg bg-white shadow-lg max-h-60 overflow-y-auto">
-                      {locationResults.map((result, index) => (
-                        <div
-                          key={`${result.latitude.toFixed(
-                            6
-                          )}-${result.longitude.toFixed(6)}-${index}`}
-                          className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                          onClick={() => selectLocation(result)}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* latitude */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Latitude
+                        </label>
+                        <TextField.Root
+                          type="number"
+                          step="0.000001"
+                          value={settings.location.latitude.toString()}
+                          onChange={(e) =>
+                            setSettings({
+                              ...settings,
+                              location: {
+                                ...settings.location,
+                                latitude: parseFloat(e.target.value) || 0,
+                              },
+                            })
+                          }
+                        />
+                      </div>
+
+                      {/* longitude */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Longitude
+                        </label>
+                        <TextField.Root
+                          type="number"
+                          step="0.000001"
+                          value={settings.location.longitude.toString()}
+                          onChange={(e) =>
+                            setSettings({
+                              ...settings,
+                              location: {
+                                ...settings.location,
+                                longitude: parseFloat(e.target.value) || 0,
+                              },
+                            })
+                          }
+                        />
+                      </div>
+
+                      {/* radius */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Radius (Meter)
+                        </label>
+                        <Select.Root
+                          value={settings.location.radius.toString()}
+                          onValueChange={(value) =>
+                            setSettings({
+                              ...settings,
+                              location: {
+                                ...settings.location,
+                                radius: parseInt(value),
+                                useRadius: parseInt(value) > 0,
+                              },
+                            })
+                          }
                         >
-                          <p className="text-sm text-gray-900 truncate">
-                            {result.address}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {result.latitude.toFixed(6)},{" "}
-                            {result.longitude.toFixed(6)}
-                          </p>
-                        </div>
-                      ))}
+                          <Select.Trigger className="w-full" />
+                          <Select.Content>
+                            <Select.Item value="0">Nonaktif</Select.Item>
+                            <Select.Item value="25">25 meter</Select.Item>
+                            <Select.Item value="50">50 meter</Select.Item>
+                            <Select.Item value="100">100 meter</Select.Item>
+                            <Select.Item value="200">200 meter</Select.Item>
+                            <Select.Item value="500">500 meter</Select.Item>
+                          </Select.Content>
+                        </Select.Root>
+                      </div>
                     </div>
-                  )}
-                </Fragment>
-              </div>
-
-              {/* Coordinates Input */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Alamat
-                  </label>
-                  <TextField.Root
-                    placeholder="Masukkan alamat lengkap kantor"
-                    value={settings.location.officeAddress}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setSettings({
-                        ...settings,
-                        location: {
-                          ...settings.location,
-                          officeAddress: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Latitude
-                    </label>
-                    <TextField.Root
-                      placeholder="Masukkan latitude (contoh: 5.5454249)"
-                      type="number"
-                      step="0.000001"
-                      value={settings.location.latitude.toString()}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setSettings({
-                          ...settings,
-                          location: {
-                            ...settings.location,
-                            latitude: parseFloat(e.target.value) || 0,
-                          },
-                        })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Longitude
-                    </label>
-                    <TextField.Root
-                      placeholder="Masukkan longitude (contoh: 95.3175582)"
-                      type="number"
-                      step="0.000001"
-                      value={settings.location.longitude.toString()}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setSettings({
-                          ...settings,
-                          location: {
-                            ...settings.location,
-                            longitude: parseFloat(e.target.value) || 0,
-                          },
-                        })
-                      }
-                    />
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    variant="solid"
-                    size="2"
-                    onClick={getCurrentLocation}
-                    disabled={isGettingLocation}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    {isGettingLocation ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Mendeteksi Lokasi...
-                      </>
-                    ) : (
-                      <>
-                        <MapPin className="h-4 w-4 mr-2" />
-                        Gunakan Lokasi Saya
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="2"
-                    onClick={validateCoordinates}
-                  >
-                    ✓ Validasi Koordinat
-                  </Button>
-                </div>
-              </div>
+                {/* 2. MAP */}
+                <div className="relative rounded-xl overflow-hidden border border-gray-200 shadow-inner">
+                  <InteractiveMap
+                    latitude={settings.location.latitude}
+                    longitude={settings.location.longitude}
+                    onLocationChange={handleMapLocationChange}
+                    height="450px"
+                    useRadius={settings.location.useRadius}
+                    radius={settings.location.radius}
+                  />
 
-              {/* Radius and Actions */}
-              <div className="space-y-4">
-                {/* Toggle Radius Usage */}
-                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">
-                      Gunakan Pembatasan Radius
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      Batasi absensi hanya dalam radius tertentu dari kantor
+                  <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg border">
+                    <p className="text-xs text-gray-500 mb-0.5">
+                      Koordinat
+                    </p>
+                    <p className="text-gray-900 font-mono text-xs leading-relaxed">
+                      {settings.location.latitude.toFixed(6)},{" "}
+                      {settings.location.longitude.toFixed(6)}
                     </p>
                   </div>
-                  <Switch
-                    checked={settings.location.useRadius}
-                    onCheckedChange={(checked) =>
-                      setSettings({
-                        ...settings,
-                        location: {
-                          ...settings.location,
-                          useRadius: checked,
-                        },
-                      })
-                    }
-                  />
                 </div>
 
-                {/* Radius Setting - Only show if useRadius is enabled */}
-                {settings.location.useRadius && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Radius Area PLN (meter)
-                    </label>
-                    <Select.Root
-                      value={settings.location.radius.toString()}
-                      onValueChange={(value) =>
-                        setSettings({
-                          ...settings,
-                          location: {
-                            ...settings.location,
-                            radius: parseInt(value),
-                          },
-                        })
-                      }
-                    >
-                      <Select.Trigger />
-                      <Select.Content>
-                        <Select.Item value="25">25 meter</Select.Item>
-                        <Select.Item value="50">50 meter</Select.Item>
-                        <Select.Item value="100">
-                          100 meter (Direkomendasikan)
-                        </Select.Item>
-                        <Select.Item value="200">200 meter</Select.Item>
-                        <Select.Item value="500">500 meter</Select.Item>
-                        <Select.Item value="1000">1000 meter</Select.Item>
-                      </Select.Content>
-                    </Select.Root>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Radius menentukan jarak maksimal dari kantor PLN untuk
-                      absensi valid
-                    </p>
+                {/* 3. ACTION BUTTONS */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <Button variant="outline" onClick={getCurrentLocation} disabled={isGettingLocation}>
+                    {isGettingLocation
+                      ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      : <Navigation className="h-4 w-4 mr-2" />}
+                    Lokasi Saya
+                  </Button>
+
+                  <Button variant="outline" onClick={validateCoordinates}>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Validasi
+                  </Button>
+
+                  <Button variant="outline" onClick={testLocation} disabled={isTestingLocation}>
+                    {isTestingLocation
+                      ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      : <Target className="h-4 w-4 mr-2" />}
+                    Test Jarak
+                  </Button>
+                </div>
+
+                {/* 4. RESULT */}
+                {locationTestResult && (
+                  <div className={`p-4 rounded-lg border ${
+                    locationTestResult.isWithinRange
+                      ? "bg-green-50 border-green-200"
+                      : "bg-red-50 border-red-200"
+                  }`}>
+                    <div className="flex items-start gap-2">
+                      {locationTestResult.isWithinRange
+                        ? <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                        : <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />}
+
+                      <div>
+                        <p className="font-bold leading-relaxed">
+                          {locationTestResult.isWithinRange
+                            ? "Dalam Jangkauan"
+                            : "Di Luar Jangkauan"}
+                        </p>
+
+                        <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+                          Jarak{" "}
+                          <span className="font-mono font-medium">
+                            {locationTestResult.distance} m
+                          </span>{" "}
+                          dari titik pusat (Radius {settings.location.radius} m)
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                {/* Radius Status Info */}
-                <div
-                  className={`p-3 rounded-lg border ${
-                    settings.location.useRadius
-                      ? "bg-blue-50 border-blue-200"
-                      : "bg-gray-50 border-gray-200"
-                  }`}
-                >
-                  <div className="flex items-center text-sm">
-                    <div className="mr-2">
-                      {settings.location.useRadius ? "🎯" : "🌍"}
-                    </div>
-                    <div>
-                      <p
-                        className={`font-medium ${
-                          settings.location.useRadius
-                            ? "text-blue-800"
-                            : "text-gray-700"
-                        }`}
-                      >
-                        {settings.location.useRadius
-                          ? `Radius Aktif: ${settings.location.radius}m`
-                          : "Radius Tidak Digunakan"}
-                      </p>
-                      <p
-                        className={`text-xs ${
-                          settings.location.useRadius
-                            ? "text-blue-600"
-                            : "text-gray-500"
-                        }`}
-                      >
-                        {settings.location.useRadius
-                          ? "Absensi hanya bisa dilakukan dalam radius yang ditentukan"
-                          : "Absensi bisa dilakukan dari mana saja (tidak ada pembatasan lokasi)"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                {/* === MODIFIED: SEPARATOR WITH SPAN === */}
+                <span className="block w-full my-6">
+                  <Separator size="4" />
+                </span>
+                {/* =================================== */}
 
-                <div className="flex justify-between items-center">
-                  <Button
-                    variant="outline"
-                    onClick={testLocation}
-                    disabled={isTestingLocation}
-                  >
-                    {isTestingLocation ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Testing...
-                      </>
-                    ) : (
-                      "Test Lokasi"
-                    )}
-                  </Button>
-                  <Button onClick={saveSettings} disabled={isSaving}>
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Menyimpan...
-                      </>
-                    ) : (
-                      "Simpan Lokasi PLN"
-                    )}
-                  </Button>
-                </div>
-                {/* Location Test Result */}
-                <Fragment>
-                  {locationTestResult && (
-                    <div
-                      className={`mt-4 p-4 rounded-lg ${
-                        locationTestResult.isWithinRange
-                          ? "bg-green-50 border border-green-200"
-                          : "bg-red-50 border border-red-200"
-                      }`}
-                    >
-                      <div className="flex items-center">
-                        {locationTestResult.isWithinRange ? (
-                          <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                        ) : (
-                          <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
-                        )}
-                        <div>
-                          <p
-                            className={`font-medium ${
-                              locationTestResult.isWithinRange
-                                ? "text-green-800"
-                                : "text-red-800"
-                            }`}
-                          >
-                            {locationTestResult.isWithinRange
-                              ? "Test Lokasi Berhasil!"
-                              : "Test Lokasi Gagal!"}
-                          </p>
-                          <p
-                            className={`text-sm ${
-                              locationTestResult.isWithinRange
-                                ? "text-green-700"
-                                : "text-red-700"
-                            }`}
-                          >
-                            {settings.location.useRadius
-                              ? `Jarak dari kantor: ${locationTestResult.distance}m (Radius: ${settings.location.radius}m)`
-                              : "Radius tidak digunakan - absensi diizinkan dari mana saja"}
-                          </p>
-                        </div>
+                {/* 6. QUICK STATS */}
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-purple-500" />
+                    <span>Ringkasan Status</span>
+                  </h4>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+                    {/* Card 1: Jam Kerja (Blue Theme) */}
+                    <div className="group bg-white py-5 px-3 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center justify-center text-center gap-3">
+                      <div className="p-3 bg-blue-50 text-blue-600 rounded-full group-hover:scale-110 transition-transform duration-200">
+                        <Clock className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Jam Operasional</p>
+                        <p className="text-sm font-bold text-gray-900">
+                          {settings.schedule.workStartTime} - {settings.schedule.workEndTime}
+                        </p>
                       </div>
                     </div>
-                  )}
-                </Fragment>
+
+                    {/* Card 2: Radius (Green/Gray Theme) */}
+                    <div className="group bg-white py-5 px-3 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center justify-center text-center gap-3">
+                      <div className={`p-3 rounded-full transition-transform duration-200 group-hover:scale-110 ${
+                          settings.location.useRadius
+                            ? "bg-green-50 text-green-600"
+                            : "bg-gray-100 text-gray-400"
+                        }`}>
+                        <MapPin className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Radius Absen</p>
+                        <p className={`text-sm font-bold ${settings.location.useRadius ? "text-gray-900" : "text-gray-400"}`}>
+                          {settings.location.useRadius ? `${settings.location.radius} Meter` : "Nonaktif"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Hari Kerja (Purple Theme) */}
+                    <div className="group bg-white py-5 px-3 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center justify-center text-center gap-3">
+                      <div className="p-3 bg-purple-50 text-purple-600 rounded-full group-hover:scale-110 transition-transform duration-200">
+                        <Calendar className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Total Hari Kerja</p>
+                        <p className="text-sm font-bold text-gray-900">
+                          {settings.schedule.workDays.length} Hari <span className="text-xs font-normal text-gray-400">/minggu</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Card 4: Keamanan (Orange/Red Theme) */}
+                    <div className="group bg-white py-5 px-3 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center justify-center text-center gap-3">
+                      <div className={`p-3 rounded-full transition-transform duration-200 group-hover:scale-110 ${
+                           (settings.security.faceVerification || settings.security.ipWhitelist)
+                            ? "bg-orange-50 text-orange-600"
+                            : "bg-gray-100 text-gray-400"
+                        }`}>
+                        <Shield className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Level Proteksi</p>
+                        <p className="text-sm font-bold text-gray-900">
+                          {settings.security.faceVerification && settings.security.ipWhitelist
+                            ? "Maksimal"
+                            : settings.security.faceVerification || settings.security.ipWhitelist
+                              ? "Tingkat Lanjut"
+                              : "Standar"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </Flex>
-        </Card>
-      </Box>
+          </Card>
+        </div>
 
-      {/* Security Settings */}
-      <Box>
-        <Card>
-          <Flex direction="column" p="4" gap="4">
-            <Flex align="center" gap="2">
-              <Shield className="h-5 w-5" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                Pengaturan Keamanan
-              </h3>
-            </Flex>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900">
-                    Verifikasi Wajah
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    Aktifkan verifikasi wajah untuk check-in yang lebih aman
-                  </p>
+        {/* RIGHT COLUMN - All Settings Accordions */}
+        <div className="lg:col-span-1 space-y-4">
+
+          {/* Attendance Settings */}
+          <Card className="hover:shadow-md transition-shadow">
+            <div className="p-4">
+              <div
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => toggleSection('attendance')}
+              >
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-semibold text-gray-900">Aturan Absensi</h3>
                 </div>
-                <Switch
-                  checked={settings.security.faceVerification}
-                  onCheckedChange={(checked) =>
-                    setSettings({
-                      ...settings,
-                      security: {
-                        ...settings.security,
-                        faceVerification: checked,
-                      },
-                    })
-                  }
-                />
+                {expandedSections.attendance ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </div>
-              <div className="space-y-4 p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">
-                      IP Whitelist
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      Batasi akses hanya dari IP tertentu
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.security.ipWhitelist}
-                    onCheckedChange={(checked) =>
-                      setSettings({
-                        ...settings,
-                        security: { ...settings.security, ipWhitelist: checked },
-                      })
-                    }
-                  />
-                </div>
 
-                {/* IP Whitelist Management */}
-                {settings.security.ipWhitelist && (
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                      <TextField.Root
-                        placeholder="192.168.1.100"
-                        value={newIpAddress}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          setNewIpAddress(e.target.value);
-                          setIpError('');
-                        }}
-                        className="flex-1"
-                      />
-                      <Button
-                        variant="outline"
-                        onClick={addIPAddress}
-                        disabled={!newIpAddress.trim()}
-                      >
-                        Tambah IP
-                      </Button>
+              {expandedSections.attendance && (
+                <div key="attendance-content" className="mt-4 space-y-4 animate-fadeIn">
+
+                  {/* === MODIFIED: SEPARATOR WITH SPAN === */}
+                  <span className="block w-full my-6">
+                    <Separator size="4" />
+                  </span>
+                  {/* =================================== */}
+
+                  {/* MODIFIED SECTION: Added Icons to Labels */}
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-orange-500" />
+                        <span>Telat Check-in</span>
+                      </p>
+                      <p className="text-xs text-gray-500 pl-6">Izinkan absen meski terlambat</p>
                     </div>
-                    
-                    {ipError && (
-                      <p className="text-red-600 text-xs">{ipError}</p>
-                    )}
-                    
-                    {/* IP List */}
-                    {settings.security.allowedIps.length > 0 ? (
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-700">
-                          Daftar IP yang Diizinkan ({settings.security.allowedIps.length})
+                    <Switch
+                      checked={settings.attendance.allowLateCheckIn}
+                      onCheckedChange={(checked) =>
+                        setSettings({ ...settings, attendance: { ...settings.attendance, allowLateCheckIn: checked } })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium flex items-center gap-2">
+                         <MapPin className="h-4 w-4 text-blue-500" />
+                         <span>Wajib Lokasi</span>
+                      </p>
+                      <p className="text-xs text-gray-500 pl-6">Harus menyalakan GPS</p>
+                    </div>
+                    <Switch
+                      checked={settings.attendance.requireLocation}
+                      onCheckedChange={(checked) =>
+                        setSettings({ ...settings, attendance: { ...settings.attendance, requireLocation: checked } })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                       <p className="text-sm font-medium flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-green-500" />
+                          <span>Remote Work</span>
+                       </p>
+                      <p className="text-xs text-gray-500 pl-6">Absen dari mana saja</p>
+                    </div>
+                    <Switch
+                      checked={settings.attendance.allowRemoteCheckIn}
+                      onCheckedChange={(checked) =>
+                        setSettings({ ...settings, attendance: { ...settings.attendance, allowRemoteCheckIn: checked } })
+                      }
+                    />
+                  </div>
+
+                  {/* MODIFIED: Toleransi Keterlambatan Layout - Left Aligned */}
+                  <div className="space-y-3 pt-2">
+                     <div className="space-y-1">
+                        <p className="text-sm font-medium flex items-center gap-2">
+                           <AlertTriangle className="h-4 w-4 text-red-500" />
+                           <span>Toleransi Keterlambatan</span>
                         </p>
-                        <div className="max-h-32 overflow-y-auto space-y-1">
-                          {settings.security.allowedIps.map((ip, index) => (
-                            <div
-                              key={`ip-${ip}-${index}`}
-                              className="flex items-center justify-between p-2 bg-gray-50 rounded border"
-                            >
-                              <span className="font-mono text-sm">{ip}</span>
-                              <Button
-                                variant="ghost"
-                                size="1"
-                                onClick={() => removeIPAddress(ip)}
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                ×
+                        <p className="text-xs text-gray-500 pl-6">
+                           Batas waktu toleransi check-in
+                        </p>
+                     </div>
+
+                     <div className="pl-6">
+                        <Select.Root
+                           value={settings.attendance.lateThreshold.toString()}
+                           onValueChange={(value) =>
+                              setSettings({ ...settings, attendance: { ...settings.attendance, lateThreshold: parseInt(value) } })
+                           }
+                        >
+                           <Select.Trigger className="w-[180px]" placeholder="Pilih durasi..." />
+                           <Select.Content>
+                              <Select.Item value="5">5 menit</Select.Item>
+                              <Select.Item value="10">10 menit</Select.Item>
+                              <Select.Item value="15">15 menit</Select.Item>
+                              <Select.Item value="30">30 menit</Select.Item>
+                              <Select.Item value="45">45 menit</Select.Item>
+                              <Select.Item value="60">60 menit</Select.Item>
+                           </Select.Content>
+                        </Select.Root>
+                     </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Schedule Settings */}
+          <Card className="hover:shadow-md transition-shadow">
+            <div className="p-4">
+              <div
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => toggleSection('schedule')}
+              >
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-purple-600" />
+                  <h3 className="font-semibold text-gray-900">Jadwal Kerja</h3>
+                </div>
+                {expandedSections.schedule ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </div>
+
+              {expandedSections.schedule && (
+                <div key="schedule-content" className="mt-4 space-y-4 animate-fadeIn">
+
+                  {/* === MODIFIED: SEPARATOR WITH SPAN === */}
+                  <span className="block w-full my-6">
+                    <Separator size="4" />
+                  </span>
+                  {/* =================================== */}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Jam Masuk</label>
+                      <TextField.Root type="time" value={settings.schedule.workStartTime} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings({...settings, schedule: {...settings.schedule, workStartTime: e.target.value}})} />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Jam Pulang</label>
+                      <TextField.Root type="time" value={settings.schedule.workEndTime} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings({...settings, schedule: {...settings.schedule, workEndTime: e.target.value}})} />
+                    </div>
+                     <div>
+                      <label className="block text-xs text-gray-500 mb-1">Break Mulai</label>
+                      <TextField.Root type="time" value={settings.schedule.breakStartTime} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings({...settings, schedule: {...settings.schedule, breakStartTime: e.target.value}})} />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Break Selesai</label>
+                      <TextField.Root type="time" value={settings.schedule.breakEndTime} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSettings({...settings, schedule: {...settings.schedule, breakEndTime: e.target.value}})} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Hari Kerja Aktif</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { key: "monday", label: "Sen" },
+                        { key: "tuesday", label: "Sel" },
+                        { key: "wednesday", label: "Rab" },
+                        { key: "thursday", label: "Kam" },
+                        { key: "friday", label: "Jum" },
+                        { key: "saturday", label: "Sab" },
+                        { key: "sunday", label: "Min" },
+                      ].map((day) => (
+                        <Button
+                          key={day.key}
+                          variant={settings.schedule.workDays.includes(day.key) ? "solid" : "outline"}
+                          size="1"
+                          onClick={() => {
+                            const currentDays = settings.schedule.workDays;
+                            const newDays = currentDays.includes(day.key)
+                              ? currentDays.filter(d => d !== day.key)
+                              : [...currentDays, day.key];
+                            setSettings({...settings, schedule: {...settings.schedule, workDays: newDays}});
+                          }}
+                          className={`w-9 h-9 p-0 ${settings.schedule.workDays.includes(day.key) ? 'bg-purple-600' : ''}`}
+                        >
+                          {day.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Security Settings */}
+          <Card className="hover:shadow-md transition-shadow">
+            <div className="p-4">
+              <div
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => toggleSection('security')}
+              >
+                <div className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-red-600" />
+                  <h3 className="font-semibold text-gray-900">Keamanan</h3>
+                </div>
+                {expandedSections.security ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </div>
+
+              {expandedSections.security && (
+                <div key="security-content" className="mt-4 space-y-4 animate-fadeIn">
+
+                  {/* === MODIFIED: SEPARATOR WITH SPAN === */}
+                  <span className="block w-full my-6">
+                    <Separator size="4" />
+                  </span>
+                  {/* =================================== */}
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">
+                        {/* Added icon */}
+                        <span className="flex items-center gap-2"><ScanFace className="h-3 w-3" /> Face Recognition</span>
+                      </p>
+                      <p className="text-xs text-gray-500">Verifikasi wajah saat absen</p>
+                    </div>
+                    <Switch
+                      checked={settings.security.faceVerification}
+                      onCheckedChange={(checked) =>
+                        setSettings({ ...settings, security: { ...settings.security, faceVerification: checked } })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-medium">
+                           {/* Added icon */}
+                           <span className="flex items-center gap-2"><Wifi className="h-3 w-3" /> IP Whitelist</span>
+                        </p>
+                        <p className="text-xs text-gray-500">Batasi jaringan WiFi kantor</p>
+                      </div>
+                      <Switch
+                        checked={settings.security.ipWhitelist}
+                        onCheckedChange={(checked) =>
+                          setSettings({ ...settings, security: { ...settings.security, ipWhitelist: checked } })
+                        }
+                      />
+                    </div>
+
+                    {settings.security.ipWhitelist && (
+                      <div className="bg-gray-50 p-3 rounded-md space-y-2">
+                        <div className="flex gap-2">
+                          <TextField.Root
+                            placeholder="192.168.1.xxx"
+                            size="1"
+                            value={newIpAddress}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                              setNewIpAddress(e.target.value);
+                              setIpError('');
+                            }}
+                            className="flex-1"
+                          />
+                          <Button size="1" onClick={addIPAddress}>Tambah</Button>
+                        </div>
+                        {ipError && <p className="text-xs text-red-500">{ipError}</p>}
+
+                        <div className="max-h-[100px] overflow-y-auto space-y-1 mt-2">
+                          {settings.security.allowedIps.map((ip, idx) => (
+                            <div key={idx} className="flex justify-between items-center bg-white px-2 py-1 rounded border border-gray-200 text-xs">
+                              <span className="font-mono flex items-center gap-1"><Globe className="h-3 w-3 text-gray-400"/> {ip}</span>
+                              <Button variant="ghost" color="red" size="1" onClick={() => removeIPAddress(ip)} className="h-5 w-5 p-0">
+                                <X className="h-3 w-3" />
                               </Button>
                             </div>
                           ))}
+                          {settings.security.allowedIps.length === 0 && <p className="text-xs text-gray-400 italic text-center">Belum ada IP terdaftar</p>}
                         </div>
                       </div>
-                    ) : (
-                      <p className="text-xs text-gray-500">
-                        Belum ada IP yang ditambahkan. Tambahkan IP untuk mengaktifkan whitelist.
-                      </p>
                     )}
                   </div>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Session Timeout (menit)
-                </label>
-                <Select.Root
-                  value={settings.security.sessionTimeout.toString()}
-                  onValueChange={(value) =>
-                    setSettings({
-                      ...settings,
-                      security: {
-                        ...settings.security,
-                        sessionTimeout: parseInt(value),
-                      },
-                    })
-                  }
-                >
-                  <Select.Trigger />
-                  <Select.Content>
-                    <Select.Item value="15">15 menit</Select.Item>
-                    <Select.Item value="30">30 menit</Select.Item>
-                    <Select.Item value="60">1 jam</Select.Item>
-                    <Select.Item value="120">2 jam</Select.Item>
-                  </Select.Content>
-                </Select.Root>
-              </div>
+                </div>
+              )}
             </div>
-          </Flex>
-        </Card>
-      </Box>
-      {/* Save Settings */}
-      <div className="flex justify-end items-center">
-        <div className="text-sm text-gray-500">
-          {hasUnsavedChanges() && (
-            <span className="text-orange-600">
-              ⚠️ Ada perubahan yang belum disimpan
-            </span>
-          )}
+          </Card>
         </div>
-        <div className="flex gap-4">
-          <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
-            Batal
-          </Button>
-          <Button
-            onClick={saveSettings}
-            disabled={isSaving || !hasUnsavedChanges()}
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Menyimpan...
-              </>
-            ) : (
-              "Simpan Pengaturan"
-            )}
-          </Button>
+      </div>
+
+      {/* STATIC SAVE ACTIONS (NOT FLOATING) */}
+      <div className="mt-8 pt-4 border-t border-gray-200">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+           <div className="text-sm text-gray-500">
+              {hasUnsavedChanges() ? (
+                <span className="text-orange-600 font-medium flex items-center">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full mr-2 animate-pulse"></div>
+                  <span>Konfigurasi belum disimpan</span>
+                </span>
+              ) : (
+                "Semua perubahan telah tersimpan"
+              )}
+           </div>
+
+           <div className="flex gap-3 w-full md:w-auto">
+              <Button
+                size="3"
+                variant="soft"
+                color="gray"
+                onClick={handleCancel}
+                disabled={isSaving || !hasUnsavedChanges()}
+                className="flex-1 md:flex-none"
+              >
+                {/* Wrapped in span to protect text */}
+                <span>Batal</span>
+              </Button>
+              <Button
+                size="3"
+                onClick={saveSettings}
+                disabled={isSaving || !hasUnsavedChanges()}
+                className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {/* Wrapped in span */}
+                    <span>Menyimpan...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    {/* Wrapped in span */}
+                    <span>Simpan Pengaturan</span>
+                  </>
+                )}
+              </Button>
+           </div>
         </div>
       </div>
 
@@ -1474,8 +1341,7 @@ const PengaturanPageContent = () => {
         <AlertDialog.Content>
           <AlertDialog.Title>Perubahan Belum Disimpan</AlertDialog.Title>
           <AlertDialog.Description>
-            Anda memiliki perubahan yang belum disimpan. Apakah Anda yakin ingin
-            membatalkan perubahan?
+            Anda memiliki perubahan yang belum disimpan. Apakah Anda yakin ingin membatalkan perubahan?
           </AlertDialog.Description>
           <Flex gap="3" mt="4" justify="end">
             <AlertDialog.Cancel>

@@ -37,7 +37,7 @@ class PerformanceCard extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    'Performa Bulanan',
+                    'Performa Bulanan', // Translate
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
@@ -69,7 +69,7 @@ class PerformanceCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Belum ada data performa',
+                      'Belum ada data performa', // Translate
                       style: TextStyle(
                         fontSize: 14,
                         color: isDark
@@ -87,6 +87,9 @@ class PerformanceCard extends StatelessWidget {
     }
 
     double percentage = (presentDays / totalDays * 100);
+    // Cegah NaN jika totalDays 0 (sudah dihandle di atas, tapi double check)
+    if (percentage.isNaN) percentage = 0;
+
     bool targetAchieved = percentage >= 85;
 
     return Card(
@@ -111,7 +114,7 @@ class PerformanceCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      'Performa Bulanan',
+                      'Performa Bulanan', // Translate
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -150,7 +153,7 @@ class PerformanceCard extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    '${percentage.round()}% Hadir',
+                    '${percentage.round()}% Hadir', // Translate
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -182,7 +185,7 @@ class PerformanceCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            '$presentDays hari hadir',
+                            '$presentDays hari hadir', // Translate
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -197,7 +200,7 @@ class PerformanceCard extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(left: 28),
                         child: Text(
-                          '$totalDays total hari kerja',
+                          '$totalDays total hari kerja', // Translate
                           style: TextStyle(
                             fontSize: 14,
                             color: isDark
@@ -251,7 +254,7 @@ class PerformanceCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Target Bulanan',
+                  'Target Bulanan', // Translate
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -319,7 +322,7 @@ class PerformanceCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Target Tercapai',
+                          'Target Tercapai', // Translate
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,

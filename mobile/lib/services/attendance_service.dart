@@ -6,6 +6,7 @@ import '../models/api_response.dart';
 import '../models/attendance.dart';
 import '../services/storage_service.dart';
 import '../utils/constants.dart';
+import '../utils/indonesian_time.dart';
 
 class AttendanceService {
   static const String baseUrl = AppConstants.baseUrl;
@@ -33,11 +34,10 @@ class AttendanceService {
       final params = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
-        if (pesertaMagangId != null && pesertaMagangId.isNotEmpty) 
+        if (pesertaMagangId != null && pesertaMagangId.isNotEmpty)
           'pesertaMagangId': pesertaMagangId,
-        if (tipe != null && tipe.isNotEmpty && tipe != 'Semua') 
-          'tipe': tipe,
-        if (status != null && status.isNotEmpty && status != 'Semua') 
+        if (tipe != null && tipe.isNotEmpty && tipe != 'Semua') 'tipe': tipe,
+        if (status != null && status.isNotEmpty && status != 'Semua')
           'status': status,
       };
 
@@ -86,7 +86,7 @@ class AttendanceService {
   }) async {
     try {
       final headers = await _getHeaders();
-      
+
       final requestBody = {
         'pesertaMagangId': pesertaMagangId,
         'tipe': tipe,
@@ -98,9 +98,9 @@ class AttendanceService {
         'ipAddress': ipAddress,
         'device': device,
       };
-      
+
       print('[ATTENDANCE SERVICE] Creating attendance: $requestBody');
-      
+
       final response = await http
           .post(
             Uri.parse('$baseUrl/absensi'),
@@ -111,9 +111,9 @@ class AttendanceService {
 
       print('[ATTENDANCE SERVICE] Response status: ${response.statusCode}');
       print('[ATTENDANCE SERVICE] Response body: ${response.body}');
-      
+
       final responseBody = response.body;
-      
+
       // Handle empty response body
       if (responseBody.isEmpty) {
         return ApiResponse(
@@ -122,10 +122,12 @@ class AttendanceService {
           statusCode: response.statusCode,
         );
       }
-      
+
       final data = jsonDecode(responseBody);
 
-      if (response.statusCode >= 200 && response.statusCode < 300 && data['success'] == true) {
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          data['success'] == true) {
         final attendance = Attendance.fromJson(data['data']);
         return ApiResponse(
           success: true,
@@ -134,9 +136,8 @@ class AttendanceService {
         );
       } else {
         // Get error message from response
-        final errorMessage = data['message'] ?? 
-            data['error'] ?? 
-            'Failed to create attendance';
+        final errorMessage =
+            data['message'] ?? data['error'] ?? 'Failed to create attendance';
         return ApiResponse(
           success: false,
           message: errorMessage,
@@ -223,6 +224,34 @@ class AttendanceService {
         success: false,
         message: 'Failed to retrieve today\'s attendance: $e',
       );
+    }
+  }
+
+  // [BARU] Helper untuk cek apakah sudah jam pulang
+  static bool isClockOutTimeReached(String workEndTime) {
+    if (workEndTime.isEmpty) return false;
+
+    try {
+      final now = IndonesianTime.now; // Gunakan waktu Indonesia
+      final parts = workEndTime.split(':');
+
+      if (parts.length != 2) return false;
+
+      final endHour = int.parse(parts[0]);
+      final endMinute = int.parse(parts[1]);
+
+      final endTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        endHour,
+        endMinute,
+      );
+
+      // Return true jika waktu sekarang >= waktu pulang
+      return now.isAfter(endTime) || now.isAtSameMomentAs(endTime);
+    } catch (e) {
+      return false;
     }
   }
 }

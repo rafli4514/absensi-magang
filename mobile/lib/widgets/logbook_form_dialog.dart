@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/enum/activity_status.dart';
@@ -8,8 +11,15 @@ import '../../themes/app_themes.dart';
 
 class LogBookFormDialog extends StatefulWidget {
   final LogBook? existingLog;
-  final Function(String tanggal, String kegiatan, String deskripsi, String? durasi, ActivityType? type, ActivityStatus? status)
-  onSave;
+  final Function(
+    String tanggal,
+    String kegiatan,
+    String deskripsi,
+    String? durasi,
+    ActivityType? type,
+    ActivityStatus? status,
+    File? foto, // Parameter baru untuk foto
+  ) onSave;
 
   const LogBookFormDialog({super.key, this.existingLog, required this.onSave});
 
@@ -26,6 +36,10 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
   ActivityType? _selectedType;
   ActivityStatus? _selectedStatus;
 
+  // Variabel untuk foto
+  File? _selectedImage;
+  final ImagePicker _picker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
@@ -38,8 +52,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
     _durasiController = TextEditingController(
       text: widget.existingLog?.durasi ?? '',
     );
-    
-    // Parse tanggal dari existing log atau gunakan hari ini
+
     if (widget.existingLog != null && widget.existingLog!.tanggal.isNotEmpty) {
       try {
         _selectedDate = DateTime.parse(widget.existingLog!.tanggal);
@@ -49,8 +62,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
     } else {
       _selectedDate = DateTime.now();
     }
-    
-    // Set type dan status dari existing log atau default
+
     _selectedType = widget.existingLog?.type ?? ActivityType.other;
     _selectedStatus = widget.existingLog?.status ?? ActivityStatus.pending;
   }
@@ -61,6 +73,25 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
     _deskripsiController.dispose();
     _durasiController.dispose();
     super.dispose();
+  }
+
+  // Fungsi ambil foto
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        imageQuality: 80, // Kompresi ringan
+        maxWidth: 1024,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImage = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error picking image: $e");
+    }
   }
 
   @override
@@ -86,8 +117,8 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
               children: [
                 Text(
                   widget.existingLog != null
-                      ? 'Edit Log Book'
-                      : 'Tambah Log Book',
+                      ? 'Edit Log Book' // Translate
+                      : 'Tambah Log Book', // Translate
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -97,12 +128,13 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                   ),
                 ),
                 const SizedBox(height: 24),
+
                 // Tanggal Picker
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Tanggal',
+                      'Tanggal', // Translate
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -161,14 +193,14 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                 ),
                 const SizedBox(height: 16),
                 _StyledTextField(
-                  label: 'Kegiatan',
+                  label: 'Kegiatan', // Translate
                   icon: Icons.event_note,
                   isDark: isDark,
                   controller: _kegiatanController,
                 ),
                 const SizedBox(height: 16),
                 _StyledTextField(
-                  label: 'Deskripsi',
+                  label: 'Deskripsi', // Translate
                   icon: Icons.description,
                   isDark: isDark,
                   maxLines: 4,
@@ -176,15 +208,106 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                 ),
                 const SizedBox(height: 16),
                 _StyledTextField(
-                  label: 'Durasi (opsional, contoh: 2 jam)',
+                  label: 'Durasi (opsional, contoh: 2 jam)', // Translate
                   icon: Icons.access_time,
                   isDark: isDark,
                   controller: _durasiController,
                 ),
                 const SizedBox(height: 16),
+
+                // --- BAGIAN UPLOAD FOTO ---
+                Text(
+                  'Dokumentasi (Opsional)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppThemes.darkTextSecondary
+                        : AppThemes.hintColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (_selectedImage != null)
+                  Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          _selectedImage!,
+                          height: 150,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedImage = null;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _pickImage(ImageSource.camera),
+                          icon: const Icon(Icons.camera_alt_rounded),
+                          label: const Text('Kamera'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            foregroundColor: AppThemes.primaryColor,
+                            side:
+                                const BorderSide(color: AppThemes.primaryColor),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _pickImage(ImageSource.gallery),
+                          icon: const Icon(Icons.photo_library_rounded),
+                          label: const Text('Galeri'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            foregroundColor: AppThemes.primaryColor,
+                            side:
+                                const BorderSide(color: AppThemes.primaryColor),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                const SizedBox(height: 16),
+
                 // Type Dropdown
                 _buildDropdown<ActivityType>(
-                  label: 'Tipe Aktivitas',
+                  label: 'Tipe Aktivitas', // Translate
                   value: _selectedType,
                   items: ActivityType.values,
                   onChanged: (val) => setState(() => _selectedType = val),
@@ -194,7 +317,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                 const SizedBox(height: 16),
                 // Status Dropdown
                 _buildDropdown<ActivityStatus>(
-                  label: 'Status',
+                  label: 'Status', // Translate
                   value: _selectedStatus,
                   items: ActivityStatus.values,
                   onChanged: (val) => setState(() => _selectedStatus = val),
@@ -208,7 +331,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                     TextButton(
                       onPressed: () => Navigator.pop(context),
                       child: Text(
-                        'Batal',
+                        'Batal', // Translate
                         style: TextStyle(
                           color: isDark
                               ? AppThemes.darkTextSecondary
@@ -231,6 +354,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                                   : null,
                               _selectedType,
                               _selectedStatus,
+                              _selectedImage, // Kirim foto ke callback
                             );
                             Navigator.pop(context);
                           }
@@ -246,7 +370,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                           vertical: 12,
                         ),
                       ),
-                      child: const Text('Simpan'),
+                      child: const Text('Simpan'), // Translate
                     ),
                   ],
                 ),
@@ -291,9 +415,8 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
             child: DropdownButton<T>(
               value: value,
               isExpanded: true,
-              dropdownColor: isDark
-                  ? AppThemes.darkSurface
-                  : AppThemes.surfaceColor,
+              dropdownColor:
+                  isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
               items: items.map((e) {
                 return DropdownMenuItem<T>(
                   value: e,
@@ -357,19 +480,18 @@ class _StyledTextField extends StatelessWidget {
             controller: controller,
             maxLines: maxLines,
             style: TextStyle(
-              color: isDark
-                  ? AppThemes.darkTextPrimary
-                  : AppThemes.onSurfaceColor,
+              color:
+                  isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
             ),
             decoration: InputDecoration(
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(12),
               prefixIcon: Icon(icon, size: 20, color: AppThemes.hintColor),
-              hintText: 'Enter $label',
+              hintText: 'Masukkan $label', // Translate
               hintStyle: TextStyle(
                 color: isDark
                     ? AppThemes.darkTextTertiary
-                    : AppThemes.hintColor.withValues(alpha: 0.5),
+                    : AppThemes.hintColor.withOpacity(0.5),
               ),
             ),
           ),

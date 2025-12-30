@@ -11,11 +11,8 @@ class OnboardWelcomeScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // Ambil ukuran layar untuk perhitungan responsif
     final size = MediaQuery.of(context).size;
     final double screenHeight = size.height;
-
-    // Tentukan ukuran gambar dinamis (maksimal 45% tinggi layar)
     final double imageSectionHeight = screenHeight * 0.45;
     final double maxImageWidth = 400.0;
 
@@ -25,7 +22,6 @@ class OnboardWelcomeScreen extends StatelessWidget {
       body: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
-            // Agar bisa discroll di HP kecil/landscape
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 minHeight: constraints.maxHeight,
@@ -36,27 +32,20 @@ class OnboardWelcomeScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Spacer atas dinamis
                       SizedBox(height: screenHeight * 0.05),
-
-                      // Logo di paling atas
                       Image.asset(
                         'assets/images/InternLogoExpand.png',
                         width: 80,
                         height: 80,
                         fit: BoxFit.contain,
                       ),
-
                       SizedBox(height: screenHeight * 0.02),
-
-                      // Mascot dengan background bulat - RESPONSIVE
                       SizedBox(
                         height: imageSectionHeight,
                         width: double.infinity,
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            // Background bulatan besar (80% dari area gambar)
                             Container(
                               width: imageSectionHeight * 0.8,
                               height: imageSectionHeight * 0.8,
@@ -81,17 +70,14 @@ class OnboardWelcomeScreen extends StatelessWidget {
                                 shape: BoxShape.circle,
                               ),
                             ),
-                            // Mascot yang "timbul" lebih tinggi
                             Transform.translate(
-                              offset: Offset(
-                                  0, -imageSectionHeight * 0.1), // Naik 10%
+                              offset: Offset(0, -imageSectionHeight * 0.1),
                               child: ConstrainedBox(
                                 constraints:
                                     BoxConstraints(maxWidth: maxImageWidth),
                                 child: Image.asset(
                                   'assets/images/Mascot4.png',
-                                  height:
-                                      imageSectionHeight, // Ikuti tinggi area
+                                  height: imageSectionHeight,
                                   fit: BoxFit.contain,
                                 ),
                               ),
@@ -99,8 +85,6 @@ class OnboardWelcomeScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-
-                      // Konten text dan buttons
                       Column(
                         children: [
                           Row(
@@ -113,9 +97,8 @@ class OnboardWelcomeScreen extends StatelessWidget {
                               ),
                               const SizedBox(width: 8),
                               Flexible(
-                                // Agar teks tidak overflow jika layar sempit
                                 child: Text(
-                                  'Yuk, Mulai Petualanganmu!',
+                                  'Ayo Mulai Petualanganmu!', // Translate
                                   style:
                                       theme.textTheme.headlineMedium?.copyWith(
                                     fontWeight: FontWeight.w800,
@@ -132,7 +115,7 @@ class OnboardWelcomeScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Absensi jadi lebih seru dan praktis! Pantau aktivitas magang, catat progress, dan raih prestasi terbaikmu',
+                            'Absensi jadi lebih seru dan praktis! Pantau aktivitas magang, catat progres, dan raih prestasi terbaikmu.', // Translate
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: isDark
                                   ? AppThemes.darkTextSecondary
@@ -143,10 +126,7 @@ class OnboardWelcomeScreen extends StatelessWidget {
                             ),
                             textAlign: TextAlign.center,
                           ),
-
-                          SizedBox(
-                              height: screenHeight * 0.04), // Jarak dinamis
-
+                          SizedBox(height: screenHeight * 0.04),
                           SizedBox(
                             width: double.infinity,
                             height: 56,
@@ -173,7 +153,7 @@ class OnboardWelcomeScreen extends StatelessWidget {
                                   Icon(Icons.login, size: 20),
                                   SizedBox(width: 8),
                                   Text(
-                                    'Masuk & Eksplor!',
+                                    'Masuk & Jelajahi', // Translate
                                     style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
@@ -217,7 +197,7 @@ class OnboardWelcomeScreen extends StatelessWidget {
                                   const Icon(Icons.person_add, size: 20),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Daftar Akun Baru',
+                                    'Buat Akun Baru', // Translate
                                     style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
@@ -262,7 +242,7 @@ class OnboardWelcomeScreen extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 Flexible(
                                   child: Text(
-                                    'Gabung dengan komunitas magang terbaik',
+                                    'Gabung dengan komunitas magang terbaik', // Translate
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: isDark
                                           ? AppThemes.darkTextSecondary
@@ -278,8 +258,6 @@ class OnboardWelcomeScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-
-                      // Spacer bawah agar tidak mepet di scroll paling bawah
                       const SizedBox(height: 20),
                     ],
                   ),

@@ -5,7 +5,7 @@ import 'api_service.dart';
 class DashboardService {
   static final ApiService _apiService = ApiService();
 
-  /// Get current month performance for a peserta magang
+  // --- UNTUK PESERTA ---
   static Future<ApiResponse<PerformanceStats>> getCurrentMonthPerformance({
     required String pesertaMagangId,
   }) async {
@@ -33,10 +33,27 @@ class DashboardService {
     } catch (e) {
       return ApiResponse<PerformanceStats>(
         success: false,
-        message: 'Failed to get current month performance: $e',
+        message: 'Gagal mengambil data performa: $e',
         statusCode: 500,
       );
     }
   }
-}
 
+  // --- UNTUK ADMIN (BARU) ---
+  static Future<ApiResponse<Map<String, dynamic>>> getDashboardStats() async {
+    try {
+      // Endpoint ini sudah ada di backend: src/controllers/dashboardController.ts
+      final response = await _apiService.get<Map<String, dynamic>>(
+        '/dashboard/stats',
+        (json) => json as Map<String, dynamic>,
+      );
+
+      return response;
+    } catch (e) {
+      return ApiResponse(
+          success: false,
+          message: 'Gagal memuat statistik dashboard: $e',
+          statusCode: 500);
+    }
+  }
+}

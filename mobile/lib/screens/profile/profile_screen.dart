@@ -1,4 +1,3 @@
-// screens/profile/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -11,6 +10,7 @@ import '../../utils/navigation_helper.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/floating_bottom_nav.dart';
+import '../../widgets/mentor_bottom_nav.dart';
 import '../../widgets/profile_widgets.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -20,9 +20,9 @@ class ProfileScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => CustomDialog(
-        title: 'Logout',
-        content: 'Are you sure you want to logout?',
-        primaryButtonText: 'Logout',
+        title: 'Keluar',
+        content: 'Apakah Anda yakin ingin keluar dari aplikasi?',
+        primaryButtonText: 'Keluar',
         primaryButtonColor: AppThemes.errorColor,
         onPrimaryButtonPressed: () async {
           await authProvider.logout();
@@ -34,7 +34,7 @@ class ProfileScreen extends StatelessWidget {
             );
           }
         },
-        secondaryButtonText: 'Cancel',
+        secondaryButtonText: 'Batal',
       ),
     );
   }
@@ -43,12 +43,11 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final theme = Theme.of(context);
     final isDarkMode = themeProvider.isDarkMode;
     final user = authProvider.user;
 
-    // --- EXTRACT DATA USING LOGIC CLASSES ---
-    final (:displayDivisi, :displayInstansi, :isStudent) =
+    // Logic Extract Data
+    final (:displayDivisi, :displayInstansi, :mentorName, :isStudent) =
         ProfileLogic.extractUserData(user, authProvider);
 
     final (
@@ -60,55 +59,56 @@ class ProfileScreen extends StatelessWidget {
       :displayStartDate,
       :displayEndDate,
       :hasValidInternshipDates,
-    ) = ProfileLogic.parseUserDates(
-      user,
-    );
+    ) = ProfileLogic.parseUserDates(user);
 
     return Scaffold(
-      appBar: CustomAppBar(title: 'Profile', showBackButton: false),
+      appBar: CustomAppBar(title: 'Profil', showBackButton: false),
       body: Stack(
         children: [
           SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                // --- USER PROFILE CARD (GABUNGAN) ---
-                UserProfileCard(
+                // 1. IDENTITY CARD (Header + Info Diri dalam satu card)
+                // Menggabungkan Nama, Username, Role dengan NIM, HP, Instansi
+                IdentityCard(
                   user: user,
                   isDarkMode: isDarkMode,
-                  joinDate: joinDate,
-                  endDate: endDate,
+                  displayInstansi: displayInstansi,
                 ),
                 const SizedBox(height: 24),
 
-                // --- INTERNSHIP INFO ---
-                InternshipInfoCard(
-                  isDarkMode: isDarkMode,
-                  isStudent: isStudent,
-                  displayInstansi: displayInstansi,
-                  displayDivisi: displayDivisi,
-                  idPesertaMagang: user?.idPesertaMagang,
-                  hasValidInternshipDates: hasValidInternshipDates,
-                  startDate: startDate,
-                  endDate: endDateTime,
-                  remainingDays: remainingDays,
-                  displayStartDate: displayStartDate,
-                  displayEndDate: displayEndDate,
-                ),
+                // 2. DETAIL MAGANG (Mentor, Divisi, Status, Periode)
+                if (isStudent) ...[
+                  InternshipDetailCard(
+                    isDarkMode: isDarkMode,
+                    mentorName: mentorName,
+                    divisi: displayDivisi,
+                    isActive: user?.isActive ?? false,
+                    // Data Tanggal
+                    hasValidInternshipDates: hasValidInternshipDates,
+                    startDate: startDate,
+                    endDate: endDateTime,
+                    remainingDays: remainingDays,
+                    displayStartDate: displayStartDate,
+                    displayEndDate: displayEndDate,
+                  ),
+                  const SizedBox(height: 24),
+                ],
 
-                // --- SETTINGS ---
+                // 3. PENGATURAN
                 ProfileSection(
                   title: 'Pengaturan',
                   isDarkMode: isDarkMode,
                   children: [
                     ModernSettingItem(
                       icon: Icons.edit_rounded,
-                      title: 'Edit Profile',
+                      title: 'Edit Profil',
                       trailing: Icon(
                         Icons.chevron_right_rounded,
                         color: isDarkMode
                             ? AppThemes.darkTextSecondary
-                            : theme.hintColor,
+                            : AppThemes.hintColor,
                       ),
                       onTap: () async {
                         await Navigator.pushNamed(
@@ -122,7 +122,7 @@ class ProfileScreen extends StatelessWidget {
                     ProfileDivider(isDarkMode: isDarkMode),
                     ModernSettingItem(
                       icon: Icons.dark_mode_rounded,
-                      title: 'Dark Mode',
+                      title: 'Mode Gelap',
                       trailing: Switch(
                         value: themeProvider.themeMode == ThemeMode.dark,
                         onChanged: (value) {
@@ -138,8 +138,26 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     ProfileDivider(isDarkMode: isDarkMode),
                     ModernSettingItem(
+                      icon: Icons.lock_rounded,
+                      title: 'Ganti Kata Sandi',
+                      trailing: Icon(
+                        Icons.chevron_right_rounded,
+                        color: isDarkMode
+                            ? AppThemes.darkTextSecondary
+                            : AppThemes.hintColor,
+                      ),
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          RouteNames.changePassword,
+                        );
+                      },
+                      isDarkMode: isDarkMode,
+                    ),
+                    ProfileDivider(isDarkMode: isDarkMode),
+                    ModernSettingItem(
                       icon: Icons.logout_rounded,
-                      title: 'Logout',
+                      title: 'Keluar',
                       trailing: const SizedBox.shrink(),
                       onTap: () => _showLogoutDialog(context, authProvider),
                       isDarkMode: isDarkMode,
@@ -149,57 +167,28 @@ class ProfileScreen extends StatelessWidget {
                   ],
                 ),
 
-                const SizedBox(height: 24),
-
-                // --- ACTIONS ---
-                ProfileSection(
-                  title: 'Tindakan Akun',
-                  isDarkMode: isDarkMode,
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pushNamed(
-                            context,
-                            RouteNames.changePassword,
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.lock_rounded,
-                          color: AppThemes.infoColor,
-                        ),
-                        label: const Text(
-                          'Change Password',
-                          style: TextStyle(color: AppThemes.infoColor),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppThemes.infoColor,
-                          side: const BorderSide(color: AppThemes.infoColor),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 100),
               ],
             ),
           ),
+
+          // BOTTOM NAV SESUAI ROLE
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: FloatingBottomNav(
-              currentRoute: RouteNames.profile,
-              onQRScanTap: () => NavigationHelper.navigateWithoutAnimation(
-                context,
-                RouteNames.qrScan,
-              ),
-            ),
+            child: authProvider.isMentor
+                ? MentorBottomNav(currentRoute: RouteNames.profile)
+                : authProvider.isAdmin
+                    ? const SizedBox.shrink()
+                    : FloatingBottomNav(
+                        currentRoute: RouteNames.profile,
+                        onQRScanTap: () =>
+                            NavigationHelper.navigateWithoutAnimation(
+                          context,
+                          RouteNames.qrScan,
+                        ),
+                      ),
           ),
         ],
       ),

@@ -20,6 +20,7 @@ import {
   CheckCircle,
   RefreshCw,
   Trash2,
+  Pencil,
 } from "lucide-react";
 import AvatarUpload from "../components/AvatarUpload";
 import profilService from "../services/profilService";
@@ -67,7 +68,7 @@ export default function ProfilPage() {
     try {
       setIsLoading(true);
       setErrorMessage('');
-      
+
       const response = await profilService.getProfile();
       if (response.success && response.data) {
         setProfileData(response.data);
@@ -96,7 +97,7 @@ export default function ProfilPage() {
 
       // Validate form data
       const newErrors: { [key: string]: string } = {};
-      
+
       if (!formData.username.trim()) {
         newErrors.username = 'Username tidak boleh kosong';
       } else {
@@ -122,7 +123,7 @@ export default function ProfilPage() {
         setOriginalProfileData(response.data);
         setIsEditingProfile(false);
         setSuccessMessage('Profil berhasil diperbarui!');
-        
+
         // Clear success message after 3 seconds
         setTimeout(() => setSuccessMessage(''), 3000);
       } else {
@@ -158,7 +159,7 @@ export default function ProfilPage() {
 
       // Validate password data
       const newErrors: { [key: string]: string } = {};
-      
+
       if (!passwordData.currentPassword) {
         newErrors.currentPassword = 'Password saat ini harus diisi';
       }
@@ -195,7 +196,7 @@ export default function ProfilPage() {
         });
         setIsChangingPassword(false);
         setSuccessMessage('Password berhasil diubah!');
-        
+
         // Clear success message after 3 seconds
         setTimeout(() => setSuccessMessage(''), 3000);
       } else {
@@ -239,7 +240,7 @@ export default function ProfilPage() {
 
       // Upload avatar
       const response = await profilService.uploadAvatar(file);
-      
+
       if (response.success && response.data) {
         // Update profile data with new avatar URL
         if (profileData) {
@@ -248,7 +249,7 @@ export default function ProfilPage() {
           setOriginalProfileData(updatedProfile);
         }
         setSuccessMessage('Avatar berhasil diupload!');
-        
+
         // Clear success message after 3 seconds
         setTimeout(() => setSuccessMessage(''), 3000);
       } else {
@@ -270,7 +271,7 @@ export default function ProfilPage() {
       setSuccessMessage('');
 
       const response = await profilService.removeAvatar();
-      
+
       if (response.success) {
         // Update profile data to remove avatar
         if (profileData) {
@@ -279,7 +280,7 @@ export default function ProfilPage() {
           setOriginalProfileData(updatedProfile);
         }
         setSuccessMessage('Avatar berhasil dihapus!');
-        
+
         // Clear success message after 3 seconds
         setTimeout(() => setSuccessMessage(''), 3000);
       } else {
@@ -328,7 +329,7 @@ export default function ProfilPage() {
             <p className="text-gray-600">Kelola informasi akun dan pengaturan keamanan</p>
           </div>
         </div>
-        
+
         <Card>
           <div className="p-6 text-center">
             <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -354,8 +355,8 @@ export default function ProfilPage() {
               Kelola informasi akun dan pengaturan keamanan
             </p>
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             color="red"
             onClick={() => setShowDeleteDialog(true)}
           >
@@ -393,27 +394,28 @@ export default function ProfilPage() {
           </Card>
         )}
 
-      <div>
-        {/* Profile Information */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <Flex direction="column" gap="4" className="p-6">
-              <Flex align="center" gap="2">
-                <User className="h-5 w-5" />
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Informasi Profil
-                </h3>
-              </Flex>
+      <div className="lg:col-span-2 space-y-6">
+        {/* Profile Information Card */}
+        <Card>
+          <div className="p-6">
+            <Flex align="center" gap="2" className="mb-6">
+              <User className="h-5 w-5" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Informasi Profil
+              </h3>
+            </Flex>
 
-              <div className="space-y-6">
-              {/* Avatar Section */}
-              <div className="flex items-center gap-6">
+            {/* Main Layout: Side by Side on Desktop (md), Stacked on Mobile */}
+            <div className="flex flex-col md:flex-row gap-8 items-start">
+
+              {/* LEFT COLUMN: Avatar Section */}
+              <div className="flex-shrink-0 flex flex-col items-center md:items-start space-y-2">
                 <div className="relative">
                   <AvatarUpload
                     src={profileData.avatar}
                     alt={profileData.username}
                     name={profileData.username}
-                    size="xl"
+                    size="xl" // Ensure this size prop renders a large enough avatar (e.g., w-32 h-32)
                     onUpload={handleAvatarUpload}
                     onRemove={handleAvatarRemove}
                   />
@@ -423,32 +425,33 @@ export default function ProfilPage() {
                     </div>
                   )}
                 </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900">{profileData.username}</h3>
-                  <div className="flex gap-2 mt-2">
-                    <Badge variant="soft" className="inline-flex items-center">
-                      <Shield className="h-3 w-3 mr-1" />
-                      {profileData.role}
-                    </Badge>
-                    <Badge 
-                      variant={profileData.isActive ? "soft" : "outline"} 
-                      color={profileData.isActive ? "green" : "red"}
-                    >
-                      {profileData.isActive ? 'Aktif' : 'Nonaktif'}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    {isUploadingAvatar ? 'Mengupload avatar...' : ""}
-                  </p>
-                </div>
+                <p className="text-xs text-gray-500 text-center w-full">
+                  {isUploadingAvatar ? 'Mengupload...' : ""}
+                </p>
               </div>
 
-              <Separator />
+              {/* RIGHT COLUMN: Information & Form */}
+              <div className="flex-grow w-full space-y-6">
 
-              {/* Profile Form */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-lg font-semibold text-gray-900">Detail Profil</h4>
+                {/* Header: Name, Badges, and Action Buttons */}
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">{profileData.username}</h3>
+                    <div className="flex gap-2 mt-2">
+                      <Badge variant="soft" className="inline-flex items-center">
+                        <Shield className="h-3 w-3 mr-1" />
+                        {profileData.role}
+                      </Badge>
+                      <Badge
+                        variant={profileData.isActive ? "soft" : "outline"}
+                        color={profileData.isActive ? "green" : "red"}
+                      >
+                        {profileData.isActive ? 'Aktif' : 'Nonaktif'}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Edit/Save Buttons */}
                   <div className="flex gap-2">
                     {isEditingProfile && (
                       <Button
@@ -484,189 +487,185 @@ export default function ProfilPage() {
                           Simpan
                         </>
                       ) : (
-                        'Edit Profil'
+                        <>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit Profil
+                        </>
                       )}
                     </Button>
                   </div>
                 </div>
 
-                <Flex direction="column">
+                {/* Form Inputs */}
+                <div className="space-y-4">
                   <Box className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">Username *</label>
                     <TextField.Root
                       value={formData.username}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         setFormData({...formData, username: e.target.value});
-                        if (errors.username) {
-                          setErrors({...errors, username: ''});
-                        }
+                        if (errors.username) setErrors({...errors, username: ''});
                       }}
                       disabled={!isEditingProfile}
                       color={errors.username ? "red" : undefined}
+                      className="w-full"
                     />
                     {errors.username && (
                       <p className="text-sm text-red-600">{errors.username}</p>
                     )}
                   </Box>
-                </Flex>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">Role</label>
-                    <TextField.Root
-                      value={profileData.role}
-                      disabled
-                      className="bg-gray-50"
-                    />
-                    <p className="text-xs text-gray-500">Role tidak dapat diubah</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">Role</label>
+                      <TextField.Root
+                        value={profileData.role}
+                        disabled
+                        className="bg-gray-50"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">Status</label>
+                      <TextField.Root
+                        value={profileData.isActive ? 'Aktif' : 'Nonaktif'}
+                        disabled
+                        className="bg-gray-50"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">Status</label>
-                    <TextField.Root
-                      value={profileData.isActive ? 'Aktif' : 'Nonaktif'}
-                      disabled
-                      className="bg-gray-50"
-                    />
-                    <p className="text-xs text-gray-500">Status dikelola oleh admin</p>
+
+                  <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+                    <p>Terakhir diperbarui: {new Date(profileData.updatedAt).toLocaleString('id-ID')}</p>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </Card>
 
-                <div className="text-sm text-gray-500">
-                  <p>Terakhir diperbarui: {new Date(profileData.updatedAt).toLocaleString('id-ID')}</p>
-                  <p className="mt-1">* Field yang wajib diisi</p>
-                </div>
-              </div>
-              </div>
+        {/* Password Change Card */}
+        <Card>
+          <Flex direction="column" gap="4" className="p-6">
+            <Flex align="center" gap="2">
+              <Lock className="h-5 w-5" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Keamanan Akun
+              </h3>
             </Flex>
-          </Card>
+            <Text size="2" color="gray" className="-mt-2">
+              Ubah password dan kelola keamanan akun
+            </Text>
 
-          {/* Password Change */}
-          <Card>
-            <Flex direction="column" gap="4" className="p-6">
-              <Flex align="center" gap="2">
-                <Lock className="h-5 w-5" />
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Keamanan Akun
-                </h3>
-                <Text size="2" color="gray">
-                  Ubah password dan kelola keamanan akun
-                </Text>
-              </Flex>
-
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900">Password</h4>
-                    <p className="text-sm text-gray-600">
-                      Untuk keamanan, password tidak ditampilkan
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    {isChangingPassword && (
-                      <Button
-                        variant="outline"
-                        size="2"
-                        onClick={handleCancelPasswordChange}
-                        disabled={isSaving}
-                      >
-                        Batal
-                      </Button>
-                    )}
+            <div className="space-y-6 mt-2">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h4 className="text-base font-semibold text-gray-900">Password</h4>
+                  <p className="text-sm text-gray-600">
+                    Untuk keamanan, password tidak ditampilkan
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  {isChangingPassword && (
                     <Button
-                      variant={isChangingPassword ? "solid" : "outline"}
+                      variant="outline"
                       size="2"
-                      onClick={() => {
-                        if (isChangingPassword) {
-                          handlePasswordChange();
-                        } else {
-                          setIsChangingPassword(true);
-                          clearMessages();
-                        }
-                      }}
+                      onClick={handleCancelPasswordChange}
                       disabled={isSaving}
                     >
-                      {isSaving ? (
-                        <>
-                          <Spinner size="1" className="mr-2" />
-                          Mengubah...
-                        </>
-                      ) : isChangingPassword ? (
-                        <>
-                          <Lock className="h-4 w-4 mr-2" />
-                          Ubah Password
-                        </>
-                      ) : (
-                        'Ubah Password'
-                      )}
+                      Batal
                     </Button>
+                  )}
+                  <Button
+                    variant={isChangingPassword ? "solid" : "outline"}
+                    size="2"
+                    onClick={() => {
+                      if (isChangingPassword) {
+                        handlePasswordChange();
+                      } else {
+                        setIsChangingPassword(true);
+                        clearMessages();
+                      }
+                    }}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Spinner size="1" className="mr-2" />
+                        Mengubah...
+                      </>
+                    ) : isChangingPassword ? (
+                      <>
+                        <Lock className="h-4 w-4 mr-2" />
+                        Ubah Password
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="h-4 w-4 mr-2" />
+                        Ubah Password
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {isChangingPassword && (
+                <div className="space-y-4 pt-4 border-t border-gray-200">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Password Saat Ini *</label>
+                    <TextField.Root
+                      type="password"
+                      value={passwordData.currentPassword}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setPasswordData({...passwordData, currentPassword: e.target.value});
+                        if (errors.currentPassword) setErrors({...errors, currentPassword: ''});
+                      }}
+                      color={errors.currentPassword ? "red" : undefined}
+                      placeholder="Masukkan password saat ini"
+                    />
+                    {errors.currentPassword && (
+                      <p className="text-sm text-red-600">{errors.currentPassword}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Password Baru *</label>
+                    <TextField.Root
+                      type="password"
+                      value={passwordData.newPassword}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setPasswordData({...passwordData, newPassword: e.target.value});
+                        if (errors.newPassword) setErrors({...errors, newPassword: ''});
+                      }}
+                      color={errors.newPassword ? "red" : undefined}
+                      placeholder="Masukkan password baru"
+                    />
+                    {errors.newPassword && (
+                      <p className="text-sm text-red-600">{errors.newPassword}</p>
+                    )}
+                    <p className="text-xs text-gray-500">
+                      Password harus minimal 8 karakter, mengandung huruf besar, huruf kecil, dan angka
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Konfirmasi Password Baru *</label>
+                    <TextField.Root
+                      type="password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setPasswordData({...passwordData, confirmPassword: e.target.value});
+                        if (errors.confirmPassword) setErrors({...errors, confirmPassword: ''});
+                      }}
+                      color={errors.confirmPassword ? "red" : undefined}
+                      placeholder="Konfirmasi password baru"
+                    />
+                    {errors.confirmPassword && (
+                      <p className="text-sm text-red-600">{errors.confirmPassword}</p>
+                    )}
                   </div>
                 </div>
-
-                {isChangingPassword && (
-                  <div className="space-y-4 pt-4 border-t border-gray-200">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">Password Saat Ini *</label>
-                      <TextField.Root
-                        type="password"
-                        value={passwordData.currentPassword}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          setPasswordData({...passwordData, currentPassword: e.target.value});
-                          if (errors.currentPassword) {
-                            setErrors({...errors, currentPassword: ''});
-                          }
-                        }}
-                        color={errors.currentPassword ? "red" : undefined}
-                        placeholder="Masukkan password saat ini"
-                      />
-                      {errors.currentPassword && (
-                        <p className="text-sm text-red-600">{errors.currentPassword}</p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">Password Baru *</label>
-                      <TextField.Root
-                        type="password"
-                        value={passwordData.newPassword}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          setPasswordData({...passwordData, newPassword: e.target.value});
-                          if (errors.newPassword) {
-                            setErrors({...errors, newPassword: ''});
-                          }
-                        }}
-                        color={errors.newPassword ? "red" : undefined}
-                        placeholder="Masukkan password baru"
-                      />
-                      {errors.newPassword && (
-                        <p className="text-sm text-red-600">{errors.newPassword}</p>
-                      )}
-                      <p className="text-xs text-gray-500">
-                        Password harus minimal 8 karakter, mengandung huruf besar, huruf kecil, dan angka
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">Konfirmasi Password Baru *</label>
-                      <TextField.Root
-                        type="password"
-                        value={passwordData.confirmPassword}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          setPasswordData({...passwordData, confirmPassword: e.target.value});
-                          if (errors.confirmPassword) {
-                            setErrors({...errors, confirmPassword: ''});
-                          }
-                        }}
-                        color={errors.confirmPassword ? "red" : undefined}
-                        placeholder="Konfirmasi password baru"
-                      />
-                      {errors.confirmPassword && (
-                        <p className="text-sm text-red-600">{errors.confirmPassword}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Flex>
-          </Card>
-        </div>
+              )}
+            </div>
+          </Flex>
+        </Card>
 
         {/* Delete Account Dialog */}
         <AlertDialog.Root open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

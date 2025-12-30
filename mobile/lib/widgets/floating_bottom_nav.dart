@@ -24,7 +24,7 @@ class FloatingBottomNav extends StatelessWidget {
       children: [
         Container(
           margin: const EdgeInsets.fromLTRB(20, 0, 20, 30),
-          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           decoration: BoxDecoration(
             color:
                 isDark ? AppThemes.darkSurfaceVariant : AppThemes.surfaceColor,
@@ -45,13 +45,13 @@ class FloatingBottomNav extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildNavItem(context, Icons.home_rounded, Icons.home_outlined,
-                  RouteNames.home, 'Home', isDark),
+                  RouteNames.home, 'Beranda', isDark),
               _buildNavItem(
                   context,
                   Icons.assignment_rounded,
                   Icons.assignment_outlined,
                   RouteNames.activities,
-                  'Activity',
+                  'Aktivitas',
                   isDark),
               const SizedBox(width: 40), // Space for FAB
               _buildNavItem(
@@ -59,10 +59,10 @@ class FloatingBottomNav extends StatelessWidget {
                   Icons.bar_chart_rounded,
                   Icons.bar_chart_outlined,
                   RouteNames.report,
-                  'Report',
+                  'Laporan',
                   isDark),
               _buildNavItem(context, Icons.person_rounded, Icons.person_outline,
-                  RouteNames.profile, 'Profile', isDark),
+                  RouteNames.profile, 'Profil', isDark),
             ],
           ),
         ),

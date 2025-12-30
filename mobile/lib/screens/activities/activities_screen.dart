@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -18,16 +17,15 @@ import '../../themes/app_themes.dart';
 import '../../utils/constants.dart';
 import '../../utils/navigation_helper.dart';
 import '../../utils/responsive_layout.dart';
-import '../../utils/ui_utils.dart'; // Import UI Utils Baru
+import '../../utils/ui_utils.dart';
 import '../../widgets/activities_header.dart';
 import '../../widgets/activities_statistics.dart';
 import '../../widgets/activities_timeline.dart';
-import '../../widgets/activity_card.dart';
-import '../../widgets/activity_form_dialog.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/floating_bottom_nav.dart';
+import '../../widgets/loading_indicator.dart'; // Pastikan import LoadingIndicator
 import '../../widgets/logbook_card.dart';
 import '../../widgets/logbook_form_dialog.dart';
 
@@ -47,71 +45,57 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
   late DateTime _startDateMagang;
   final int _totalWeeksDuration = 12;
 
-  // List LogBook (dari API/database)
   List<LogBook> _allLogBooks = [];
-
   List<LogBook> _filteredLogBooks = [];
-
-  // List Activities (dari API/database)
-  final List<Activity> _activities = [];
-
-  // List Timeline Activities (dari API/database)
   final List<TimelineActivity> _timelineActivities = [];
-
   bool _isLoadingLogbooks = false;
 
   @override
   void initState() {
     super.initState();
-    // Get tanggal mulai dari user data
     _initializeStartDate();
-    
-    // Set default selected week ke minggu saat ini
     _selectedWeekIndex = 0;
-
     _loadLogbooks();
   }
 
   void _initializeStartDate() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final user = authProvider.user;
-    
+
     if (user?.tanggalMulai != null) {
       try {
         _startDateMagang = DateTime.parse(user!.tanggalMulai!);
       } catch (e) {
-        // Fallback: 3 minggu lalu jika parsing gagal
         _startDateMagang = DateTime.now().subtract(const Duration(days: 21));
       }
     } else {
-      // Fallback: 3 minggu lalu jika tidak ada tanggal mulai
       _startDateMagang = DateTime.now().subtract(const Duration(days: 21));
     }
-    
-    // Update selected week index berdasarkan minggu saat ini
+
     final now = DateTime.now();
     final daysDiff = now.difference(_startDateMagang).inDays;
-    _selectedWeekIndex = (daysDiff / 7).floor().clamp(0, _totalWeeksDuration - 1);
+    _selectedWeekIndex =
+        (daysDiff / 7).floor().clamp(0, _totalWeeksDuration - 1);
   }
 
   Future<void> _loadLogbooks() async {
     if (!mounted) return;
-    
+
     setState(() => _isLoadingLogbooks = true);
-    
+
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.user;
-      
+
       if (user == null) {
         setState(() => _isLoadingLogbooks = false);
         return;
       }
 
-      // Get pesertaMagangId
       String? pesertaMagangId;
       try {
-        final userDataStr = await StorageService.getString(AppConstants.userDataKey);
+        final userDataStr =
+            await StorageService.getString(AppConstants.userDataKey);
         if (userDataStr != null) {
           final userData = jsonDecode(userDataStr);
           pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
@@ -122,10 +106,12 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
 
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
         await authProvider.refreshProfile();
-        final refreshedUserDataStr = await StorageService.getString(AppConstants.userDataKey);
+        final refreshedUserDataStr =
+            await StorageService.getString(AppConstants.userDataKey);
         if (refreshedUserDataStr != null) {
           final refreshedUserData = jsonDecode(refreshedUserDataStr);
-          pesertaMagangId = refreshedUserData['pesertaMagang']?['id']?.toString();
+          pesertaMagangId =
+              refreshedUserData['pesertaMagang']?['id']?.toString();
         }
       }
 
@@ -136,29 +122,35 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
         );
 
         if (mounted && response.success && response.data != null) {
-          // Sort logbooks by tanggal (newest first)
           final sortedLogbooks = List<LogBook>.from(response.data!);
           sortedLogbooks.sort((a, b) {
             try {
               final dateA = DateTime.parse(a.tanggal);
               final dateB = DateTime.parse(b.tanggal);
-              return dateB.compareTo(dateA); // Descending order
+              return dateB.compareTo(dateA);
             } catch (e) {
               return b.createdAt.compareTo(a.createdAt);
             }
           });
-          
+
           setState(() {
             _allLogBooks = sortedLogbooks;
             _isLoadingLogbooks = false;
           });
           _filterLogBooks();
         } else {
-          setState(() {
-            _allLogBooks = [];
-            _isLoadingLogbooks = false;
-          });
-          _filterLogBooks();
+          if (mounted) {
+            setState(() {
+              _allLogBooks = [];
+              _isLoadingLogbooks = false;
+            });
+            _filterLogBooks();
+            GlobalSnackBar.show(
+              response.message ?? 'Gagal memuat data logbook',
+              title: 'Gagal Memuat',
+              isError: true,
+            );
+          }
         }
       } else {
         setState(() {
@@ -175,6 +167,12 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
           _isLoadingLogbooks = false;
         });
         _filterLogBooks();
+        GlobalSnackBar.show(
+          'Gagal terhubung ke server',
+          title: 'Koneksi Error',
+          isError: true,
+          icon: Icons.wifi_off_rounded,
+        );
       }
     }
   }
@@ -189,7 +187,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
 
     setState(() {
       _filteredLogBooks = _allLogBooks.where((log) {
-        // Parse tanggal dari string format YYYY-MM-DD
         try {
           final logDate = DateTime.parse(log.tanggal);
           return logDate.isAfter(
@@ -197,7 +194,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               ) &&
               logDate.isBefore(weekEndDate);
         } catch (e) {
-          // Jika parsing gagal, gunakan createdAt sebagai fallback
           return log.createdAt.isAfter(
                 weekStartDate.subtract(const Duration(seconds: 1)),
               ) &&
@@ -216,15 +212,14 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       backgroundColor:
           isDark ? AppThemes.darkBackground : AppThemes.backgroundColor,
       appBar: CustomAppBar(
-        title: 'Activities',
+        title: 'Aktivitas', // Translate
         showBackButton: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list_rounded),
             onPressed: () {
-              // Contoh Notifikasi Filter (Info)
               GlobalSnackBar.show(
-                'Filter fitur akan segera tersedia',
+                'Fitur filter segera hadir', // Translate
                 title: 'Info',
                 isInfo: true,
               );
@@ -363,14 +358,14 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                     child: Row(
                       children: [
                         _TabButton(
-                          title: 'Activity',
+                          title: 'Aktivitas Terbaru', // Translate
                           isActive: _selectedTabIndex == 0,
                           onTap: () => setState(() => _selectedTabIndex = 0),
                           isDark: isDark,
                         ),
                         const SizedBox(width: 8),
                         _TabButton(
-                          title: 'Log Book',
+                          title: 'Log Book', // Translate
                           isActive: _selectedTabIndex == 1,
                           onTap: () => setState(() => _selectedTabIndex = 1),
                           isDark: isDark,
@@ -400,7 +395,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
 
   Widget _buildWeekFilter(bool isDark) {
     return Container(
-      height: 50,
+      height: 60,
       margin: const EdgeInsets.only(bottom: 8, top: 8),
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -449,6 +444,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                               : AppThemes.onSurfaceColor),
                     ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
                     dateRange,
                     style: TextStyle(
@@ -471,27 +467,24 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
 
   Widget _buildListContent(bool isDark) {
     if (_selectedTabIndex == 0) {
-      // --- TAB ACTIVITY (menggunakan Logbook dengan type/status) ---
-      // Filter logbook yang memiliki type atau status (dianggap sebagai Activity)
-      final activityLogbooks = _allLogBooks.where((log) => 
-        log.type != null || log.status != null
-      ).toList();
-      
-      // Jika tidak ada activity dengan type/status, tampilkan semua logbook (diurutkan terbaru)
-      // Urutkan berdasarkan tanggal (terbaru dulu)
-      final displayLogbooks = (activityLogbooks.isNotEmpty 
-          ? activityLogbooks
-          : _allLogBooks).toList()
+      final activityLogbooks = _allLogBooks
+          .where((log) => log.type != null || log.status != null)
+          .toList();
+
+      final displayLogbooks = (activityLogbooks.isNotEmpty
+              ? activityLogbooks
+              : _allLogBooks)
+          .toList()
         ..sort((a, b) {
           try {
             final dateA = DateTime.parse(a.tanggal);
             final dateB = DateTime.parse(b.tanggal);
-            return dateB.compareTo(dateA); // Descending order (newest first)
+            return dateB.compareTo(dateA);
           } catch (e) {
             return b.createdAt.compareTo(a.createdAt);
           }
         });
-      
+
       if (_isLoadingLogbooks) {
         return SliverFillRemaining(
           hasScrollBody: false,
@@ -502,9 +495,10 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
           ),
         );
       }
-      
+
       return displayLogbooks.isEmpty
-          ? _buildEmptyState(isDark, 'No activities found')
+          ? _buildEmptyState(
+              isDark, 'Tidak ada aktivitas ditemukan') // Translate
           : SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
@@ -519,19 +513,19 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                       isDark: isDark,
                       onEdit: () => _showLogBookForm(context, logbook),
                       onDelete: () {
-                        final deleteIndex = _allLogBooks.indexWhere((l) => l.id == logbook.id);
+                        final deleteIndex =
+                            _allLogBooks.indexWhere((l) => l.id == logbook.id);
                         if (deleteIndex != -1) {
                           _confirmDeleteLog(context, deleteIndex);
                         }
                       },
-                                                          ),
-                                                        );
-                                                      },
-                                                      childCount: displayLogbooks.length,
+                    ),
+                  );
+                },
+                childCount: displayLogbooks.length,
               ),
             );
     } else {
-      // --- TAB LOG BOOK (Filtered) ---
       if (_isLoadingLogbooks) {
         return SliverFillRemaining(
           hasScrollBody: false,
@@ -542,9 +536,10 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
           ),
         );
       }
-      
+
       return _filteredLogBooks.isEmpty
-          ? _buildEmptyState(isDark, 'Belum ada Log Book di Minggu ini')
+          ? _buildEmptyState(
+              isDark, 'Belum ada Log Book di Minggu ini') // Translate
           : SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) => Padding(
@@ -566,186 +561,105 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     }
   }
 
-  // === CRUD LOGIC ===
-
   void _showLogBookForm(BuildContext context, LogBook? existingLog) async {
     await showDialog(
       context: context,
       builder: (context) => LogBookFormDialog(
         existingLog: existingLog,
-        onSave: (tanggal, kegiatan, deskripsi, durasi, type, status) async {
+        // Update callback onSave untuk menerima foto
+        onSave:
+            (tanggal, kegiatan, deskripsi, durasi, type, status, foto) async {
+          // Tampilkan loading
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const Center(child: LoadingIndicator()),
+          );
+
           try {
-            final authProvider = Provider.of<AuthProvider>(context, listen: false);
+            final authProvider =
+                Provider.of<AuthProvider>(context, listen: false);
             final user = authProvider.user;
-            
+
             if (user == null) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('User not found. Please login again.'),
-                    backgroundColor: AppThemes.errorColor,
-                  ),
+                Navigator.pop(context); // Tutup loading
+                GlobalSnackBar.show(
+                  'User tidak ditemukan. Silakan login kembali.', // Translate
+                  title: 'Auth Error',
+                  isError: true,
                 );
               }
               return;
             }
 
-            // Get pesertaMagangId from multiple sources
+            // ... (Logic get ID)
             String? pesertaMagangId;
-            
             try {
-              // Method 1: Try from stored user data (pesertaMagang.id)
-              final userDataStr = await StorageService.getString(AppConstants.userDataKey);
+              final userDataStr =
+                  await StorageService.getString(AppConstants.userDataKey);
               if (userDataStr != null) {
                 final userData = jsonDecode(userDataStr);
                 pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
-                if (kDebugMode && pesertaMagangId != null) {
-                  print('✅ Got pesertaMagangId from stored data: $pesertaMagangId');
-                }
               }
-              
-              // Method 2: If not found, refresh profile from API (most reliable)
-              if ((pesertaMagangId == null || pesertaMagangId.isEmpty) && mounted) {
-                if (kDebugMode) {
-                  print('🔄 Refreshing profile to get pesertaMagangId...');
-                }
-                await authProvider.refreshProfile();
-                final refreshedUserDataStr = await StorageService.getString(AppConstants.userDataKey);
+              if (pesertaMagangId == null && user.id.isNotEmpty) {
+                await authProvider.refreshProfile(); // Refresh if missing
+                final refreshedUserDataStr =
+                    await StorageService.getString(AppConstants.userDataKey);
                 if (refreshedUserDataStr != null) {
                   final refreshedUserData = jsonDecode(refreshedUserDataStr);
-                  pesertaMagangId = refreshedUserData['pesertaMagang']?['id']?.toString();
-                  if (kDebugMode && pesertaMagangId != null) {
-                    print('✅ Got pesertaMagangId from refreshed profile: $pesertaMagangId');
-                  }
+                  pesertaMagangId =
+                      refreshedUserData['pesertaMagang']?['id']?.toString();
                 }
               }
-              
-              // Method 3: If still not found, try to get from API using userId endpoint
-              if ((pesertaMagangId == null || pesertaMagangId.isEmpty) && user.id.isNotEmpty) {
-                try {
-                  if (kDebugMode) {
-                    print('🔄 Trying to get pesertaMagangId from API endpoint...');
-                  }
-                  final token = await StorageService.getString(AppConstants.tokenKey);
-                  if (token != null) {
-                    final headers = {
-                      'Content-Type': 'application/json',
-                      'Authorization': 'Bearer $token',
-                    };
-                    
-                    final response = await http.get(
-                      Uri.parse('${AppConstants.baseUrl}/peserta-magang/user/${user.id}'),
-                      headers: headers,
-                    ).timeout(const Duration(seconds: 10));
-                    
-                    if (response.statusCode == 200) {
-                      final responseData = jsonDecode(response.body);
-                      if (responseData['success'] == true && responseData['data'] != null) {
-                        pesertaMagangId = responseData['data']['id']?.toString();
-                        if (kDebugMode && pesertaMagangId != null) {
-                          print('✅ Got pesertaMagangId from API endpoint: $pesertaMagangId');
-                        }
-                      }
-                    } else if (kDebugMode) {
-                      print('⚠️ API returned status ${response.statusCode}: ${response.body}');
-                    }
-                  }
-                } catch (apiError) {
-                  if (kDebugMode) {
-                    print('⚠️ Error fetching pesertaMagangId from API: $apiError');
-                  }
-                }
-              }
-            } catch (e) {
-              if (kDebugMode) print('Error getting pesertaMagangId: $e');
-            }
+            } catch (e) {}
 
-            if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
+            if (pesertaMagangId == null) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Peserta magang ID not found. Please ensure you are registered as a participant.'),
-                    backgroundColor: AppThemes.errorColor,
-                    duration: const Duration(seconds: 4),
-                  ),
+                Navigator.pop(context); // Tutup loading
+                GlobalSnackBar.show(
+                  'ID Peserta tidak ditemukan',
+                  title: 'Error',
+                  isError: true,
                 );
               }
               return;
             }
 
-            if (existingLog != null) {
-              // Update logbook
-              final response = await LogbookService.updateLogbook(
-                id: existingLog.id,
-                tanggal: tanggal,
-                kegiatan: kegiatan,
-                deskripsi: deskripsi,
-                durasi: durasi,
-                type: type?.value,
-                status: status?.value,
-              );
+            // Panggil Service dengan Foto
+            final response = await LogbookService.createLogbook(
+              pesertaMagangId: pesertaMagangId,
+              tanggal: tanggal,
+              kegiatan: kegiatan,
+              deskripsi: deskripsi,
+              durasi: durasi,
+              type: type?.value,
+              status: status?.value,
+              foto: foto, // Kirim foto
+            );
 
-              if (response.success && response.data != null && mounted) {
-                await _loadLogbooks();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Logbook berhasil diperbarui'),
-                    backgroundColor: AppThemes.successColor,
-                  ),
+            if (mounted) {
+              Navigator.pop(context); // Tutup loading
+              if (response.success) {
+                _loadLogbooks(); // Refresh data
+                GlobalSnackBar.show(
+                  'Logbook berhasil disimpan',
+                  title: 'Sukses',
+                  isSuccess: true,
                 );
               } else {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(response.message ?? 'Gagal memperbarui logbook'),
-                      backgroundColor: AppThemes.errorColor,
-                    ),
-                  );
-                }
-              }
-            } else {
-              // Create new logbook
-              final response = await LogbookService.createLogbook(
-                pesertaMagangId: pesertaMagangId,
-                tanggal: tanggal,
-                kegiatan: kegiatan,
-                deskripsi: deskripsi,
-                durasi: durasi,
-                type: type?.value,
-                status: status?.value,
-              );
-
-              if (response.success && response.data != null && mounted) {
-                await _loadLogbooks();
-                setState(() {
-                  _selectedTabIndex = 1;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Logbook berhasil dibuat'),
-                    backgroundColor: AppThemes.successColor,
-                  ),
+                GlobalSnackBar.show(
+                  response.message,
+                  title: 'Gagal',
+                  isError: true,
                 );
-              } else {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(response.message ?? 'Gagal membuat logbook'),
-                      backgroundColor: AppThemes.errorColor,
-                    ),
-                  );
-                }
               }
             }
           } catch (e) {
-            if (kDebugMode) print('Error saving logbook: $e');
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Terjadi kesalahan: ${e.toString()}'),
-                  backgroundColor: AppThemes.errorColor,
-                ),
-              );
+              Navigator.pop(context); // Tutup loading
+              GlobalSnackBar.show('Terjadi kesalahan: $e',
+                  title: 'Error', isError: true);
             }
           }
         },
@@ -754,11 +668,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
   }
 
   void _showActivityForm(BuildContext context, Activity? existingActivity) {
-    // Activity sekarang menggunakan Logbook, jadi redirect ke Logbook form
-    // Convert Activity ke LogBook jika ada
     LogBook? logBook;
     if (existingActivity != null) {
-      // Cari logbook dengan id yang sama (jika Activity adalah Logbook)
       logBook = _allLogBooks.firstWhere(
         (log) => log.id == existingActivity.id,
         orElse: () => LogBook(
@@ -782,32 +693,38 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     await showDialog(
       context: context,
       builder: (context) => CustomDialog(
-        title: 'Hapus Log?',
-        content: 'Data yang dihapus tidak dapat dikembalikan.',
-        primaryButtonText: 'Hapus',
+        title: 'Hapus Log?', // Translate
+        content: 'Data yang dihapus tidak dapat dikembalikan.', // Translate
+        primaryButtonText: 'Hapus', // Translate
         primaryButtonColor: AppThemes.errorColor,
-        secondaryButtonText: 'Batal',
+        secondaryButtonText: 'Batal', // Translate
         onPrimaryButtonPressed: () async {
           final itemToDelete = _filteredLogBooks[index];
-          Navigator.pop(context); // Close dialog first
-          
+          Navigator.pop(context);
+
+          // Tampilkan loading
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const Center(child: LoadingIndicator()),
+          );
+
           final response = await LogbookService.deleteLogbook(itemToDelete.id);
-          
-          if (response.success && mounted) {
-            await _loadLogbooks();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Logbook berhasil dihapus'),
-                backgroundColor: AppThemes.successColor,
-              ),
-            );
-          } else {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(response.message ?? 'Gagal menghapus logbook'),
-                  backgroundColor: AppThemes.errorColor,
-                ),
+
+          if (mounted) {
+            Navigator.pop(context); // Tutup loading
+            if (response.success) {
+              await _loadLogbooks();
+              GlobalSnackBar.show(
+                'Logbook berhasil dihapus', // Translate
+                title: 'Sukses',
+                isSuccess: true,
+              );
+            } else {
+              GlobalSnackBar.show(
+                response.message ?? 'Gagal menghapus logbook', // Translate
+                title: 'Gagal',
+                isError: true,
               );
             }
           }
@@ -867,14 +784,14 @@ class _StickyTabDelegate extends SliverPersistentHeaderDelegate {
         child: Row(
           children: [
             _TabButton(
-              title: 'Recent Activities',
+              title: 'Aktivitas Terbaru', // Translate
               isActive: selectedIndex == 0,
               onTap: () => onTabSelected(0),
               isDark: isDark,
             ),
             const SizedBox(width: 12),
             _TabButton(
-              title: 'Log Books',
+              title: 'Log Book', // Translate
               isActive: selectedIndex == 1,
               onTap: () => onTabSelected(1),
               isDark: isDark,

@@ -1,4 +1,4 @@
-name: MyInternPlus
+name: myinternplus
 description: "A new Flutter project."
 
 publish_to: 'none'
@@ -26,6 +26,9 @@ dependencies:
   fl_chart: ^1.1.1
   timezone: ^0.10.1
   fluttertoast: ^9.0.0
+  gal: ^2.3.0
+  share_plus: ^7.2.1
+  path_provider: ^2.1.1
 
 dev_dependencies:
   flutter_test:

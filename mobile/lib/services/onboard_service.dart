@@ -6,29 +6,28 @@ import '../utils/constants.dart';
 class OnboardService {
   static Future<ApiResponse<List<OnboardPage>>> getOnboardPages() async {
     try {
-      // For now, return mock data. You can replace this with API call later
       final mockPages = [
         OnboardPage(
           id: '1',
-          title: 'Welcome to Employee App',
+          title: 'Selamat Datang di MyInternPlus',
           description:
-              'Manage your attendance and activities efficiently with our mobile application.',
+              'Kelola absensi dan aktivitas magangmu dengan mudah, efisien, dan terorganisir dalam satu aplikasi.',
           imageUrl: 'assets/images/onboard1.png',
           order: 1,
         ),
         OnboardPage(
           id: '2',
-          title: 'Easy Attendance',
+          title: 'Absensi Mudah & Cepat',
           description:
-              'Clock in and out easily using QR code scanning or location-based attendance.',
+              'Cukup scan QR Code atau gunakan lokasi untuk melakukan Clock In dan Clock Out dalam hitungan detik.',
           imageUrl: 'assets/images/onboard2.png',
           order: 2,
         ),
         OnboardPage(
           id: '3',
-          title: 'Track Your Progress',
+          title: 'Pantau Progresmu',
           description:
-              'Monitor your attendance history, leaves, and performance in one place.',
+              'Lihat riwayat kehadiran, catatan aktivitas, dan performa magangmu secara real-time.',
           imageUrl: 'assets/images/onboard3.png',
           order: 3,
         ),
@@ -52,7 +51,6 @@ class OnboardService {
       await StorageService.setBool(AppConstants.onboardSeenKey, true);
       return true;
     } catch (e) {
-      print('Error marking onboard completed: $e');
       return false;
     }
   }
@@ -62,7 +60,6 @@ class OnboardService {
       await StorageService.setBool(AppConstants.onboardSeenKey, false);
       return true;
     } catch (e) {
-      print('Error resetting onboard: $e');
       return false;
     }
   }
@@ -78,7 +75,6 @@ class OnboardService {
       }
       return false;
     } catch (e) {
-      print('Error checking first launch: $e');
       return true;
     }
   }

@@ -19,7 +19,8 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  // ... (Controller tetap sama) ...
+
+  final _mentorController = TextEditingController();
   final _namaController = TextEditingController();
   final _usernameController = TextEditingController();
   final _idPesertaMagangController = TextEditingController();
@@ -35,13 +36,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _acceptedTerms = false;
   bool _showUsernameHint = false;
 
+  // --- OPSI DIVISI DENGAN ICON (Updated) ---
+  final List<Map<String, dynamic>> _divisiOptions = [
+    {
+      "label": "Bidang Pemasaran & Penjualan",
+      "icon": Icons.campaign_rounded,
+    },
+    {
+      "label": "Retail SBU",
+      "icon": Icons.storefront_rounded,
+    },
+    {
+      "label": "Pembangunan & Aktivasi",
+      "icon": Icons.construction_rounded,
+    },
+    {
+      "label": "Operasi Pemeliharaan & Aset",
+      "icon": Icons.engineering_rounded,
+    },
+  ];
+
+  String? _selectedDivisi;
+
   int _selectedDuration = 3;
   final List<int> _durations = [1, 2, 3, 4, 5, 6, 12];
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
 
-  // ... (dispose, initState, _selectStartDate, _calculateEndDate, _updateDuration TETAP SAMA) ...
   @override
   void dispose() {
+    _mentorController.dispose();
     _namaController.dispose();
     _usernameController.dispose();
     _idPesertaMagangController.dispose();
@@ -64,22 +87,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Validators.getPasswordStrength(_passwordController.text);
       });
     });
-    _namaController.addListener(_validateForm);
-    _usernameController.addListener(_validateForm);
-    _idPesertaMagangController.addListener(_validateForm);
-    _divisiController.addListener(_validateForm);
-    _instansiController.addListener(_validateForm);
-    _nomorHpController.addListener(_validateForm);
-    _tanggalMulaiController.addListener(_validateForm);
-    _tanggalSelesaiController.addListener(_validateForm);
-    _passwordController.addListener(_validateForm);
-    _confirmPasswordController.addListener(_validateForm);
-  }
-
-  void _validateForm() {
-    if (mounted) {
-      setState(() {});
-    }
   }
 
   void _checkPasswordStrength(String password) {
@@ -150,6 +157,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         tanggalMulai: _tanggalMulaiController.text.trim(),
         tanggalSelesai: _tanggalSelesaiController.text.trim(),
         role: 'peserta_magang',
+        namaMentor: _mentorController.text.trim(),
       );
 
       if (success && mounted) {
@@ -194,8 +202,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-
-  // Widget untuk section header - lebih compact
   Widget _buildSectionHeader(String title, {String? subtitle}) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -310,148 +316,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildFormField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    String? Function(String?)? validator,
-    TextInputType? keyboardType,
-    bool isPassword = false,
-    bool? obscureText,
-    VoidCallback? onToggleObscure,
-  }) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-        hintText: hint,
-        hintStyle: const TextStyle(fontSize: 13),
-        prefixIcon: Icon(icon, color: AppThemes.primaryColor, size: 18),
-        suffixIcon: isPassword && onToggleObscure != null
-            ? IconButton(
-                icon: Icon(
-                  obscureText ?? false
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  color: AppThemes.primaryColor,
-                  size: 18,
-                ),
-                onPressed: onToggleObscure,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(maxWidth: 36),
-              )
-            : null,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(
-            color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
-            width: 1.5,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(
-            color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
-            width: 1.5,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: AppThemes.primaryColor, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 12,
-        ),
-        isDense: true,
-        floatingLabelBehavior: FloatingLabelBehavior.auto,
-      ),
-      obscureText: obscureText ?? false,
-      validator: validator,
-      keyboardType: keyboardType,
-      style: TextStyle(
-        fontSize: 13,
-        color: isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
-      ),
-      autovalidateMode: AutovalidateMode.onUserInteraction,
-    );
-  }
-
-  // Build personal information section - lebih compact
-  Widget _buildPersonalInfoSection() {
-    return Column(
-      children: [
-        _buildSectionHeader(
-          'Informasi Pribadi',
-          subtitle: 'Data diri lengkap untuk profil Anda',
-        ),
-        _buildFormField(
-          controller: _namaController,
-          label: 'Nama Lengkap',
-          hint: 'Masukkan nama lengkap',
-          icon: Icons.person_rounded,
-          validator: Validators.validateName,
-        ),
-        const SizedBox(height: 12),
-
-        _buildFormField(
-          controller: _idPesertaMagangController,
-          label: 'ID Peserta Magang (NISN/NIM)',
-          hint: 'Masukkan NISN/NIM',
-          icon: Icons.badge_rounded,
-          validator: (value) {
-            // Optional field, no validation needed
-            return null;
-          },
-          keyboardType: TextInputType.number,
-        ),
-        const SizedBox(height: 12),
-
-        // Username Field dengan Hint yang lebih compact
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextFormField(
-              controller: _usernameController,
-              decoration: InputDecoration(
-                labelText: 'Username',
-                labelStyle: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-                hintText: 'Buat username unik',
-                hintStyle: const TextStyle(fontSize: 13),
-                prefixIcon: Icon(
-                  Icons.alternate_email_rounded,
-                  color: AppThemes.primaryColor,
-                  size: 18,
-                ),
-                suffixIcon: Container(
-                  width: 36, // Lebar tetap untuk icon info
-                  child: IconButton(
-                    icon: Icon(
-                      _showUsernameHint
-                          ? Icons.info_outlined
-                          : Icons.info_outline,
-                      color: AppThemes.primaryColor.withOpacity(0.7),
-                      size: 18,
-                    ),
-                    onPressed: () => setState(() => _showUsernameHint = !_showUsernameHint),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -487,14 +351,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 _buildSectionHeader('Informasi Pribadi',
                     subtitle: 'Data diri lengkap Anda'),
+
+                // 1. Nama Lengkap
                 CustomTextField(
-                    controller: _namaController,
-                    label: 'Nama Lengkap',
-                    hint: 'Nama lengkap sesuai KTP',
-                    icon: Icons.person_rounded,
-                    validator: Validators.validateName,
+                  controller: _namaController,
+                  label: 'Nama Lengkap',
+                  hint: 'Nama lengkap sesuai KTP',
+                  icon: Icons.person_rounded,
+                  validator: Validators.validateName,
                 ),
                 const SizedBox(height: 16),
+
+                // 2. NIM / NISN
+                CustomTextField(
+                  controller: _idPesertaMagangController,
+                  label: 'NIM / NISN',
+                  hint: 'Masukkan NIM / NISN',
+                  icon: Icons.badge_rounded,
+                  keyboardType: TextInputType.number,
+                  validator: (v) => (v?.isEmpty ?? true) ? 'Wajib diisi' : null,
+                ),
+                const SizedBox(height: 16),
+
+                // 3. Username
                 CustomTextField(
                   controller: _usernameController,
                   label: 'Username',
@@ -506,8 +385,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         _showUsernameHint ? Icons.info : Icons.info_outline,
                         size: 20,
                         color: AppThemes.primaryColor),
-                    onPressed: () => setState(
-                        () => _showUsernameHint = !_showUsernameHint),
+                    onPressed: () =>
+                        setState(() => _showUsernameHint = !_showUsernameHint),
                   ),
                 ),
                 if (_showUsernameHint)
@@ -521,6 +400,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 : AppThemes.hintColor)),
                   ),
                 const SizedBox(height: 16),
+
+                // 4. Nomor HP
                 CustomTextField(
                   controller: _nomorHpController,
                   label: 'Nomor HP',
@@ -533,24 +414,172 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 24),
                 _buildSectionHeader('Informasi Magang',
                     subtitle: 'Detail penempatan Anda'),
-                CustomTextField(
-                  controller: _divisiController,
-                  label: 'Divisi',
-                  hint: 'Contoh: IT Support',
-                  icon: Icons.business_center_rounded,
-                  validator: (v) =>
-                      (v?.isEmpty ?? true) ? 'Wajib diisi' : null,
+
+                // 5. Divisi (DROPDOWN REFINED & ELEGANT)
+                DropdownButtonFormField<String>(
+                  value: _selectedDivisi,
+                  // Ikon panah minimalis
+                  icon: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: isDark
+                        ? AppThemes.darkTextSecondary
+                        : AppThemes.hintColor,
+                    size: 20,
+                  ),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark
+                        ? AppThemes.darkTextPrimary
+                        : AppThemes.onSurfaceColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  itemHeight: kMinInteractiveDimension, // Standar 48px
+                  isExpanded: true,
+                  dropdownColor:
+                      isDark ? AppThemes.darkSurfaceElevated : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  elevation: 4,
+                  // Logic item builder
+                  items: _divisiOptions.map((Map<String, dynamic> item) {
+                    final isSelected = _selectedDivisi == item['label'];
+                    // Warna dinamis untuk selected state
+                    final iconColor = isSelected
+                        ? (isDark
+                            ? AppThemes.darkAccentBlue
+                            : AppThemes.primaryColor)
+                        : (isDark
+                            ? AppThemes.darkTextTertiary
+                            : AppThemes.hintColor);
+                    final textColor = isSelected
+                        ? (isDark
+                            ? AppThemes.darkAccentBlue
+                            : AppThemes.primaryColor)
+                        : (isDark
+                            ? AppThemes.darkTextPrimary
+                            : AppThemes.onSurfaceColor);
+
+                    return DropdownMenuItem<String>(
+                      value: item['label'],
+                      child: Row(
+                        children: [
+                          Icon(
+                            item['icon'],
+                            size: 18,
+                            color: iconColor,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              item['label'],
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: textColor,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          // Indikator centang jika dipilih
+                          if (isSelected)
+                            Icon(
+                              Icons.check_rounded,
+                              size: 16,
+                              color: iconColor,
+                            ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedDivisi = newValue;
+                      _divisiController.text = newValue ?? '';
+                    });
+                  },
+                  validator: (value) =>
+                      (value == null || value.isEmpty) ? 'Wajib dipilih' : null,
+                  // Dekorasi yang konsisten dengan CustomTextField tapi lebih compact
+                  decoration: InputDecoration(
+                    labelText: 'Divisi',
+                    labelStyle: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppThemes.darkTextSecondary
+                          : AppThemes.hintColor,
+                    ),
+                    hintText: 'Pilih Divisi Penempatan',
+                    hintStyle: TextStyle(
+                      fontSize: 13,
+                      color: isDark
+                          ? AppThemes.darkTextTertiary
+                          : AppThemes.hintColor.withOpacity(0.5),
+                    ),
+                    filled: true,
+                    fillColor: isDark ? AppThemes.darkSurface : Colors.white,
+                    prefixIcon: Icon(Icons.work_outline_rounded,
+                        color: AppThemes.primaryColor, size: 18),
+                    // Border konsisten
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: isDark
+                            ? AppThemes.darkOutline
+                            : Colors.grey.shade300,
+                        width: 1.5,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: isDark
+                            ? AppThemes.darkOutline
+                            : Colors.grey.shade300,
+                        width: 1.5,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(
+                          color: AppThemes.primaryColor, width: 2),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(
+                          color: AppThemes.errorColor, width: 1.5),
+                    ),
+                    // KUNCI: Padding yang pas agar tidak kopong
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    isDense: true,
+                  ),
                 ),
                 const SizedBox(height: 16),
+
+                // 6. Instansi
                 CustomTextField(
                   controller: _instansiController,
                   label: 'Instansi / Kampus',
                   hint: 'Asal Universitas/Sekolah',
                   icon: Icons.school_rounded,
-                  validator: (v) =>
-                      (v?.isEmpty ?? true) ? 'Wajib diisi' : null,
+                  validator: (v) => (v?.isEmpty ?? true) ? 'Wajib diisi' : null,
                 ),
                 const SizedBox(height: 16),
+
+                // --- INPUT NAMA MENTOR (BARU) ---
+                CustomTextField(
+                  controller: _mentorController,
+                  label: 'Nama Mentor / Pembimbing',
+                  hint: 'Nama pembimbing lapangan',
+                  icon: Icons.supervisor_account_rounded,
+                  // Opsional: validator jika wajib
+                  // validator: (v) => (v?.isEmpty ?? true) ? 'Wajib diisi' : null,
+                ),
+                const SizedBox(height: 16),
+
+                // 7. Tanggal Mulai
                 CustomTextField(
                   controller: _tanggalMulaiController,
                   label: 'Tanggal Mulai',
@@ -561,8 +590,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   validator: Validators.validateDate,
                 ),
                 const SizedBox(height: 16),
+
+                // 8. Pilihan Durasi
                 _buildDurationSelection(),
                 const SizedBox(height: 16),
+
+                // 9. Tanggal Selesai (Auto)
                 CustomTextField(
                   controller: _tanggalSelesaiController,
                   label: 'Tanggal Selesai',
@@ -572,8 +605,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
 
                 const SizedBox(height: 24),
-                _buildSectionHeader('Keamanan',
-                    subtitle: 'Lindungi akun Anda'),
+                _buildSectionHeader('Keamanan', subtitle: 'Lindungi akun Anda'),
+
+                // 10. Password
                 CustomTextField(
                   controller: _passwordController,
                   label: 'Password',
@@ -582,7 +616,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   validator: Validators.validatePassword,
                   isPassword: true,
                 ),
-                // Password Strength indicator (Simplified for brevity, logic exists in previous code)
+                // Password Strength indicator
                 if (_passwordController.text.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
@@ -613,6 +647,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
 
                 const SizedBox(height: 16),
+
+                // 11. Konfirmasi Password
                 CustomTextField(
                   controller: _confirmPasswordController,
                   label: 'Konfirmasi Password',

@@ -20,8 +20,8 @@ class AuthService {
     }
 
     final response = await _apiService.post(
-      AppConstants.loginEndpoint,
-      {
+        AppConstants.loginEndpoint,
+        {
           'username': username,
           'password': password,
         },
@@ -66,6 +66,7 @@ class AuthService {
     required String nomorHp,
     required String tanggalMulai,
     required String tanggalSelesai,
+    String? namaMentor,
     String? instansi,
     String? idInstansi,
     String? status,
@@ -83,11 +84,14 @@ class AuthService {
       'nomorHp': nomorHp,
       'tanggalMulai': tanggalMulai,
       'tanggalSelesai': tanggalSelesai,
-      if (idPesertaMagang != null && idPesertaMagang.isNotEmpty) 'id_peserta_magang': idPesertaMagang,
+      if (idPesertaMagang != null && idPesertaMagang.isNotEmpty)
+        'id_peserta_magang': idPesertaMagang,
       if (instansi != null && instansi.isNotEmpty) 'instansi': instansi,
       if (idInstansi != null && idInstansi.isNotEmpty)
         'id_instansi': idInstansi,
       if (status != null && status.isNotEmpty) 'status': status,
+      if (namaMentor != null && namaMentor.isNotEmpty)
+        'namaMentor': namaMentor, // <--- Kirim ke Backend
     };
 
     print('[AUTH SERVICE] Registration data: $data');
@@ -110,6 +114,7 @@ class AuthService {
             'tanggalMulai': data['pesertaMagang']['tanggalMulai'],
             'tanggalSelesai': data['pesertaMagang']['tanggalSelesai'],
             'avatar': data['pesertaMagang']['avatar'],
+            'namaMentor': data['pesertaMagang']['namaMentor'],
           },
           // pastikan role terisi
           if (!(data['user'] ?? {}).containsKey('role'))
@@ -139,6 +144,7 @@ class AuthService {
     required String nomorHp,
     required String tanggalMulai,
     required String tanggalSelesai,
+    String? namaMentor,
     String? instansi,
     String? idInstansi,
     String? status,
@@ -151,7 +157,7 @@ class AuthService {
     final data = {
       'nama': nama,
       'username': username,
-        'password': password,
+      'password': password,
       'divisi': divisi,
       'nomorHp': nomorHp,
       'tanggalMulai': tanggalMulai,
@@ -265,6 +271,7 @@ class AuthService {
     // Menambahkan parameter tanggal agar AuthProvider tidak error
     String? tanggalMulai,
     String? tanggalSelesai,
+    String? namaMentor,
   }) async {
     final body = <String, dynamic>{};
     if (username != null) body['username'] = username;
@@ -273,7 +280,7 @@ class AuthService {
     if (divisi != null) body['divisi'] = divisi;
     if (instansi != null) body['instansi'] = instansi;
     if (nomorHp != null) body['nomorHp'] = nomorHp;
-
+    if (namaMentor != null) body['namaMentor'] = namaMentor;
     // Menambahkan logic untuk mengirim tanggal ke backend
     if (tanggalMulai != null) body['tanggalMulai'] = tanggalMulai;
     if (tanggalSelesai != null) body['tanggalSelesai'] = tanggalSelesai;

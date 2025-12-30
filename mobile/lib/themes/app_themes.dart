@@ -6,6 +6,19 @@ class AppThemes {
   static const Color primaryLight = Color(0xFF5DD5F4);
   static const Color primaryDark = Color(0xFF00728F);
 
+  static Color getStatusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'SAKIT':
+        return Color(0xFF3498DB); // Biru
+      case 'IZIN':
+        return Color(0xFFF39C12); // Kuning
+      case 'ALPHA':
+        return Color(0xFFE74C3C); // Merah
+      default:
+        return Color(0xFF95A5A6); // Abu-abu (Tanpa Ket)
+    }
+  }
+
   // Warna sekunder dan netral
   static const Color secondaryColor = Color(0xFF2E3840);
   static const Color backgroundColor = Color(0xFFF8F9FA);

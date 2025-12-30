@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/performance_stats.dart';
@@ -10,8 +12,11 @@ import '../../providers/attendance_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/attendance_service.dart';
 import '../../services/dashboard_service.dart';
+import '../../services/leave_service.dart';
 import '../../services/location_service.dart';
+import '../../services/notification_service.dart';
 import '../../services/permission_service.dart';
+import '../../services/settings_service.dart';
 import '../../services/storage_service.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/constants.dart';
@@ -24,6 +29,7 @@ import '../../widgets/attendance_status_card.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/floating_bottom_nav.dart';
+import '../../widgets/leave_form_dialog.dart';
 import '../../widgets/performance_card.dart';
 import '../../widgets/welcome_header_widget.dart';
 
@@ -38,88 +44,289 @@ class _HomeScreenState extends State<HomeScreen> {
   PerformanceStats? _performanceStats;
   bool _isLoadingPerformance = false;
 
+  // Variabel Jam Pulang
+  String _workEndTime = "17:00";
+  bool _canClockOut = false;
+
+  // [BARU] Timer Agresif
+  Timer? _realtimeTimer;
+  bool _stopRealtimeCheck = false; // Flag untuk menghentikan pengecekan
+
+  // Variabel Status Izin Hari Ini
+  String? _todayLeaveStatus; // 'IZIN', 'SAKIT', atau null
+
   @override
   void initState() {
     super.initState();
-    _loadPerformanceData();
-    // Pastikan status absensi hari ini selalu di-refresh saat masuk Home,
-    // terutama setelah login dengan akun berbeda.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        final authProvider =
-            Provider.of<AuthProvider>(context, listen: false);
-        final attendanceProvider =
-            Provider.of<AttendanceProvider>(context, listen: false);
 
-        // Jika sudah login (ada user), refresh status absensi hari ini dari backend
-        // TANPA mereset paksa state lokal (biarkan backend yang menentukan).
-        if (authProvider.user != null) {
-          attendanceProvider.refreshTodayAttendance(preserveLocalState: true);
-        }
+    // 1. Initial Load (Sekali di awal)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initialDataLoad();
+    });
+
+    // 2. [BARU] Timer Real-time (Setiap 3 Detik)
+    // Timer ini akan terus berjalan sampai _stopRealtimeCheck menjadi true
+    _realtimeTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (!_stopRealtimeCheck && mounted) {
+        _checkClockOutTime(); // Cek jam pulang (ringan)
+        _checkStatusUpdatesBackground(); // Cek status izin (API)
+      } else {
+        // Jika flag stop nyala, matikan timer
+        timer.cancel();
       }
     });
   }
 
+  @override
+  void dispose() {
+    _realtimeTimer?.cancel();
+    super.dispose();
+  }
+
+  // --- LOGIC CENTRALIZED DATA LOADING (Dipanggil saat Init / Pull Refresh) ---
+  Future<void> _initialDataLoad() async {
+    if (!mounted) return;
+
+    // Reset flag stop jika user melakukan manual refresh
+    setState(() {
+      _stopRealtimeCheck = false;
+    });
+
+    // Hidupkan timer lagi jika sudah mati
+    if (_realtimeTimer != null && !_realtimeTimer!.isActive) {
+      _realtimeTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+        if (!_stopRealtimeCheck && mounted) {
+          _checkClockOutTime();
+          _checkStatusUpdatesBackground();
+        } else {
+          timer.cancel();
+        }
+      });
+    }
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final attendanceProvider =
+        Provider.of<AttendanceProvider>(context, listen: false);
+
+    await authProvider.refreshProfile();
+
+    await Future.wait([
+      _loadSettings(),
+      _checkStatusUpdatesBackground(), // Cek status izin
+      _loadPerformanceData(),
+      attendanceProvider.refreshTodayAttendance(preserveLocalState: false),
+    ]);
+  }
+
+  // --- LOGIC 1: Ambil Peserta ID Helper ---
+  Future<String?> _getPesertaId() async {
+    try {
+      final userDataStr =
+          await StorageService.getString(AppConstants.userDataKey);
+      if (userDataStr != null) {
+        final userData = jsonDecode(userDataStr);
+        return userData['pesertaMagang']?['id']?.toString() ??
+            userData['idPesertaMagang']?.toString();
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // --- LOGIC 2: Pengecekan Status Realtime (Background) ---
+  Future<void> _checkStatusUpdatesBackground() async {
+    try {
+      String? pesertaId = await _getPesertaId();
+
+      // Jika ID null, coba refresh profile sekali
+      if (pesertaId == null && mounted) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        await authProvider.refreshProfile();
+        pesertaId = await _getPesertaId();
+      }
+
+      if (pesertaId == null) return;
+
+      // A. Cek Status DISETUJUI (Approved)
+      final status = await LeaveService.getTodayLeaveStatus(pesertaId);
+
+      if (mounted) {
+        // Update UI jika status berubah
+        if (_todayLeaveStatus != status) {
+          setState(() {
+            _todayLeaveStatus = status;
+          });
+        }
+
+        // Jika status ada (IZIN/SAKIT) -> Berarti sudah diapprove
+        if (status != null) {
+          // Cek apakah notifikasi sudah pernah muncul hari ini
+          final now = DateTime.now();
+          final dateKey = '${now.year}-${now.month}-${now.day}';
+          final storageKey = 'notif_seen_${dateKey}_APPROVED';
+          final hasSeen = await StorageService.getBool(storageKey) ?? false;
+
+          if (!hasSeen) {
+            final title = status == 'SAKIT'
+                ? 'Izin Sakit Disetujui'
+                : 'Permohonan Izin Disetujui';
+
+            await NotificationService().showNotification(
+              id: 200,
+              title: title,
+              body:
+                  'Pengajuan $status Anda telah disetujui. Refresh otomatis dimatikan.',
+            );
+
+            await StorageService.setBool(storageKey, true);
+
+            // [STOP LOGIC] Matikan refresh karena status sudah final
+            _stopRealtimeChecking();
+          } else {
+            // Jika sudah pernah lihat notif, tapi timer masih jalan, matikan saja
+            // karena status sudah final (Approved)
+            _stopRealtimeChecking();
+          }
+        }
+      }
+
+      // B. Cek Status DITOLAK (Rejected)
+      // Hanya cek jika belum Approved (karena Approved prioritas tampil di UI)
+      if (status == null) {
+        await _checkRejectedLeave(pesertaId);
+      }
+    } catch (e) {
+      if (kDebugMode) print("Error check status: $e");
+    }
+  }
+
+  // Helper untuk mematikan timer
+  void _stopRealtimeChecking() {
+    if (mounted && !_stopRealtimeCheck) {
+      setState(() {
+        _stopRealtimeCheck =
+            true; // Ini akan membuat Timer.periodic berhenti di tick berikutnya
+      });
+      print("🛑 Status Final tercapai. Auto-refresh dimatikan.");
+    }
+  }
+
+  Future<void> _checkRejectedLeave(String pesertaId) async {
+    try {
+      final response = await LeaveService.getLeaves(
+          pesertaMagangId: pesertaId, status: 'DITOLAK');
+
+      if (response.success && response.data != null) {
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final dateKey = '${now.year}-${now.month}-${now.day}';
+
+        for (var leave in response.data!) {
+          DateTime? tglMulai;
+          try {
+            tglMulai = DateTime.parse(leave['tanggalMulai']);
+          } catch (_) {}
+
+          if (tglMulai != null) {
+            final tglIzin =
+                DateTime(tglMulai.year, tglMulai.month, tglMulai.day);
+
+            if (tglIzin.isAtSameMomentAs(today)) {
+              // Cek history notif
+              final leaveId = leave['id'].toString();
+              final storageKey = 'notif_seen_${dateKey}_REJECTED_$leaveId';
+              final hasSeen = await StorageService.getBool(storageKey) ?? false;
+
+              if (!hasSeen) {
+                await NotificationService().showNotification(
+                  id: 201,
+                  title: 'Pengajuan Izin Ditolak',
+                  body:
+                      'Maaf, pengajuan izin Anda ditolak. Refresh otomatis dimatikan.',
+                );
+
+                await StorageService.setBool(storageKey, true);
+
+                // [STOP LOGIC] Matikan refresh karena status sudah final (Ditolak)
+                _stopRealtimeChecking();
+              } else {
+                // Jika sudah dilihat hari ini, matikan refresh juga
+                _stopRealtimeChecking();
+              }
+              break;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  // --- LOGIC 3: Load Settings & Jam Pulang ---
+  Future<void> _loadSettings() async {
+    try {
+      final response = await SettingsService.getSettings();
+      if (response.success && response.data != null) {
+        if (mounted) {
+          setState(() {
+            final schedule = response.data!['schedule'];
+            if (schedule != null && schedule['workEndTime'] != null) {
+              _workEndTime = schedule['workEndTime'];
+            }
+            _checkClockOutTime();
+          });
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) print("Gagal load settings: $e");
+    }
+  }
+
+  void _checkClockOutTime() {
+    final canOut = AttendanceService.isClockOutTimeReached(_workEndTime);
+    if (mounted && _canClockOut != canOut) {
+      setState(() {
+        _canClockOut = canOut;
+      });
+    }
+  }
+
+  // --- LOGIC 4: Load Performance ---
   Future<void> _loadPerformanceData() async {
     if (!mounted) return;
-    
     setState(() => _isLoadingPerformance = true);
-    
+
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final user = authProvider.user;
-      
-      if (user == null) {
+      if (authProvider.user == null) {
         setState(() => _isLoadingPerformance = false);
         return;
       }
 
-      // Get pesertaMagangId
-      String? pesertaMagangId;
-      try {
-        final userDataStr = await StorageService.getString(AppConstants.userDataKey);
-        if (userDataStr != null) {
-          final userData = jsonDecode(userDataStr);
-          pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
-        }
-      } catch (e) {
-        if (kDebugMode) print('Error getting pesertaMagangId: $e');
-      }
+      String? pesertaMagangId = await _getPesertaId();
 
-      if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
-        // Try to refresh profile
-        await authProvider.refreshProfile();
-        final refreshedUserDataStr = await StorageService.getString(AppConstants.userDataKey);
-        if (refreshedUserDataStr != null) {
-          final refreshedUserData = jsonDecode(refreshedUserDataStr);
-          pesertaMagangId = refreshedUserData['pesertaMagang']?['id']?.toString();
-        }
-      }
-
-      if (pesertaMagangId != null && pesertaMagangId.isNotEmpty) {
+      if (pesertaMagangId != null) {
         final response = await DashboardService.getCurrentMonthPerformance(
           pesertaMagangId: pesertaMagangId,
         );
 
-        if (mounted && response.success && response.data != null) {
+        if (mounted) {
           setState(() {
-            _performanceStats = response.data;
+            if (response.success && response.data != null) {
+              _performanceStats = response.data;
+            } else {
+              _performanceStats = PerformanceStats.empty();
+            }
             _isLoadingPerformance = false;
           });
-        } else {
+        }
+      } else {
+        if (mounted) {
           setState(() {
             _performanceStats = PerformanceStats.empty();
             _isLoadingPerformance = false;
           });
         }
-      } else {
-        setState(() {
-          _performanceStats = PerformanceStats.empty();
-          _isLoadingPerformance = false;
-        });
       }
     } catch (e) {
-      if (kDebugMode) print('Error loading performance: $e');
       if (mounted) {
         setState(() {
           _performanceStats = PerformanceStats.empty();
@@ -129,67 +336,44 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Method untuk handle attendance result
-  Future<void> _handleAttendanceResult(BuildContext context, dynamic result) async {
+  Future<void> _handleAttendanceResult(
+      BuildContext context, dynamic result) async {
     if (result != null && result is Map<String, dynamic> && mounted) {
-      if (kDebugMode) {
-        print('🏠 HOME: Received result from QR: $result');
-      }
-
       final attendanceProvider =
           Provider.of<AttendanceProvider>(context, listen: false);
       final attendanceType = result['type'] as String? ?? '';
       final time = result['time'] as String? ?? '';
 
-      if (kDebugMode) {
-        print('🏠 HOME: Processing attendance type: $attendanceType, time: $time');
-      }
-
       if (attendanceType == 'CLOCK_IN' && time.isNotEmpty) {
         attendanceProvider.clockIn(time);
-        
-        if (kDebugMode) {
-          print('🏠 HOME: Clock in processed, waiting before refresh...');
-        }
-        
-        // Wait a bit for backend to process
         await Future.delayed(const Duration(milliseconds: 500));
-        
-        // Refresh today attendance after clock in, preserve local state if API doesn't have it yet
-        await attendanceProvider.refreshTodayAttendance(preserveLocalState: true);
-        
-        if (kDebugMode) {
-          print('🏠 HOME: Clock in processed successfully');
-        }
-      } else if (attendanceType.isEmpty) {
-        if (kDebugMode) {
-          print('🏠 HOME: Warning - attendance type is empty in result, refreshing from API...');
-        }
-        // Wait a bit for backend to process
-        await Future.delayed(const Duration(milliseconds: 500));
-        // Try to refresh from API anyway
-        await attendanceProvider.refreshTodayAttendance(preserveLocalState: true);
-      }
+        await _initialDataLoad();
 
-      if (kDebugMode) {
-        print(
-          '🏠 HOME: After - isClockedIn: ${attendanceProvider.isClockedIn}, clockInTime: ${attendanceProvider.clockInTime}',
-        );
+        GlobalSnackBar.show('Berhasil melakukan Absen Masuk pada $time',
+            isSuccess: true);
+      } else if (attendanceType.isEmpty) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        await attendanceProvider.refreshTodayAttendance(
+            preserveLocalState: true);
       }
     }
   }
 
-  // Method untuk handle clock out langsung tanpa scan QR
   Future<void> _handleClockOut(BuildContext context) async {
+    if (!_canClockOut) {
+      GlobalSnackBar.show('Belum waktunya absen pulang (Jadwal: $_workEndTime)',
+          isWarning: true);
+      return;
+    }
+
     if (!mounted) return;
 
-    // Tampilkan dialog konfirmasi terlebih dahulu
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => CustomDialog(
-        title: 'Konfirmasi Clock Out',
-        content: 'Apakah Anda yakin ingin melakukan clock out?',
-        primaryButtonText: 'Ya, Clock Out',
+        title: 'Konfirmasi Pulang',
+        content: 'Apakah Anda yakin ingin melakukan absen pulang?',
+        primaryButtonText: 'Ya, Pulang',
         secondaryButtonText: 'Batal',
         primaryButtonColor: AppThemes.warningColor,
         onPrimaryButtonPressed: () => Navigator.pop(context, true),
@@ -198,152 +382,43 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
 
-    // Jika user membatalkan, return tanpa melakukan apa-apa
-    if (confirmed != true || !mounted) {
-      return;
-    }
+    if (confirmed != true || !mounted) return;
 
-    // Clock out bisa dilakukan kapan saja - tidak ada validasi waktu
-
-    // Tampilkan loading dialog dengan teks agar user tahu apa yang sedang terjadi
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(40),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: AppThemes.darkSurface.withOpacity(0.95),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  AppThemes.primaryColor,
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Mendeteksi lokasi dan mencatat kehadiran...',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
     try {
-      // Request location permission
       final hasPermission = await PermissionService.requestLocationPermission();
       if (!hasPermission) {
         if (mounted) {
-          Navigator.pop(context); // Close loading
-          showDialog(
-            context: context,
-            builder: (context) => CustomDialog(
-              title: 'Izin Lokasi Diperlukan',
-              content: 'Harap berikan akses lokasi untuk melakukan presensi.',
-              primaryButtonText: 'OK',
-              primaryButtonColor: AppThemes.errorColor,
-              onPrimaryButtonPressed: () => Navigator.pop(context),
-            ),
-          );
+          Navigator.pop(context);
+          GlobalSnackBar.show('Izin lokasi diperlukan.', isWarning: true);
         }
         return;
       }
 
-      // Get current location
       final currentLocation = await LocationService.getCurrentLocation();
       if (currentLocation == null) {
         if (mounted) {
-          Navigator.pop(context); // Close loading
-          showDialog(
-            context: context,
-            builder: (context) => CustomDialog(
-              title: 'Gagal Mendeteksi Lokasi',
-              content: 'Tidak dapat mendeteksi lokasi Anda. Pastikan GPS aktif.',
-              primaryButtonText: 'OK',
-              primaryButtonColor: AppThemes.errorColor,
-              onPrimaryButtonPressed: () => Navigator.pop(context),
-            ),
-          );
+          Navigator.pop(context);
+          GlobalSnackBar.show('Lokasi tidak ditemukan.', isError: true);
         }
         return;
       }
 
-      // Get pesertaMagangId
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final user = authProvider.user;
-
-      if (user == null) {
+      final pesertaMagangId = await _getPesertaId();
+      if (pesertaMagangId == null) {
         if (mounted) {
-          Navigator.pop(context); // Close loading
-          showDialog(
-            context: context,
-            builder: (context) => CustomDialog(
-              title: 'Error',
-              content: 'User data not found. Please login again.',
-              primaryButtonText: 'OK',
-              primaryButtonColor: AppThemes.errorColor,
-              onPrimaryButtonPressed: () => Navigator.pop(context),
-            ),
-          );
+          Navigator.pop(context);
+          GlobalSnackBar.show('ID Peserta tidak ditemukan.', isError: true);
         }
         return;
       }
 
-      String? pesertaMagangId;
-      try {
-        final userDataStr = await StorageService.getString(AppConstants.userDataKey);
-        if (userDataStr != null) {
-          final userData = jsonDecode(userDataStr);
-          pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
-        }
-      } catch (e) {
-        if (kDebugMode) print('Error getting pesertaMagangId: $e');
-      }
-
-      if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
-        // Try to refresh profile
-        await authProvider.refreshProfile();
-        final refreshedUserDataStr = await StorageService.getString(AppConstants.userDataKey);
-        if (refreshedUserDataStr != null) {
-          final refreshedUserData = jsonDecode(refreshedUserDataStr);
-          pesertaMagangId = refreshedUserData['pesertaMagang']?['id']?.toString();
-        }
-      }
-
-      if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
-        if (mounted) {
-          Navigator.pop(context); // Close loading
-          showDialog(
-            context: context,
-            builder: (context) => CustomDialog(
-              title: 'Error',
-              content: 'Peserta magang ID not found. Please ensure you are registered as a student.',
-              primaryButtonText: 'OK',
-              primaryButtonColor: AppThemes.errorColor,
-              onPrimaryButtonPressed: () => Navigator.pop(context),
-            ),
-          );
-        }
-        return;
-      }
-
-      // Submit clock out
-      final nowTime = IndonesianTime.now; // Use Indonesian time
+      final nowTime = IndonesianTime.now;
       final attendanceResponse = await AttendanceService.createAttendance(
         pesertaMagangId: pesertaMagangId,
         tipe: 'KELUAR',
@@ -358,57 +433,110 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
       if (mounted) {
-        Navigator.pop(context); // Close loading
+        Navigator.pop(context);
 
         if (attendanceResponse.success) {
           final attendanceProvider =
               Provider.of<AttendanceProvider>(context, listen: false);
           final time = IndonesianTime.formatTime(IndonesianTime.now);
           attendanceProvider.clockOut(time);
-          await attendanceProvider.refreshTodayAttendance(preserveLocalState: true);
+          await _initialDataLoad();
 
-          GlobalSnackBar.show(
-            'Clock out berhasil dilakukan',
-            title: 'Berhasil',
-            isSuccess: true,
-            icon: Icons.check_circle_outline_rounded,
-          );
+          GlobalSnackBar.show('Absen pulang berhasil dilakukan',
+              isSuccess: true);
         } else {
-          showDialog(
-            context: context,
-            builder: (context) => CustomDialog(
-              title: 'Gagal Clock Out',
-              content: attendanceResponse.message,
-              primaryButtonText: 'OK',
-              primaryButtonColor: AppThemes.errorColor,
-              onPrimaryButtonPressed: () => Navigator.pop(context),
-            ),
-          );
+          GlobalSnackBar.show(attendanceResponse.message, isError: true);
         }
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Close loading
-        showDialog(
-          context: context,
-          builder: (context) => CustomDialog(
-            title: 'Error',
-            content: 'Terjadi kesalahan: ${e.toString()}',
-            primaryButtonText: 'OK',
-            primaryButtonColor: AppThemes.errorColor,
-            onPrimaryButtonPressed: () => Navigator.pop(context),
-          ),
-        );
+        Navigator.pop(context);
+        GlobalSnackBar.show('Terjadi kesalahan: ${e.toString()}',
+            isError: true);
       }
     }
+  }
+
+  void _showAlreadyClockedInNotification() {
+    GlobalSnackBar.show('Anda sudah melakukan absen masuk hari ini.',
+        isWarning: true);
+  }
+
+  void _handleRequestLeave() {
+    showDialog(
+      context: context,
+      builder: (context) => LeaveFormDialog(
+        onSubmit: (tipe, alasan, start, end) async {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const Center(child: CircularProgressIndicator()),
+          );
+
+          try {
+            final pesertaMagangId = await _getPesertaId();
+            if (pesertaMagangId == null) {
+              if (mounted) {
+                Navigator.pop(context);
+                GlobalSnackBar.show('ID Peserta tidak ditemukan.',
+                    isError: true);
+              }
+              return;
+            }
+
+            final dateFormat = DateFormat('yyyy-MM-dd');
+            final startDateStr = dateFormat.format(start);
+            final endDateStr = dateFormat.format(end);
+
+            final response = await LeaveService.createLeave(
+              pesertaMagangId: pesertaMagangId,
+              tipe: tipe,
+              alasan: alasan,
+              tanggalMulai: startDateStr,
+              tanggalSelesai: endDateStr,
+            );
+
+            if (mounted) {
+              Navigator.pop(context);
+              if (response.success) {
+                await _initialDataLoad();
+
+                // Nyalakan ulang monitoring realtime karena status berubah jadi PENDING
+                setState(() {
+                  _stopRealtimeCheck = false;
+                });
+                if (_realtimeTimer != null && !_realtimeTimer!.isActive) {
+                  _realtimeTimer =
+                      Timer.periodic(const Duration(seconds: 3), (timer) {
+                    if (!_stopRealtimeCheck && mounted) {
+                      _checkStatusUpdatesBackground();
+                    } else {
+                      timer.cancel();
+                    }
+                  });
+                }
+
+                GlobalSnackBar.show('Pengajuan berhasil dikirim.',
+                    isSuccess: true);
+              } else {
+                GlobalSnackBar.show(response.message, isError: true);
+              }
+            }
+          } catch (e) {
+            if (mounted) {
+              Navigator.pop(context);
+              GlobalSnackBar.show('Terjadi kesalahan: $e', isError: true);
+            }
+          }
+        },
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
-    // DETEKSI KEYBOARD
     final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
     return Scaffold(
@@ -421,10 +549,18 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: Icon(
               Icons.notifications_outlined,
-              color:
-                  isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
+              // Indikator visual sederhana jika realtime aktif/mati
+              color: !_stopRealtimeCheck
+                  ? AppThemes.successColor
+                  : (isDark
+                      ? AppThemes.darkTextPrimary
+                      : AppThemes.onSurfaceColor),
             ),
-            onPressed: () {},
+            onPressed: () {
+              final status = !_stopRealtimeCheck ? "Aktif" : "Selesai/Nonaktif";
+              GlobalSnackBar.show('Monitoring Real-time: $status',
+                  title: 'Info', isInfo: true);
+            },
           ),
         ],
       ),
@@ -432,148 +568,84 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context, attendanceProvider, child) {
           return Stack(
             children: [
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    const WelcomeHeaderWidget(),
-                    const SizedBox(height: 24),
-                    AttendanceCard(
-                      onClockIn: () async {
-                        // Jika sudah pernah clock in hari ini, jangan izinkan scan lagi
-                        if (attendanceProvider.isClockedIn) {
-                          showDialog(
-                            context: context,
-                            builder: (context) => CustomDialog(
-                              title: 'Sudah Absen',
-                              content:
-                                  'Anda sudah melakukan absensi hari ini. Silakan absen lagi besok.',
-                              primaryButtonText: 'OK',
-                              primaryButtonColor: AppThemes.primaryColor,
-                              onPrimaryButtonPressed: () =>
-                                  Navigator.pop(context),
-                            ),
-                          );
-                          return;
-                        }
+              RefreshIndicator(
+                onRefresh: _initialDataLoad,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const WelcomeHeaderWidget(),
+                      const SizedBox(height: 24),
 
-                        final result = await Navigator.pushNamed(
-                          context,
-                          RouteNames.qrScan,
-                          arguments: {'type': 'CLOCK_IN'},
-                        );
-                        _handleAttendanceResult(context, result);
-                      },
-                      onClockOut: () async {
-                        await _handleClockOut(context);
-                      },
-                      isClockedIn: attendanceProvider.isClockedIn,
-                      isClockedOut: attendanceProvider.isClockedOut,
-                    ),
-                    const SizedBox(height: 16),
-                    AttendanceStatusCard(
-                      clockInTime: attendanceProvider.clockInTime,
-                      clockOutTime: attendanceProvider.clockOutTime,
-                      isClockedIn: attendanceProvider.isClockedIn,
-                      isClockedOut: attendanceProvider.isClockedOut,
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Performance',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: isDark
-                            ? AppThemes.darkTextPrimary
-                            : AppThemes.onSurfaceColor,
+                      // --- ATTENDANCE CARD ---
+                      AttendanceCard(
+                        isClockedIn: attendanceProvider.isClockedIn,
+                        isClockedOut: attendanceProvider.isClockedOut,
+                        canClockOut: _canClockOut,
+                        workEndTime: _workEndTime,
+                        leaveStatus: _todayLeaveStatus,
+                        onClockIn: () async {
+                          if (attendanceProvider.isClockedIn) {
+                            _showAlreadyClockedInNotification();
+                            return;
+                          }
+                          final result = await Navigator.pushNamed(
+                            context,
+                            RouteNames.qrScan,
+                            arguments: {'type': 'CLOCK_IN'},
+                          );
+                          _handleAttendanceResult(context, result);
+                        },
+                        onClockOut: () async {
+                          await _handleClockOut(context);
+                        },
+                        onRequestLeave: _handleRequestLeave,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Performance Card - data dari API
-                    _isLoadingPerformance
-                        ? const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(32.0),
-                              child: CircularProgressIndicator(),
-                            ),
-                          )
-                        : PerformanceCard(
-                            presentDays: _performanceStats?.presentDays ?? 0,
-                            totalDays: _performanceStats?.totalDays ?? 0,
-                          ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Announcements',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: isDark
-                                ? AppThemes.darkTextPrimary
-                                : AppThemes.onSurfaceColor,
-                          ),
+
+                      const SizedBox(height: 16),
+                      AttendanceStatusCard(
+                        clockInTime: attendanceProvider.clockInTime,
+                        clockOutTime: attendanceProvider.clockOutTime,
+                        isClockedIn: attendanceProvider.isClockedIn,
+                        isClockedOut: attendanceProvider.isClockedOut,
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Performa',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: isDark
+                              ? AppThemes.darkTextPrimary
+                              : AppThemes.onSurfaceColor,
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? AppThemes.darkSurface
-                                : AppThemes.backgroundColor,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'Documents',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: isDark
-                                  ? AppThemes.darkTextSecondary
-                                  : AppThemes.hintColor,
+                      ),
+                      const SizedBox(height: 16),
+                      _isLoadingPerformance
+                          ? const Center(child: CircularProgressIndicator())
+                          : SizedBox(
+                              width: double.infinity,
+                              child: PerformanceCard(
+                                presentDays:
+                                    _performanceStats?.presentDays ?? 0,
+                                totalDays: _performanceStats?.totalDays ?? 0,
+                              ),
                             ),
-                          ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: AnnouncementCard(
+                          onDownload: (item) {},
+                          onViewDetail: (item) {},
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    AnnouncementCard(
-                      onDownload: (item) {
-                        showDialog(
-                          context: context,
-                          builder: (context) => CustomDialog.download(
-                            fileName: item.title,
-                            onDownload: () {
-                              Navigator.pop(context);
-                              GlobalSnackBar.show(
-                                '${item.title} berhasil didownload',
-                                title: 'Download Selesai',
-                                isSuccess: true,
-                                icon: Icons.file_download_done_rounded,
-                              );
-                            },
-                          ),
-                        );
-                      },
-                      onViewDetail: (item) {
-                        showDialog(
-                          context: context,
-                          builder: (context) => CustomDialog.detail(
-                            title: item.title,
-                            description: item.body,
-                            onClose: () => Navigator.pop(context),
-                          ),
-                        );
-                      },
-                    ),
-                    // Beri padding bawah ekstra JIKA keyboard tidak buka (untuk navbar)
-                    SizedBox(height: isKeyboardOpen ? 20 : 100),
-                  ],
+                      ),
+                      SizedBox(height: isKeyboardOpen ? 20 : 100),
+                    ],
+                  ),
                 ),
               ),
-
-              // HANYA TAMPILKAN NAVBAR JIKA KEYBOARD TERTUTUP
               if (!isKeyboardOpen)
                 Positioned(
                   left: 0,
@@ -582,23 +654,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: FloatingBottomNav(
                     currentRoute: RouteNames.home,
                     onQRScanTap: () {
-                      // Cegah scan langsung dari FAB jika sudah clock in hari ini
                       if (attendanceProvider.isClockedIn) {
-                        showDialog(
-                          context: context,
-                          builder: (context) => CustomDialog(
-                            title: 'Sudah Absen',
-                            content:
-                                'Anda sudah melakukan absensi hari ini. Silakan absen lagi besok.',
-                            primaryButtonText: 'OK',
-                            primaryButtonColor: AppThemes.primaryColor,
-                            onPrimaryButtonPressed: () =>
-                                Navigator.pop(context),
-                          ),
-                        );
+                        _showAlreadyClockedInNotification();
                         return;
                       }
-
                       NavigationHelper.navigateWithoutAnimation(
                         context,
                         RouteNames.qrScan,

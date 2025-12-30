@@ -17,11 +17,9 @@ class ActivityCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        // Integrasi Theme: Gunakan Surface Elevated untuk kartu di dark mode
         color: isDark ? AppThemes.darkSurfaceElevated : AppThemes.surfaceColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          // Integrasi Theme: Border halus di dark mode
           color: isDark ? AppThemes.darkOutline : Colors.transparent,
           width: 1,
         ),
@@ -70,7 +68,6 @@ class ActivityCard extends StatelessWidget {
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
-                                // Integrasi Theme: Text Primary
                                 color: isDark
                                     ? AppThemes.darkTextPrimary
                                     : AppThemes.onSurfaceColor,
@@ -94,7 +91,6 @@ class ActivityCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
-                            // Integrasi Theme: Text Secondary
                             color: isDark
                                 ? AppThemes.darkTextSecondary
                                 : AppThemes.hintColor,
@@ -106,14 +102,13 @@ class ActivityCard extends StatelessWidget {
                             Icon(
                               Icons.calendar_today_outlined,
                               size: 12,
-                              // Integrasi Theme: Icon muted
                               color: isDark
                                   ? AppThemes.darkTextTertiary
                                   : AppThemes.hintColor,
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              activity.tanggal, // String langsung
+                              activity.tanggal,
                               style: TextStyle(
                                 fontSize: 11,
                                 color: isDark
@@ -122,6 +117,7 @@ class ActivityCard extends StatelessWidget {
                               ),
                             ),
                             const Spacer(),
+                            // PERBAIKAN DI SINI: Menggunakan displayName (Bahasa Indo)
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
@@ -135,13 +131,10 @@ class ActivityCard extends StatelessWidget {
                                 ),
                               ),
                               child: Text(
-                                activity.status
-                                    .toString()
-                                    .split('.')
-                                    .last
-                                    .toUpperCase(),
+                                activity
+                                    .status.displayName, // Gunakan displayName
                                 style: TextStyle(
-                                  fontSize: 9,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 0.5,
                                   color: statusColor,
@@ -162,7 +155,6 @@ class ActivityCard extends StatelessWidget {
     );
   }
 
-  // ... (Helper methods tetap sama)
   Color _getStatusColor(ActivityStatus status) {
     switch (status) {
       case ActivityStatus.completed:

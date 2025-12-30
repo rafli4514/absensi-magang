@@ -15,52 +15,51 @@ class ActivitiesHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Wrap(
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 16,
-      runSpacing: 16,
+
+    // Menggunakan Column untuk menumpuk Teks dan Tombol secara vertikal
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Activities Overview',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: isDark
-                    ? AppThemes.darkTextPrimary
-                    : AppThemes.onSurfaceColor,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Track your daily progress',
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark
-                    ? AppThemes.darkTextSecondary
-                    : AppThemes.hintColor,
-              ),
-            ),
-          ],
+        // Bagian Teks Judul
+        Text(
+          'Ringkasan Aktivitas',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color:
+                isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
+          ),
         ),
+        const SizedBox(height: 4),
+        Text(
+          'Pantau progres harianmu',
+          style: TextStyle(
+            fontSize: 14,
+            color: isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
+          ),
+        ),
+
+        const SizedBox(height: 20), // Memberi jarak antara teks dan tombol
+
+        // Bagian Tombol (50:50)
         Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            _HeaderActionButton(
-              icon: Icons.add_task,
-              label: 'Activity',
-              onTap: onAddActivity,
-              isDark: isDark,
+            Expanded(
+              child: _HeaderActionButton(
+                icon: Icons.add_task,
+                label: 'Aktivitas',
+                onTap: onAddActivity,
+                isDark: isDark,
+              ),
             ),
-            const SizedBox(width: 8),
-            _HeaderActionButton(
-              icon: Icons.book_outlined,
-              label: 'Log',
-              onTap: onAddLogbook,
-              isDark: isDark,
+            const SizedBox(width: 12), // Jarak antar tombol
+            Expanded(
+              child: _HeaderActionButton(
+                icon: Icons.book_outlined,
+                label: 'Log Book',
+                onTap: onAddLogbook,
+                isDark: isDark,
+              ),
             ),
           ],
         ),
@@ -88,11 +87,11 @@ class _HeaderActionButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        // Padding vertikal diperbesar agar tombol lebih nyaman ditekan
+        padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: isDark
-              ? AppThemes.darkSurfaceElevated
-              : AppThemes.surfaceColor,
+          color:
+              isDark ? AppThemes.darkSurfaceElevated : AppThemes.surfaceColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDark ? AppThemes.darkOutline : Colors.grey.shade200,
@@ -106,14 +105,16 @@ class _HeaderActionButton extends StatelessWidget {
               ),
           ],
         ),
-        child: Column(
+        // Menggunakan Row agar Icon dan Teks sejajar (Horizontal)
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 20, color: AppThemes.primaryColor),
-            const SizedBox(height: 2),
+            const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 14, // Ukuran font disesuaikan agar pas
                 fontWeight: FontWeight.w600,
                 color: isDark
                     ? AppThemes.darkTextSecondary
