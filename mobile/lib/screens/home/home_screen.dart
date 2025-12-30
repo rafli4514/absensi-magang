@@ -14,6 +14,7 @@ import '../../services/attendance_service.dart';
 import '../../services/dashboard_service.dart';
 import '../../services/leave_service.dart';
 import '../../services/location_service.dart';
+import '../../services/notification_service.dart';
 import '../../services/permission_service.dart';
 import '../../services/settings_service.dart';
 import '../../services/storage_service.dart';
@@ -46,7 +47,10 @@ class _HomeScreenState extends State<HomeScreen> {
   // Variabel Jam Pulang
   String _workEndTime = "17:00";
   bool _canClockOut = false;
-  Timer? _timer;
+
+  // [BARU] Timer Agresif
+  Timer? _realtimeTimer;
+  bool _stopRealtimeCheck = false; // Flag untuk menghentikan pengecekan
 
   // Variabel Status Izin Hari Ini
   String? _todayLeaveStatus; // 'IZIN', 'SAKIT', atau null
@@ -54,31 +58,64 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPerformanceData();
-    _loadSettings();
-    _checkTodayLeaveStatus(); // <--- CEK STATUS IZIN SAAT INIT
 
-    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
-      _checkClockOutTime();
+    // 1. Initial Load (Sekali di awal)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initialDataLoad();
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final attendanceProvider =
-            Provider.of<AttendanceProvider>(context, listen: false);
-
-        if (authProvider.user != null) {
-          attendanceProvider.refreshTodayAttendance(preserveLocalState: true);
-        }
+    // 2. [BARU] Timer Real-time (Setiap 3 Detik)
+    // Timer ini akan terus berjalan sampai _stopRealtimeCheck menjadi true
+    _realtimeTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (!_stopRealtimeCheck && mounted) {
+        _checkClockOutTime(); // Cek jam pulang (ringan)
+        _checkStatusUpdatesBackground(); // Cek status izin (API)
+      } else {
+        // Jika flag stop nyala, matikan timer
+        timer.cancel();
       }
     });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _realtimeTimer?.cancel();
     super.dispose();
+  }
+
+  // --- LOGIC CENTRALIZED DATA LOADING (Dipanggil saat Init / Pull Refresh) ---
+  Future<void> _initialDataLoad() async {
+    if (!mounted) return;
+
+    // Reset flag stop jika user melakukan manual refresh
+    setState(() {
+      _stopRealtimeCheck = false;
+    });
+
+    // Hidupkan timer lagi jika sudah mati
+    if (_realtimeTimer != null && !_realtimeTimer!.isActive) {
+      _realtimeTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+        if (!_stopRealtimeCheck && mounted) {
+          _checkClockOutTime();
+          _checkStatusUpdatesBackground();
+        } else {
+          timer.cancel();
+        }
+      });
+    }
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final attendanceProvider =
+        Provider.of<AttendanceProvider>(context, listen: false);
+
+    await authProvider.refreshProfile();
+
+    await Future.wait([
+      _loadSettings(),
+      _checkStatusUpdatesBackground(), // Cek status izin
+      _loadPerformanceData(),
+      attendanceProvider.refreshTodayAttendance(preserveLocalState: false),
+    ]);
   }
 
   // --- LOGIC 1: Ambil Peserta ID Helper ---
@@ -88,50 +125,139 @@ class _HomeScreenState extends State<HomeScreen> {
           await StorageService.getString(AppConstants.userDataKey);
       if (userDataStr != null) {
         final userData = jsonDecode(userDataStr);
-        return userData['pesertaMagang']?['id']?.toString();
+        return userData['pesertaMagang']?['id']?.toString() ??
+            userData['idPesertaMagang']?.toString();
       }
     } catch (_) {}
     return null;
   }
 
-  // --- LOGIC 2: Cek Status Izin Hari Ini ---
-  Future<void> _checkTodayLeaveStatus() async {
+  // --- LOGIC 2: Pengecekan Status Realtime (Background) ---
+  Future<void> _checkStatusUpdatesBackground() async {
     try {
-      final pesertaId = await _getPesertaId();
+      String? pesertaId = await _getPesertaId();
+
+      // Jika ID null, coba refresh profile sekali
+      if (pesertaId == null && mounted) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        await authProvider.refreshProfile();
+        pesertaId = await _getPesertaId();
+      }
+
       if (pesertaId == null) return;
 
-      // Ambil semua izin yang DISETUJUI milik user ini
-      final response = await LeaveService.getLeaves(
-          pesertaMagangId: pesertaId, status: 'DISETUJUI');
+      // A. Cek Status DISETUJUI (Approved)
+      final status = await LeaveService.getTodayLeaveStatus(pesertaId);
 
-      if (response.success && response.data != null) {
-        final now = DateTime.now();
-        // Cek apakah hari ini (now) berada dalam rentang tanggalMulai - tanggalSelesai
-        for (var leave in response.data!) {
-          final start = DateTime.parse(leave['tanggalMulai']);
-          final end = DateTime.parse(leave['tanggalSelesai']);
+      if (mounted) {
+        // Update UI jika status berubah
+        if (_todayLeaveStatus != status) {
+          setState(() {
+            _todayLeaveStatus = status;
+          });
+        }
 
-          // Normalisasi tanggal (abaikan jam) agar akurat
-          final dateNow = DateTime(now.year, now.month, now.day);
-          final dateStart = DateTime(start.year, start.month, start.day);
-          final dateEnd = DateTime(end.year, end.month, end.day);
+        // Jika status ada (IZIN/SAKIT) -> Berarti sudah diapprove
+        if (status != null) {
+          // Cek apakah notifikasi sudah pernah muncul hari ini
+          final now = DateTime.now();
+          final dateKey = '${now.year}-${now.month}-${now.day}';
+          final storageKey = 'notif_seen_${dateKey}_APPROVED';
+          final hasSeen = await StorageService.getBool(storageKey) ?? false;
 
-          if ((dateNow.isAtSameMomentAs(dateStart) ||
-                  dateNow.isAfter(dateStart)) &&
-              (dateNow.isAtSameMomentAs(dateEnd) ||
-                  dateNow.isBefore(dateEnd))) {
-            if (mounted) {
-              setState(() {
-                _todayLeaveStatus = leave['tipe']; // 'IZIN' atau 'SAKIT'
-              });
-            }
-            break; // Ketemu satu sudah cukup
+          if (!hasSeen) {
+            final title = status == 'SAKIT'
+                ? 'Izin Sakit Disetujui'
+                : 'Permohonan Izin Disetujui';
+
+            await NotificationService().showNotification(
+              id: 200,
+              title: title,
+              body:
+                  'Pengajuan $status Anda telah disetujui. Refresh otomatis dimatikan.',
+            );
+
+            await StorageService.setBool(storageKey, true);
+
+            // [STOP LOGIC] Matikan refresh karena status sudah final
+            _stopRealtimeChecking();
+          } else {
+            // Jika sudah pernah lihat notif, tapi timer masih jalan, matikan saja
+            // karena status sudah final (Approved)
+            _stopRealtimeChecking();
           }
         }
       }
+
+      // B. Cek Status DITOLAK (Rejected)
+      // Hanya cek jika belum Approved (karena Approved prioritas tampil di UI)
+      if (status == null) {
+        await _checkRejectedLeave(pesertaId);
+      }
     } catch (e) {
-      if (kDebugMode) print("Error check leave status: $e");
+      if (kDebugMode) print("Error check status: $e");
     }
+  }
+
+  // Helper untuk mematikan timer
+  void _stopRealtimeChecking() {
+    if (mounted && !_stopRealtimeCheck) {
+      setState(() {
+        _stopRealtimeCheck =
+            true; // Ini akan membuat Timer.periodic berhenti di tick berikutnya
+      });
+      print("🛑 Status Final tercapai. Auto-refresh dimatikan.");
+    }
+  }
+
+  Future<void> _checkRejectedLeave(String pesertaId) async {
+    try {
+      final response = await LeaveService.getLeaves(
+          pesertaMagangId: pesertaId, status: 'DITOLAK');
+
+      if (response.success && response.data != null) {
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final dateKey = '${now.year}-${now.month}-${now.day}';
+
+        for (var leave in response.data!) {
+          DateTime? tglMulai;
+          try {
+            tglMulai = DateTime.parse(leave['tanggalMulai']);
+          } catch (_) {}
+
+          if (tglMulai != null) {
+            final tglIzin =
+                DateTime(tglMulai.year, tglMulai.month, tglMulai.day);
+
+            if (tglIzin.isAtSameMomentAs(today)) {
+              // Cek history notif
+              final leaveId = leave['id'].toString();
+              final storageKey = 'notif_seen_${dateKey}_REJECTED_$leaveId';
+              final hasSeen = await StorageService.getBool(storageKey) ?? false;
+
+              if (!hasSeen) {
+                await NotificationService().showNotification(
+                  id: 201,
+                  title: 'Pengajuan Izin Ditolak',
+                  body:
+                      'Maaf, pengajuan izin Anda ditolak. Refresh otomatis dimatikan.',
+                );
+
+                await StorageService.setBool(storageKey, true);
+
+                // [STOP LOGIC] Matikan refresh karena status sudah final (Ditolak)
+                _stopRealtimeChecking();
+              } else {
+                // Jika sudah dilihat hari ini, matikan refresh juga
+                _stopRealtimeChecking();
+              }
+              break;
+            }
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   // --- LOGIC 3: Load Settings & Jam Pulang ---
@@ -155,21 +281,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _checkClockOutTime() {
-    final now = DateTime.now();
-    final parts = _workEndTime.split(':');
-    if (parts.length == 2) {
-      final endHour = int.parse(parts[0]);
-      final endMinute = int.parse(parts[1]);
-      final endTime =
-          DateTime(now.year, now.month, now.day, endHour, endMinute);
-
-      final canOut = now.isAfter(endTime) || now.isAtSameMomentAs(endTime);
-
-      if (mounted && _canClockOut != canOut) {
-        setState(() {
-          _canClockOut = canOut;
-        });
-      }
+    final canOut = AttendanceService.isClockOutTimeReached(_workEndTime);
+    if (mounted && _canClockOut != canOut) {
+      setState(() {
+        _canClockOut = canOut;
+      });
     }
   }
 
@@ -187,35 +303,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
       String? pesertaMagangId = await _getPesertaId();
 
-      // Jika ID tidak ada, coba refresh profile
-      if (pesertaMagangId == null) {
-        await authProvider.refreshProfile();
-        pesertaMagangId = await _getPesertaId();
-      }
-
       if (pesertaMagangId != null) {
         final response = await DashboardService.getCurrentMonthPerformance(
           pesertaMagangId: pesertaMagangId,
         );
 
-        if (mounted && response.success && response.data != null) {
+        if (mounted) {
           setState(() {
-            _performanceStats = response.data;
+            if (response.success && response.data != null) {
+              _performanceStats = response.data;
+            } else {
+              _performanceStats = PerformanceStats.empty();
+            }
             _isLoadingPerformance = false;
           });
-        } else {
-          if (mounted) {
-            setState(() {
-              _performanceStats = PerformanceStats.empty();
-              _isLoadingPerformance = false;
-            });
-          }
         }
       } else {
-        setState(() {
-          _performanceStats = PerformanceStats.empty();
-          _isLoadingPerformance = false;
-        });
+        if (mounted) {
+          setState(() {
+            _performanceStats = PerformanceStats.empty();
+            _isLoadingPerformance = false;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -238,8 +347,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (attendanceType == 'CLOCK_IN' && time.isNotEmpty) {
         attendanceProvider.clockIn(time);
         await Future.delayed(const Duration(milliseconds: 500));
-        await attendanceProvider.refreshTodayAttendance(
-            preserveLocalState: true);
+        await _initialDataLoad();
 
         GlobalSnackBar.show('Berhasil melakukan Absen Masuk pada $time',
             isSuccess: true);
@@ -332,8 +440,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Provider.of<AttendanceProvider>(context, listen: false);
           final time = IndonesianTime.formatTime(IndonesianTime.now);
           attendanceProvider.clockOut(time);
-          await attendanceProvider.refreshTodayAttendance(
-              preserveLocalState: true);
+          await _initialDataLoad();
 
           GlobalSnackBar.show('Absen pulang berhasil dilakukan',
               isSuccess: true);
@@ -392,6 +499,23 @@ class _HomeScreenState extends State<HomeScreen> {
             if (mounted) {
               Navigator.pop(context);
               if (response.success) {
+                await _initialDataLoad();
+
+                // Nyalakan ulang monitoring realtime karena status berubah jadi PENDING
+                setState(() {
+                  _stopRealtimeCheck = false;
+                });
+                if (_realtimeTimer != null && !_realtimeTimer!.isActive) {
+                  _realtimeTimer =
+                      Timer.periodic(const Duration(seconds: 3), (timer) {
+                    if (!_stopRealtimeCheck && mounted) {
+                      _checkStatusUpdatesBackground();
+                    } else {
+                      timer.cancel();
+                    }
+                  });
+                }
+
                 GlobalSnackBar.show('Pengajuan berhasil dikirim.',
                     isSuccess: true);
               } else {
@@ -425,11 +549,16 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: Icon(
               Icons.notifications_outlined,
-              color:
-                  isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
+              // Indikator visual sederhana jika realtime aktif/mati
+              color: !_stopRealtimeCheck
+                  ? AppThemes.successColor
+                  : (isDark
+                      ? AppThemes.darkTextPrimary
+                      : AppThemes.onSurfaceColor),
             ),
             onPressed: () {
-              GlobalSnackBar.show('Tidak ada notifikasi baru',
+              final status = !_stopRealtimeCheck ? "Aktif" : "Selesai/Nonaktif";
+              GlobalSnackBar.show('Monitoring Real-time: $status',
                   title: 'Info', isInfo: true);
             },
           ),
@@ -439,82 +568,82 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context, attendanceProvider, child) {
           return Stack(
             children: [
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const WelcomeHeaderWidget(),
-                    const SizedBox(height: 24),
+              RefreshIndicator(
+                onRefresh: _initialDataLoad,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const WelcomeHeaderWidget(),
+                      const SizedBox(height: 24),
 
-                    // --- ATTENDANCE CARD dengan Parameter Baru ---
-                    AttendanceCard(
-                      isClockedIn: attendanceProvider.isClockedIn,
-                      isClockedOut: attendanceProvider.isClockedOut,
-
-                      canClockOut: _canClockOut,
-                      workEndTime: _workEndTime,
-
-                      // Inject Status Izin (Izin/Sakit) jika ada
-                      leaveStatus: _todayLeaveStatus,
-
-                      onClockIn: () async {
-                        if (attendanceProvider.isClockedIn) {
-                          _showAlreadyClockedInNotification();
-                          return;
-                        }
-                        final result = await Navigator.pushNamed(
-                          context,
-                          RouteNames.qrScan,
-                          arguments: {'type': 'CLOCK_IN'},
-                        );
-                        _handleAttendanceResult(context, result);
-                      },
-                      onClockOut: () async {
-                        await _handleClockOut(context);
-                      },
-                      onRequestLeave: _handleRequestLeave,
-                    ),
-
-                    const SizedBox(height: 16),
-                    AttendanceStatusCard(
-                      clockInTime: attendanceProvider.clockInTime,
-                      clockOutTime: attendanceProvider.clockOutTime,
-                      isClockedIn: attendanceProvider.isClockedIn,
-                      isClockedOut: attendanceProvider.isClockedOut,
-                    ),
-                    // ... sisa widget (Performa, Pengumuman, dll) tetap sama ...
-                    const SizedBox(height: 24),
-                    Text(
-                      'Performa',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: isDark
-                            ? AppThemes.darkTextPrimary
-                            : AppThemes.onSurfaceColor,
+                      // --- ATTENDANCE CARD ---
+                      AttendanceCard(
+                        isClockedIn: attendanceProvider.isClockedIn,
+                        isClockedOut: attendanceProvider.isClockedOut,
+                        canClockOut: _canClockOut,
+                        workEndTime: _workEndTime,
+                        leaveStatus: _todayLeaveStatus,
+                        onClockIn: () async {
+                          if (attendanceProvider.isClockedIn) {
+                            _showAlreadyClockedInNotification();
+                            return;
+                          }
+                          final result = await Navigator.pushNamed(
+                            context,
+                            RouteNames.qrScan,
+                            arguments: {'type': 'CLOCK_IN'},
+                          );
+                          _handleAttendanceResult(context, result);
+                        },
+                        onClockOut: () async {
+                          await _handleClockOut(context);
+                        },
+                        onRequestLeave: _handleRequestLeave,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    _isLoadingPerformance
-                        ? const Center(child: CircularProgressIndicator())
-                        : SizedBox(
-                            width: double.infinity,
-                            child: PerformanceCard(
-                              presentDays: _performanceStats?.presentDays ?? 0,
-                              totalDays: _performanceStats?.totalDays ?? 0,
+
+                      const SizedBox(height: 16),
+                      AttendanceStatusCard(
+                        clockInTime: attendanceProvider.clockInTime,
+                        clockOutTime: attendanceProvider.clockOutTime,
+                        isClockedIn: attendanceProvider.isClockedIn,
+                        isClockedOut: attendanceProvider.isClockedOut,
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Performa',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: isDark
+                              ? AppThemes.darkTextPrimary
+                              : AppThemes.onSurfaceColor,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _isLoadingPerformance
+                          ? const Center(child: CircularProgressIndicator())
+                          : SizedBox(
+                              width: double.infinity,
+                              child: PerformanceCard(
+                                presentDays:
+                                    _performanceStats?.presentDays ?? 0,
+                                totalDays: _performanceStats?.totalDays ?? 0,
+                              ),
                             ),
-                          ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: AnnouncementCard(
-                        onDownload: (item) {},
-                        onViewDetail: (item) {},
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: AnnouncementCard(
+                          onDownload: (item) {},
+                          onViewDetail: (item) {},
+                        ),
                       ),
-                    ),
-                    SizedBox(height: isKeyboardOpen ? 20 : 100),
-                  ],
+                      SizedBox(height: isKeyboardOpen ? 20 : 100),
+                    ],
+                  ),
                 ),
               ),
               if (!isKeyboardOpen)

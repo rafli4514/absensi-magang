@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -5,7 +7,7 @@ import '../../navigation/route_names.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/dashboard_service.dart';
 import '../../themes/app_themes.dart';
-import '../../utils/responsive_layout.dart'; // IMPORT RESPONSIVE HELPER
+import '../../utils/responsive_layout.dart';
 import '../../utils/ui_utils.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
@@ -22,29 +24,50 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   bool _isLoading = true;
   Map<String, dynamic>? _stats;
 
+  // Timer untuk Auto Refresh
+  Timer? _refreshTimer;
+
   @override
   void initState() {
     super.initState();
-    _loadDashboardData();
+    // Load pertama kali dengan loading indicator
+    _loadDashboardData(initial: true);
+
+    // Setup Auto Refresh setiap 10 detik
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      _loadDashboardData(initial: false); // Silent refresh
+    });
   }
 
-  Future<void> _loadDashboardData() async {
-    setState(() => _isLoading = true);
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadDashboardData({bool initial = false}) async {
+    if (initial) {
+      setState(() => _isLoading = true);
+    }
+
     try {
       final response = await DashboardService.getDashboardStats();
       if (mounted) {
         if (response.success && response.data != null) {
           setState(() {
             _stats = response.data;
-            _isLoading = false;
+            if (initial) _isLoading = false;
           });
         } else {
-          GlobalSnackBar.show(response.message, isError: true);
-          setState(() => _isLoading = false);
+          // Hanya tampilkan error toast jika ini load awal
+          if (initial) {
+            GlobalSnackBar.show(response.message, isError: true);
+            setState(() => _isLoading = false);
+          }
         }
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && initial) {
         GlobalSnackBar.show('Gagal memuat data: $e', isError: true);
         setState(() => _isLoading = false);
       }
@@ -76,9 +99,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // --- IMPLEMENTASI RESPONSIVE HELPER ---
+    // Responsive Helper
     final isMobile = ResponsiveLayout.isMobile(context);
-    final isTablet = ResponsiveLayout.isTablet(context);
 
     // Tentukan jumlah kolom dan rasio kartu berdasarkan ukuran layar
     final int gridCrossAxisCount = isMobile ? 2 : 4;
@@ -95,9 +117,15 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         title: 'Admin Panel',
         showBackButton: false,
         actions: [
+          // Indikator kecil bahwa auto refresh aktif
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: Icon(Icons.sync, size: 16, color: AppThemes.hintColor),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: _loadDashboardData,
+            onPressed: () =>
+                _loadDashboardData(initial: true), // Manual refresh
           ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppThemes.errorColor),
@@ -108,7 +136,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       body: _isLoading
           ? const Center(child: LoadingIndicator(message: "Memuat Data..."))
           : RefreshIndicator(
-              onRefresh: _loadDashboardData,
+              onRefresh: () => _loadDashboardData(initial: true),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(20),
@@ -143,8 +171,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       physics: const NeverScrollableScrollPhysics(),
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
-                      childAspectRatio:
-                          gridChildAspectRatio, // FIX OVERFLOW DISINI
+                      childAspectRatio: gridChildAspectRatio,
                       children: [
                         _buildStatCard(
                           'Total Peserta',
@@ -190,8 +217,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Menu Admin - Gunakan Responsive Layout jika perlu,
-                    // tapi Column biasanya aman untuk list menu vertical.
+                    // Menu Admin
                     Column(
                       children: [
                         _buildAdminMenuTile(
@@ -215,7 +241,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                         ),
                       ],
                     ),
-                    // Padding bawah tambahan agar scroll tidak mentok
                     const SizedBox(height: 40),
                   ],
                 ),

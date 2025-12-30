@@ -166,4 +166,45 @@ class LeaveService {
       return false;
     }
   }
+
+  // --- 4. LOGIC BISNIS: Cek Status Izin Hari Ini ---
+  static Future<String?> getTodayLeaveStatus(String pesertaMagangId) async {
+    try {
+      // Panggil API getLeaves internal
+      final response = await getLeaves(
+        pesertaMagangId: pesertaMagangId,
+        status: 'DISETUJUI',
+      );
+
+      if (response.success && response.data != null) {
+        final now = DateTime.now();
+        final dateNow =
+            DateTime(now.year, now.month, now.day); // Normalisasi hari ini
+
+        for (var leave in response.data!) {
+          try {
+            final start = DateTime.parse(leave['tanggalMulai']);
+            final end = DateTime.parse(leave['tanggalSelesai']);
+
+            // Normalisasi tanggal mulai & selesai
+            final dateStart = DateTime(start.year, start.month, start.day);
+            final dateEnd = DateTime(end.year, end.month, end.day);
+
+            // Cek apakah hari ini masuk dalam range izin
+            if ((dateNow.isAtSameMomentAs(dateStart) ||
+                    dateNow.isAfter(dateStart)) &&
+                (dateNow.isAtSameMomentAs(dateEnd) ||
+                    dateNow.isBefore(dateEnd))) {
+              return leave['tipe']; // Mengembalikan 'IZIN' atau 'SAKIT'
+            }
+          } catch (e) {
+            continue; // Skip jika format tanggal error
+          }
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) print('❌ Error checking leave status: $e');
+    }
+    return null; // Tidak ada izin hari ini
+  }
 }

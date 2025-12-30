@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart'; // [1] TAMBAHKAN IMPORT INI
 import 'package:provider/provider.dart';
 
 import 'navigation/app_router.dart';
@@ -8,15 +9,15 @@ import 'providers/auth_provider.dart';
 import 'providers/onboard_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/notification_service.dart';
-// import 'services/storage_service.dart'; // Tidak perlu import jika tidak dipanggil langsung di main
 import 'themes/app_themes.dart';
 import 'utils/global_context.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // HAPUS ATAU KOMENTAR BARIS INI:
-  // await StorageService.init();
+  // [2] TAMBAHKAN INISIALISASI LOCALE DI SINI
+  // Ini akan mendownload/menyiapkan data format tanggal untuk bahasa Indonesia
+  await initializeDateFormatting('id_ID', null);
 
   try {
     final notificationService = NotificationService();

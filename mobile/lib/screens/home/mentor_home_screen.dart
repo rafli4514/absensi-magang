@@ -1,9 +1,15 @@
+// lib/screens/home/mentor_home_screen.dart
+
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../navigation/route_names.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/intern_service.dart';
+import '../../services/leave_service.dart';
+import '../../services/notification_service.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/ui_utils.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -21,12 +27,104 @@ class _MentorHomeScreenState extends State<MentorHomeScreen> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _mentees = [];
 
+  // Variabel untuk Auto Refresh & Notifikasi
+  Timer? _refreshTimer;
+  int _lastPendingCount = 0; // Melacak jumlah pending terakhir
+
   @override
   void initState() {
     super.initState();
-    _loadMentees();
+    _initialLoad();
+
+    // UPDATE PENTING: Refresh dipercepat jadi 3 detik agar terasa Real-Time
+    _refreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      _checkPendingLeavesBackground();
+      _loadMenteesBackground();
+    });
   }
 
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _initialLoad() async {
+    await _loadMentees();
+    // Langsung cek izin di awal load
+    await _checkPendingLeavesBackground();
+  }
+
+  // --- LOGIC AUTO REFRESH & NOTIFIKASI ---
+
+  // Cek izin pending di background tanpa loading spinner
+  Future<void> _checkPendingLeavesBackground() async {
+    if (!mounted) return;
+    try {
+      final response = await LeaveService.getLeaves(status: 'PENDING');
+
+      if (response.success && response.data != null) {
+        final currentPendingCount = response.data!.length;
+
+        // Logic: Jika jumlah pending BERTAMBAH dari sebelumnya, berarti ada yang baru masuk
+        // Kita bandingkan dengan _lastPendingCount
+        if (currentPendingCount > 0 &&
+            currentPendingCount > _lastPendingCount) {
+          // Ambil nama peserta pertama untuk pesan notifikasi
+          final firstName =
+              response.data![0]['pesertaMagang']?['nama'] ?? 'Peserta';
+
+          String notifTitle = 'Pengajuan Izin Baru';
+          String notifBody = '$firstName mengajukan izin baru.';
+
+          if (currentPendingCount > 1) {
+            notifBody =
+                'Ada $currentPendingCount pengajuan izin menunggu validasi.';
+          }
+
+          // Tampilkan Notifikasi Sistem
+          await NotificationService().showNotification(
+            id: 100, // ID tetap agar menumpuk jika belum dibaca
+            title: notifTitle,
+            body: notifBody,
+            payload: RouteNames.mentorValidation,
+          );
+
+          // Tampilkan snackbar info kecil
+          if (mounted) {
+            GlobalSnackBar.show('Pengajuan izin baru diterima', isInfo: true);
+          }
+        }
+
+        // Update tracking count SELALU, agar sinkron
+        if (currentPendingCount != _lastPendingCount) {
+          setState(() {
+            _lastPendingCount = currentPendingCount;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Silent check error: $e");
+    }
+  }
+
+  // Refresh data tim di background (opsional, bisa lebih jarang)
+  Future<void> _loadMenteesBackground() async {
+    if (!mounted) return;
+    try {
+      final response = await InternService.getAllInterns();
+      if (mounted && response.success && response.data != null) {
+        // Cek sederhana: jika jumlah berubah, update UI
+        if (_mentees.length != response.data!.length) {
+          setState(() {
+            _mentees = response.data!;
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Load awal dengan loading spinner
   Future<void> _loadMentees() async {
     setState(() => _isLoading = true);
     try {
@@ -62,7 +160,7 @@ class _MentorHomeScreenState extends State<MentorHomeScreen> {
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
-              GlobalSnackBar.show('Tidak ada notifikasi baru', isInfo: true);
+              GlobalSnackBar.show('Real-time monitoring aktif.', isInfo: true);
             },
           ),
         ],
@@ -96,7 +194,9 @@ class _MentorHomeScreenState extends State<MentorHomeScreen> {
                           Expanded(
                             child: _buildSummaryCard(
                               'Menunggu Review',
-                              '5', // Placeholder jumlah pending
+                              _lastPendingCount > 0
+                                  ? '$_lastPendingCount'
+                                  : '0', // Data Realtime
                               Icons.rate_review_rounded,
                               AppThemes.warningColor,
                               isDark,
