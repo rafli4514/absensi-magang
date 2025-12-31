@@ -67,8 +67,8 @@ export default function ManageUsersPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
-  // State untuk Form Tambah
-  const [formData, setFormData] = useState<any>({
+  // Tipe CreateUserRequest digunakan di sini (Mencegah Error Unused)
+  const [formData, setFormData] = useState<CreateUserRequest>({
     username: "",
     password: "",
     role: "ADMIN",
@@ -76,8 +76,8 @@ export default function ManageUsersPage() {
     divisi: "",
   });
 
-  // State untuk Form Edit
-  const [updateFormData, setUpdateFormData] = useState<any>({});
+  // Tipe UpdateUserRequest digunakan di sini (Mencegah Error Unused)
+  const [updateFormData, setUpdateFormData] = useState<UpdateUserRequest>({});
 
   useEffect(() => {
     fetchUsers();

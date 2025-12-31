@@ -15,8 +15,6 @@ import {
 } from "@radix-ui/themes";
 import {
   EyeOpenIcon,
-  CheckCircledIcon,
-  CrossCircledIcon,
   FileTextIcon,
   CalendarIcon,
   MixerHorizontalIcon,
