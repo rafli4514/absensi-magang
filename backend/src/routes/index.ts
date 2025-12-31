@@ -11,7 +11,7 @@ import serverMonitorRoutes = require('./serverMonitorRoutes');
 
 const router = Router();
 
-// Public routes
+// Health check endpoint
 router.get('/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -24,7 +24,7 @@ router.get('/health', (req, res) => {
 // Authentication routes (public)
 router.use('/auth', authRoutes);
 
-// Protected API Routes
+// Protected routes
 router.use('/users', userRoutes);
 router.use('/peserta-magang', pesertaMagangRoutes);
 router.use('/absensi', absensiRoutes);
