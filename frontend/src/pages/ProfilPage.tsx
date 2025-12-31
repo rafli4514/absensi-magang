@@ -6,7 +6,6 @@ import {
   TextField,
   Text,
   Badge,
-  Separator,
   AlertDialog,
   Spinner,
   Box,

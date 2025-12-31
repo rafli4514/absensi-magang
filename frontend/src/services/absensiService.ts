@@ -35,17 +35,25 @@ export interface CreateAbsensiRequest {
 }
 
 class AbsensiService {
+  // PERBAIKAN 1: Menambahkan startDate & endDate agar LaporanPage tidak error
   async getAbsensi(params?: {
     page?: number;
     limit?: number;
     pesertaMagangId?: string;
     tipe?: string;
     status?: string;
+    startDate?: string;
+    endDate?: string;
   }): Promise<PaginatedResponse<Absensi>> {
     const response = await api.get<PaginatedResponse<Absensi>>('/absensi', {
       params,
     });
     return response.data;
+  }
+
+  // Alias jika LaporanPage memanggil dengan nama getAllAbsensi
+  async getAllAbsensi(params?: any) {
+    return this.getAbsensi(params);
   }
 
   async getAbsensiById(id: string): Promise<ApiResponse<Absensi>> {
@@ -111,7 +119,8 @@ class AbsensiService {
 
     return this.createAbsensi({
       pesertaMagangId: userId,
-      tipe: options.tipe,
+      // PERBAIKAN 2: Menghapus 'tipe: options.tipe' karena sudah ada di ...options
+      // Ini mencegah error "tipe is specified more than once"
       timestamp: new Date().toISOString(),
       status: 'VALID',
       ...options,

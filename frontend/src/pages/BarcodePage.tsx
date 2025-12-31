@@ -18,7 +18,6 @@ import {
   QrCode,
   Download,
   RefreshCw,
-  Copy,
   Check,
   Maximize2,
   X,

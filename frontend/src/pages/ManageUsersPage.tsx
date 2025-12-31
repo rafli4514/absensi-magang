@@ -57,6 +57,7 @@ export default function ManageUsersPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
+  // Tipe CreateUserRequest digunakan di sini (Mencegah Error Unused)
   const [formData, setFormData] = useState<CreateUserRequest>({
     username: "",
     password: "",
@@ -64,6 +65,7 @@ export default function ManageUsersPage() {
     isActive: true,
   });
 
+  // Tipe UpdateUserRequest digunakan di sini (Mencegah Error Unused)
   const [updateFormData, setUpdateFormData] = useState<UpdateUserRequest>({});
 
   useEffect(() => {
