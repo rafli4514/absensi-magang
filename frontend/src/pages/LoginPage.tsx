@@ -17,12 +17,17 @@ export default function Login() {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !isLoading) {
       e.preventDefault();
-      handleSubmit(e as any);
+      // Panggil langsung fungsi logika submit
+      submitForm();
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    submitForm();
+  };
+
+  const submitForm = async () => {
     setIsLoading(true);
     setError("");
 
@@ -44,8 +49,17 @@ export default function Login() {
       } else {
         setError(response.message || "Login gagal");
       }
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || "Terjadi kesalahan pada server.";
+    } catch (err: unknown) {
+      // Type narrowing untuk error handling yang aman
+      let errorMessage = "Terjadi kesalahan pada server.";
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const response = (err as { response: { data?: { message?: string } } }).response;
+        if (response?.data?.message) {
+          errorMessage = response.data.message;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
       setError(errorMessage);
     } finally {
       setIsLoading(false);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../models/enum/activity_type.dart';
 import '../themes/app_themes.dart';
 import 'custom_text_field.dart';
 
@@ -19,7 +20,9 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
   final TextEditingController _alasanController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
 
-  String _selectedType = 'IZIN';
+  // State sekarang menggunakan ActivityType
+  ActivityType _selectedType = ActivityType.izin;
+
   DateTime _startDate = DateTime.now();
   DateTime _endDate = DateTime.now();
 
@@ -37,19 +40,6 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
     } else {
       _dateController.text =
           "${DateFormat('dd MMM').format(_startDate)} - ${DateFormat('dd MMM yyyy').format(_endDate)}";
-    }
-  }
-
-  Color _getTypeColor(String type) {
-    switch (type) {
-      case 'SAKIT':
-        return AppThemes.infoColor;
-      case 'IZIN':
-        return AppThemes.warningColor;
-      case 'ALPHA':
-        return AppThemes.errorColor;
-      default:
-        return AppThemes.neutralColor;
     }
   }
 
@@ -104,6 +94,8 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
                   ),
                 ),
                 const SizedBox(height: 24),
+
+                // --- DROPDOWN JENIS IZIN ---
                 Text('Jenis Izin',
                     style: TextStyle(
                         fontSize: 12,
@@ -111,14 +103,30 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
                         color: isDark
                             ? AppThemes.darkTextSecondary
                             : AppThemes.hintColor)),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _buildTypeChip('IZIN', 'Izin', isDark),
-                    const SizedBox(width: 12),
-                    _buildTypeChip('SAKIT', 'Sakit', isDark),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<ActivityType>(
+                  value: _selectedType,
+                  dropdownColor:
+                      isDark ? AppThemes.darkSurfaceElevated : Colors.white,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                  ),
+                  items: [
+                    _buildDropdownItem(ActivityType.izin),
+                    _buildDropdownItem(ActivityType.sakit),
+                    _buildDropdownItem(ActivityType.cuti),
+                    _buildDropdownItem(ActivityType.pulangCepat),
+                    // Alpha dihapus karena otomatis sistem
+                    _buildDropdownItem(ActivityType.other),
                   ],
+                  onChanged: (val) {
+                    if (val != null) setState(() => _selectedType = val);
+                  },
                 ),
+
                 const SizedBox(height: 20),
                 CustomTextField(
                   controller: _dateController,
@@ -154,10 +162,10 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
                     ElevatedButton(
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
-                          widget.onSubmit(_selectedType, _alasanController.text,
-                              _startDate, _endDate);
-                          Navigator.pop(
-                              context); // Tutup dialog setelah submit callback dijalankan
+                          // Mengirim value string (misal "PULANG_CEPAT") ke parent
+                          widget.onSubmit(_selectedType.value,
+                              _alasanController.text, _startDate, _endDate);
+                          Navigator.pop(context);
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -178,45 +186,10 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
     );
   }
 
-  Widget _buildTypeChip(String value, String label, bool isDark) {
-    final isSelected = _selectedType == value;
-    final color = _getTypeColor(value);
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _selectedType = value),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? color
-                : (isDark
-                    ? AppThemes.darkSurfaceElevated
-                    : Colors.grey.shade100),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isSelected
-                  ? color
-                  : (isDark ? AppThemes.darkOutline : Colors.grey.shade300),
-              width: 1.5,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isSelected
-                    ? Colors.white
-                    : (isDark
-                        ? AppThemes.darkTextSecondary
-                        : AppThemes.hintColor),
-              ),
-            ),
-          ),
-        ),
-      ),
+  DropdownMenuItem<ActivityType> _buildDropdownItem(ActivityType type) {
+    return DropdownMenuItem(
+      value: type,
+      child: Text(type.displayName),
     );
   }
 }

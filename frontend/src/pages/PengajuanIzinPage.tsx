@@ -38,6 +38,9 @@ const TypeBadge = ({ tipe }: { tipe: PengajuanIzin["tipe"] }) => {
     SAKIT: { color: "bg-red-50 text-red-600 border-red-200", label: "Sakit" },
     IZIN: { color: "bg-blue-50 text-blue-600 border-blue-200", label: "Izin" },
     CUTI: { color: "bg-purple-50 text-purple-600 border-purple-200", label: "Cuti" },
+    PULANG_CEPAT: { color: "bg-orange-50 text-orange-600 border-orange-200", label: "Pulang Cepat" },
+    ALPHA: { color: "bg-red-100 text-red-700 border-red-300", label: "Alpha" },
+    LAINNYA: { color: "bg-gray-50 text-gray-600 border-gray-200", label: "Lainnya" },
   };
   const config = typeConfig[tipe] || { color: "bg-gray-50 text-gray-600 border-gray-200", label: tipe };
   return <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full border ${config.color}`}>{config.label}</span>;
@@ -49,12 +52,24 @@ export default function PengajuanIzinPage() {
   const [statusFilter, setStatusFilter] = useState<string>("Semua");
   const [typeFilter, setTypeFilter] = useState<string>("Semua");
 
-  const filteredPengajuanIzin = pengajuanIzin.filter((item) => {
-    const matchesSearch = item.pesertaMagang?.nama.toLowerCase().includes(searchTerm.toLowerCase()) || item.alasan.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "Semua" || item.status === statusFilter;
-    const matchesType = typeFilter === "Semua" || item.tipe === typeFilter;
-    return matchesSearch && matchesStatus && matchesType;
-  });
+  // REVISI SORTING:
+  // Data difilter dulu, kemudian di-sort berdasarkan TANGGAL PENGAJUAN (diajukanPada) descending.
+  // Kita TIDAK melakukan sort berdasarkan Status, agar item tidak loncat saat status berubah.
+  const filteredPengajuanIzin = pengajuanIzin
+    .filter((item) => {
+      const matchesSearch = item.pesertaMagang?.nama.toLowerCase().includes(searchTerm.toLowerCase()) || item.alasan.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Catatan: Jika Anda sedang memfilter "PENDING" dan meng-approve, item akan tetap hilang karena filter ini.
+      // Jika Anda ingin item tetap muncul di list "PENDING" sesaat setelah diapprove (sebelum refresh), logic filternya perlu diubah sedikit,
+      // tapi biasanya user ada di view "Semua" saat melakukan approval massal.
+      const matchesStatus = statusFilter === "Semua" || item.status === statusFilter;
+      const matchesType = typeFilter === "Semua" || item.tipe === typeFilter;
+      return matchesSearch && matchesStatus && matchesType;
+    })
+    .sort((a, b) => {
+      // Sort Stabil: Selalu berdasarkan Waktu Pengajuan Terbaru
+      return new Date(b.diajukanPada).getTime() - new Date(a.diajukanPada).getTime();
+    });
 
   const handleApprove = (id: string, catatan: string = "") => {
     setPengajuanIzin(pengajuanIzin.map((item) => item.id === id ? { ...item, status: "DISETUJUI", disetujuiOleh: "Admin", disetujuiPada: new Date().toISOString(), catatan, updatedAt: new Date().toISOString() } : item));
@@ -125,6 +140,9 @@ export default function PengajuanIzinPage() {
                     <Select.Item value="SAKIT">Sakit</Select.Item>
                     <Select.Item value="IZIN">Izin</Select.Item>
                     <Select.Item value="CUTI">Cuti</Select.Item>
+                    <Select.Item value="PULANG_CEPAT">Pulang Cepat</Select.Item>
+                    <Select.Item value="ALPHA">Alpha</Select.Item>
+                    <Select.Item value="LAINNYA">Lainnya</Select.Item>
                   </Select.Content>
                 </Select.Root>
               </Flex>
@@ -179,7 +197,7 @@ export default function PengajuanIzinPage() {
                     <Dialog.Trigger>
                       <IconButton size="1" variant="outline" color="blue"><EyeOpenIcon width="14" height="14" /></IconButton>
                     </Dialog.Trigger>
-                    {/* ... Detail Review Dialog Content (Existing Logic) ... */}
+                    {/* Detail Review Dialog Content */}
                     <Dialog.Content className="max-w-xl">
                       <div className="text-center pb-4 border-b border-gray-200 mb-4">
                         <Dialog.Title className="text-lg font-bold">Review Izin</Dialog.Title>
@@ -193,12 +211,11 @@ export default function PengajuanIzinPage() {
                         {item.dokumenPendukung && <div className="col-span-2"><Button variant="outline" size="1"><FileTextIcon className="mr-2"/> {item.dokumenPendukung}</Button></div>}
                       </div>
                       {/* Actions */}
-                      {item.status === "PENDING" && (
-                        <Flex gap="3" justify="end">
+                      {/* Tampilkan tombol aksi meskipun status sudah bukan pending agar bisa revisi */}
+                      <Flex gap="3" justify="end">
                            <Button color="red" variant="soft" onClick={() => handleReject(item.id)}>Tolak</Button>
                            <Button color="green" onClick={() => handleApprove(item.id)}>Setujui</Button>
-                        </Flex>
-                      )}
+                      </Flex>
                     </Dialog.Content>
                   </Dialog.Root>
                 </Table.Cell>

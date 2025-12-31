@@ -8,10 +8,9 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 // Pages
 import Login from "./pages/LoginPage";
-import UserDashboardPage from "./pages/DashboardPage"; // Dashboard User
-import ServerDashboardPage from "./pages/ServerDashboardPage"; // Dashboard Server (Baru)
-import AbsensiPage from "./pages/AbsensiPage";
-import PengajuanIzinPage from "./pages/PengajuanIzinPage";
+import UserDashboardPage from "./pages/DashboardPage";
+import ServerDashboardPage from "./pages/ServerDashboardPage";
+import KehadiranPage from "./pages/KehadiranPage";
 import LaporanPage from "./pages/LaporanPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import PengaturanPage from "./pages/PengaturanPage";
@@ -39,9 +38,13 @@ function App() {
             <Route index element={<UserDashboardPage />} />
             <Route path="dashboard/server" element={<ServerDashboardPage />} />
 
-            {/* Fitur Utama */}
-            <Route path="absensi" element={<AbsensiPage />} />
-            <Route path="izin" element={<PengajuanIzinPage />} />
+            {/* MODUL KEHADIRAN (Unified) */}
+            <Route path="kehadiran" element={<KehadiranPage />} />
+
+            {/* Route lama Absensi & Izin dihapus/di-redirect jika perlu */}
+            {/* <Route path="absensi" element={<AbsensiPage />} /> */}
+            {/* <Route path="izin" element={<PengajuanIzinPage />} /> */}
+
             <Route path="laporan" element={<LaporanPage />} />
 
             {/* User Management */}
