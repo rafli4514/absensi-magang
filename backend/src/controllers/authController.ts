@@ -54,7 +54,7 @@ export const login = async (req: Request, res: Response) => {
     sendSuccess(res, "Login successful", {
       user: userResponse,
       token,
-      expiresIn: "24h",
+      expiresIn: "30d",
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -118,7 +118,7 @@ export const loginPesertaMagang = async (req: Request, res: Response) => {
         avatar: user.pesertaMagang.avatar,
       },
       token,
-      expiresIn: "24h",
+      expiresIn: "30d",
     });
   } catch (error) {
     console.error("Peserta magang login error:", error);
@@ -207,7 +207,7 @@ export const register = async (req: Request, res: Response) => {
         user,
         pesertaMagang,
         token,
-        expiresIn: "24h",
+        expiresIn: "30d",
       },
       201
     );
@@ -359,7 +359,7 @@ export const registerPesertaMagang = async (req: Request, res: Response) => {
         user: result.user,
         pesertaMagang: result.pesertaMagang,
         token,
-        expiresIn: "24h",
+        expiresIn: "30d",
       },
       201
     );
@@ -780,7 +780,7 @@ export const refreshToken = async (req: Request, res: Response) => {
 
     sendSuccess(res, "Token refreshed successfully", {
       token,
-      expiresIn: "24h",
+      expiresIn: "30d",
     });
   } catch (error) {
     console.error("Refresh token error:", error);

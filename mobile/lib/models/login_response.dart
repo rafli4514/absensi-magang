@@ -15,7 +15,7 @@ class LoginResponse {
     return LoginResponse(
       user: User.fromJson(json['user'] ?? {}),
       token: json['token'] ?? '',
-      expiresIn: json['expiresIn'] ?? '24h',
+      expiresIn: json['expiresIn'] ?? '30d',
     );
   }
 }

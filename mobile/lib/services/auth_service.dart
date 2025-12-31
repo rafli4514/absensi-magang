@@ -124,7 +124,7 @@ class AuthService {
         return LoginResponse(
           user: User.fromJson(userMap),
           token: data['token'] ?? '',
-          expiresIn: data['expiresIn'] ?? '24h',
+          expiresIn: data['expiresIn'] ?? '30d',
         );
       },
     );
@@ -196,7 +196,7 @@ class AuthService {
         return LoginResponse(
           user: User.fromJson(userMap),
           token: data['token'] ?? '',
-          expiresIn: data['expiresIn'] ?? '24h',
+          expiresIn: data['expiresIn'] ?? '30d',
         );
       },
     );
