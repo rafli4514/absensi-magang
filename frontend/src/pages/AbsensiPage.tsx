@@ -33,20 +33,14 @@ import {
   FileIcon,
 } from "@radix-ui/react-icons";
 
-// HAPUS IMPORT PRISMA/EXPRESS DISINI (SOURCE MASALAH ANDA)
-// GANTI DENGAN SERVICE FRONTEND:
 import absensiService from "../services/absensiService";
 import Avatar from "../components/Avatar";
 
-// Import Assets
 import LogoPLN from "../assets/64eb562e223ee070362018.png";
-
-// Import Library Export
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// --- Helper Components ---
 const StatusIcon = ({ status }: { status: Absensi["status"] }) => {
   switch (status) {
     case "VALID": return <CheckCircledIcon color="green" />;
@@ -57,7 +51,8 @@ const StatusIcon = ({ status }: { status: Absensi["status"] }) => {
 };
 
 const StatusBadge = ({ status }: { status: Absensi["status"] }) => {
-  const statusConfig: any = {
+  // FIX: Type definition
+  const statusConfig: Record<string, { color: string; label: string }> = {
     VALID: { color: "bg-green-100 text-green-800", label: "Valid" },
     TERLAMBAT: { color: "bg-yellow-100 text-yellow-800", label: "Terlambat" },
     INVALID: { color: "bg-red-100 text-red-800", label: "Tidak Valid" },
@@ -67,7 +62,8 @@ const StatusBadge = ({ status }: { status: Absensi["status"] }) => {
 };
 
 const TypeBadge = ({ tipe }: { tipe: Absensi["tipe"] }) => {
-  const typeConfig: any = {
+  // FIX: Type definition
+  const typeConfig: Record<string, { color: string; label: string }> = {
     MASUK: { color: "bg-blue-100 text-blue-800", label: "Masuk" },
     KELUAR: { color: "bg-purple-100 text-purple-800", label: "Keluar" },
     IZIN: { color: "bg-orange-100 text-orange-800", label: "Izin" },
@@ -79,22 +75,18 @@ const TypeBadge = ({ tipe }: { tipe: Absensi["tipe"] }) => {
 };
 
 export default function AbsensiPage() {
-  // ============ STATE ============
   const [absensi, setAbsensi] = useState<Absensi[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("Semua");
   const [typeFilter, setTypeFilter] = useState<string>("Semua");
   const [dateFilter, setDateFilter] = useState("");
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<string>("20");
 
-  // ============ FETCH DATA ============
   useEffect(() => {
     fetchAbsensi();
   }, []);
@@ -102,7 +94,6 @@ export default function AbsensiPage() {
   const fetchAbsensi = async () => {
     try {
       setLoading(true);
-      // Panggil API lewat Service, BUKAN Prisma langsung
       const response = await absensiService.getAbsensi({ limit: 1000 });
       if (response.success && response.data) {
         setAbsensi(response.data);
@@ -133,7 +124,6 @@ export default function AbsensiPage() {
     }
   };
 
-  // ============ FILTER LOGIC ============
   const hasPesertaMagang = (record: Absensi): record is Absensi & { pesertaMagang: PesertaMagang } => {
     return record.pesertaMagang !== undefined && record.pesertaMagang !== null;
   };
@@ -152,7 +142,6 @@ export default function AbsensiPage() {
     return matchesSearch && matchesStatus && matchesType && matchesDate;
   });
 
-  // ============ PAGINATION LOGIC ============
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, typeFilter, dateFilter, itemsPerPage]);
@@ -166,7 +155,6 @@ export default function AbsensiPage() {
     currentPage * pageSize
   );
 
-  // ============ EXPORT LOGIC ============
   const addHeaderToPDF = (doc: jsPDF, title: string) => {
     const PLN_BLUE = "#0066CC";
     const DARK_GREY = "#333333";
@@ -250,7 +238,8 @@ export default function AbsensiPage() {
     const buttons = [];
     const maxVisiblePages = 5;
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    // FIX: prefer-const
+    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
     if (endPage - startPage + 1 < maxVisiblePages) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
@@ -286,25 +275,14 @@ export default function AbsensiPage() {
 
   return (
     <div className="space-y-4 pb-10">
-      {/* Error message */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
           {error}
         </div>
       )}
 
-      {/* Page header */}
-      <div className="flex flex-row justify-between items-center gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight">
-            Monitoring Absensi
-          </h1>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Pantau kehadiran siswa secara real-time
-          </p>
-        </div>
-
-        {/* Export Dropdown */}
+      {/* Action Bar */}
+      <div className="flex justify-end mb-2">
         <DropdownMenu.Root>
           <DropdownMenu.Trigger>
             <Button size="2" className="flex items-center cursor-pointer bg-blue-600 text-white hover:bg-blue-700">
@@ -328,7 +306,6 @@ export default function AbsensiPage() {
         <Box p="3">
           <Flex direction="column" gap="3">
             <Flex gap="3" wrap="wrap" align="center" justify="between">
-              {/* Search */}
               <div className="flex-1 min-w-[200px]">
                 <TextField.Root
                   size="2"
@@ -345,7 +322,6 @@ export default function AbsensiPage() {
                 </TextField.Root>
               </div>
 
-              {/* Group Filter */}
               <Flex gap="2" align="center" wrap="wrap" className="justify-end flex-1 sm:flex-none">
                 <Select.Root
                   size="2"
@@ -518,7 +494,6 @@ export default function AbsensiPage() {
                               </div>
                             </div>
 
-                            {/* Detail Fields */}
                             <div className="grid grid-cols-2 gap-2 text-sm">
                               <Text className="text-gray-500 text-xs">Tipe</Text>
                               <div className="text-right"><TypeBadge tipe={item.tipe} /></div>
@@ -593,7 +568,6 @@ export default function AbsensiPage() {
           </Table.Body>
         </Table.Root>
 
-        {/* Empty State & Pagination */}
         {filteredAbsensi.length === 0 && (
           <Box className="text-center py-10 bg-gray-50/30">
             <ClockIcon className="h-6 w-6 text-gray-300 mx-auto mb-2" />

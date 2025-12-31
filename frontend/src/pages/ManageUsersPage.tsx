@@ -11,40 +11,50 @@ import {
   Table,
   Text,
   TextField,
+  Switch,
+  Badge,
+  Grid,
 } from "@radix-ui/themes";
 import {
   Pencil2Icon,
   TrashIcon,
   MixerHorizontalIcon,
   PlusIcon,
-  CheckIcon,
-  Cross2Icon,
   PersonIcon,
+  LockClosedIcon,
 } from "@radix-ui/react-icons";
 import userService, { type CreateUserRequest, type UpdateUserRequest } from "../services/userService";
 import type { User } from "../types";
 
+// --- OPSI BIDANG / DIVISI ---
+const BIDANG_OPSI = [
+  "Bidang Pemasaran & Penjualan",
+  "Retail SBU",
+  "Pembangunan & Aktivasi",
+  "Operasi Pemeliharaan & Aset",
+];
+
 const RoleBadge = ({ role }: { role: User["role"] }) => {
   const roleConfig = {
-    ADMIN: { color: "bg-purple-100 text-purple-800", label: "Admin" },
-    PESERTA_MAGANG: { color: "bg-blue-100 text-blue-800", label: "Peserta" },
-    PEMBIMBING_MAGANG: { color: "bg-green-100 text-green-800", label: "Pembimbing" },
+    ADMIN: { color: "purple", label: "Admin" },
+    PESERTA_MAGANG: { color: "blue", label: "Peserta" },
+    PEMBIMBING_MAGANG: { color: "green", label: "Pembimbing" },
   };
 
-  const config = roleConfig[role] || { color: "bg-gray-100 text-gray-800", label: role };
+  const config = roleConfig[role] || { color: "gray", label: role };
 
   return (
-    <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full ${config.color}`}>
+    <Badge color={config.color as any} variant="soft">
       {config.label}
-    </span>
+    </Badge>
   );
 };
 
 const StatusBadge = ({ isActive }: { isActive: boolean }) => {
   return (
-    <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full ${isActive ? "bg-success-100 text-success-800" : "bg-gray-100 text-gray-800"}`}>
-      {isActive ? "Aktif" : "Tidak Aktif"}
-    </span>
+    <Badge color={isActive ? "green" : "gray"} variant={isActive ? "surface" : "outline"}>
+      {isActive ? "Aktif" : "Nonaktif"}
+    </Badge>
   );
 };
 
@@ -61,8 +71,9 @@ export default function ManageUsersPage() {
   const [formData, setFormData] = useState<CreateUserRequest>({
     username: "",
     password: "",
-    role: "PESERTA_MAGANG",
+    role: "ADMIN",
     isActive: true,
+    divisi: "",
   });
 
   // Tipe UpdateUserRequest digunakan di sini (Mencegah Error Unused)
@@ -95,7 +106,7 @@ export default function ManageUsersPage() {
       const response = await userService.createUser(formData);
       if (response.success) {
         await fetchUsers();
-        setFormData({ username: "", password: "", role: "PESERTA_MAGANG", isActive: true });
+        setFormData({ username: "", password: "", role: "ADMIN", isActive: true, divisi: "" });
         setError(null);
       } else {
         setError(response.message || "Failed to create user");
@@ -139,25 +150,13 @@ export default function ManageUsersPage() {
     }
   };
 
-  const handleToggleStatus = async (id: string) => {
-    try {
-      const response = await userService.toggleUserStatus(id);
-      if (response.success) {
-        await fetchUsers();
-        setError(null);
-      } else {
-        setError(response.message || "Failed to toggle user status");
-      }
-    } catch (error: unknown) {
-      setError("Failed to toggle user status");
-    }
-  };
-
   const initializeUpdateForm = (user: User) => {
+    const userAny = user as any;
     setUpdateFormData({
       username: user.username,
-      role: user.role as "ADMIN" | "PESERTA_MAGANG" | "PEMBIMBING_MAGANG",
+      role: user.role,
       isActive: user.isActive,
+      divisi: userAny.divisi || "",
     });
   };
 
@@ -171,44 +170,105 @@ export default function ManageUsersPage() {
 
   return (
     <Flex direction="column" gap="4">
-      {error && <div className="bg-red-50 text-red-700 px-4 py-2 rounded-md text-sm">{error}</div>}
+      {error && <div className="bg-red-50 text-red-700 px-4 py-2 rounded-md text-sm border border-red-200">{error}</div>}
 
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-lg font-bold text-gray-900">User Sistem</h2>
-          <p className="text-xs text-gray-500">Kelola akun akses sistem</p>
+          <p className="text-xs text-gray-500">Kelola akun Admin dan Pembimbing</p>
         </div>
         <Dialog.Root>
-          <Dialog.Trigger><Button size="2"><PlusIcon width="16" height="16" /> Tambah User</Button></Dialog.Trigger>
-          <Dialog.Content maxWidth="600px">
-            <Dialog.Title>Tambah User</Dialog.Title>
-            <Flex direction="column" gap="4" mt="2">
-              <TextField.Root placeholder="Username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} />
-              <TextField.Root type="password" placeholder="Password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
-              <Select.Root value={formData.role} onValueChange={v => setFormData({...formData, role: v as any})}>
-                <Select.Trigger />
-                <Select.Content>
-                  <Select.Item value="PESERTA_MAGANG">Peserta Magang</Select.Item>
-                  <Select.Item value="ADMIN">Admin</Select.Item>
-                  <Select.Item value="PEMBIMBING_MAGANG">Pembimbing</Select.Item>
-                </Select.Content>
-              </Select.Root>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={formData.isActive} onChange={e => setFormData({...formData, isActive: e.target.checked})} /> Aktif</label>
+          <Dialog.Trigger>
+            <Button size="2"><PlusIcon width="16" height="16" /> Tambah User</Button>
+          </Dialog.Trigger>
+
+          {/* --- DIALOG TAMBAH USER --- */}
+          <Dialog.Content maxWidth="500px">
+            <Dialog.Title>Tambah User Baru</Dialog.Title>
+            <Dialog.Description size="2" mb="4" color="gray">
+              Buat akun akses untuk Admin atau Pembimbing Magang.
+            </Dialog.Description>
+
+            <Flex direction="column" gap="4">
+              <Box>
+                <Text as="div" size="2" weight="bold" mb="1" className="text-gray-700">Username</Text>
+                <TextField.Root
+                  placeholder="Contoh: admin_utama"
+                  value={formData.username}
+                  onChange={e => setFormData({...formData, username: e.target.value})}
+                >
+                  <TextField.Slot><PersonIcon height="16" width="16" /></TextField.Slot>
+                </TextField.Root>
+              </Box>
+
+              <Box>
+                <Text as="div" size="2" weight="bold" mb="1" className="text-gray-700">Password</Text>
+                <TextField.Root
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={e => setFormData({...formData, password: e.target.value})}
+                >
+                  <TextField.Slot><LockClosedIcon height="16" width="16" /></TextField.Slot>
+                </TextField.Root>
+              </Box>
+
+              <Grid columns="2" gap="4">
+                <Box>
+                  <Text as="div" size="2" weight="bold" mb="1" className="text-gray-700">Role Akses</Text>
+                  <Select.Root value={formData.role} onValueChange={v => setFormData({...formData, role: v})}>
+                    <Select.Trigger className="w-full" placeholder="Pilih Role" />
+                    <Select.Content>
+                      <Select.Item value="ADMIN">Admin</Select.Item>
+                      <Select.Item value="PEMBIMBING_MAGANG">Pembimbing Magang</Select.Item>
+                    </Select.Content>
+                  </Select.Root>
+                </Box>
+
+                <Box>
+                  <Text as="div" size="2" weight="bold" mb="1" className="text-gray-700">Bidang / Divisi</Text>
+                  <Select.Root value={formData.divisi} onValueChange={v => setFormData({...formData, divisi: v})}>
+                    <Select.Trigger className="w-full" placeholder="Pilih Bidang" />
+                    <Select.Content>
+                      {BIDANG_OPSI.map(bidang => (
+                        <Select.Item key={bidang} value={bidang}>{bidang}</Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Root>
+                </Box>
+              </Grid>
+
+              <Flex justify="between" align="center" className="bg-gray-50 p-3 rounded-lg border border-gray-200 mt-1">
+                <Box>
+                  <Text as="div" size="2" weight="bold" className="text-gray-800">Status Akun</Text>
+                  <Text as="div" size="1" color="gray">Aktifkan agar user bisa login</Text>
+                </Box>
+                <Switch
+                  checked={formData.isActive}
+                  onCheckedChange={checked => setFormData({...formData, isActive: checked})}
+                />
+              </Flex>
             </Flex>
+
             <Flex gap="3" mt="6" justify="end">
-              <Dialog.Close><Button variant="soft" color="gray">Batal</Button></Dialog.Close>
-              <Button onClick={handleCreate} disabled={isCreating}>{isCreating ? "Menyimpan..." : "Simpan"}</Button>
+              <Dialog.Close>
+                <Button variant="soft" color="gray">Batal</Button>
+              </Dialog.Close>
+              <Button onClick={handleCreate} disabled={isCreating}>
+                {isCreating ? "Menyimpan..." : "Simpan"}
+              </Button>
             </Flex>
           </Dialog.Content>
         </Dialog.Root>
       </div>
 
+      {/* FILTER SEARCH & ROLE */}
       <Card className="shadow-sm">
         <Box p="3">
           <Flex direction="column" gap="3">
             <Flex gap="3" wrap="wrap" align="center" justify="between">
               <div className="flex-1 min-w-[200px]">
-                <TextField.Root size="2" color="indigo" placeholder="Cari user..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full" radius="large">
+                <TextField.Root size="2" color="indigo" placeholder="Cari username..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full" radius="large">
                   <TextField.Slot><MixerHorizontalIcon height="14" width="14" /></TextField.Slot>
                 </TextField.Root>
               </div>
@@ -217,8 +277,8 @@ export default function ManageUsersPage() {
                 <Select.Content color="indigo">
                   <Select.Item value="Semua">Semua</Select.Item>
                   <Select.Item value="ADMIN">Admin</Select.Item>
-                  <Select.Item value="PESERTA_MAGANG">Peserta</Select.Item>
                   <Select.Item value="PEMBIMBING_MAGANG">Pembimbing</Select.Item>
+                  <Select.Item value="PESERTA_MAGANG">Peserta</Select.Item>
                 </Select.Content>
               </Select.Root>
             </Flex>
@@ -226,6 +286,7 @@ export default function ManageUsersPage() {
         </Box>
       </Card>
 
+      {/* TABEL USER */}
       <Card className="shadow-sm overflow-hidden">
         <Flex direction="row" justify="between" align="center" className="border-b border-gray-100 bg-gray-50/50" p="3">
           <Flex align="center" gap="2">
@@ -240,6 +301,7 @@ export default function ManageUsersPage() {
             <Table.Row className="bg-gray-50/80">
               <Table.ColumnHeaderCell className="p-3">Username</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell className="p-3">Role</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell className="p-3">Bidang</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell className="p-3">Status</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell className="p-3">Dibuat</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell className="p-3" align="center">Aksi</Table.ColumnHeaderCell>
@@ -251,39 +313,75 @@ export default function ManageUsersPage() {
               <Table.Row key={user.id} className="hover:bg-blue-50/30 transition-colors">
                 <Table.Cell className="p-3"><Text size="2" weight="medium">{user.username}</Text></Table.Cell>
                 <Table.Cell className="p-3"><RoleBadge role={user.role} /></Table.Cell>
+                <Table.Cell className="p-3"><Text size="1" color="gray">{(user as any).divisi || "-"}</Text></Table.Cell>
                 <Table.Cell className="p-3"><StatusBadge isActive={user.isActive} /></Table.Cell>
                 <Table.Cell className="p-3"><Text size="1" color="gray">{new Date(user.createdAt).toLocaleDateString("id-ID")}</Text></Table.Cell>
                 <Table.Cell className="p-3" align="center">
                   <Flex align="center" justify="center" gap="2">
+
+                    {/* --- DIALOG EDIT USER --- */}
                     <Dialog.Root>
                       <Dialog.Trigger>
                         <IconButton size="1" color="blue" variant="outline" onClick={() => initializeUpdateForm(user)}><Pencil2Icon width="14" height="14" /></IconButton>
                       </Dialog.Trigger>
-                      <Dialog.Content maxWidth="600px">
+                      <Dialog.Content maxWidth="500px">
                         <Dialog.Title>Edit User</Dialog.Title>
+
                         <Flex direction="column" gap="4" mt="2">
-                          <TextField.Root value={updateFormData.username} onChange={e => setUpdateFormData({...updateFormData, username: e.target.value})} placeholder="Username" />
-                          <TextField.Root type="password" value={updateFormData.password} onChange={e => setUpdateFormData({...updateFormData, password: e.target.value})} placeholder="Password Baru (Opsional)" />
-                          <Select.Root value={updateFormData.role} onValueChange={v => setUpdateFormData({...updateFormData, role: v as any})}>
-                            <Select.Trigger />
-                            <Select.Content>
-                              <Select.Item value="PESERTA_MAGANG">Peserta</Select.Item>
-                              <Select.Item value="ADMIN">Admin</Select.Item>
-                              <Select.Item value="PEMBIMBING_MAGANG">Pembimbing</Select.Item>
-                            </Select.Content>
-                          </Select.Root>
-                          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={updateFormData.isActive} onChange={e => setUpdateFormData({...updateFormData, isActive: e.target.checked})} /> Aktif</label>
+                          <Box>
+                            <Text as="div" size="2" weight="bold" mb="1" className="text-gray-700">Username</Text>
+                            <TextField.Root value={updateFormData.username} onChange={e => setUpdateFormData({...updateFormData, username: e.target.value})} placeholder="Username" />
+                          </Box>
+
+                          <Box>
+                            <Text as="div" size="2" weight="bold" mb="1" className="text-gray-700">Password</Text>
+                            <TextField.Root type="password" value={updateFormData.password} onChange={e => setUpdateFormData({...updateFormData, password: e.target.value})} placeholder="Password Baru (Kosongkan jika tetap)" />
+                          </Box>
+
+                          <Grid columns="2" gap="4">
+                            <Box>
+                              <Text as="div" size="2" weight="bold" mb="1" className="text-gray-700">Role</Text>
+                              <Select.Root value={updateFormData.role} onValueChange={v => setUpdateFormData({...updateFormData, role: v})}>
+                                <Select.Trigger className="w-full" />
+                                <Select.Content>
+                                  <Select.Item value="ADMIN">Admin</Select.Item>
+                                  <Select.Item value="PEMBIMBING_MAGANG">Pembimbing Magang</Select.Item>
+                                  {user.role === 'PESERTA_MAGANG' && <Select.Item value="PESERTA_MAGANG">Peserta Magang</Select.Item>}
+                                </Select.Content>
+                              </Select.Root>
+                            </Box>
+
+                            <Box>
+                              <Text as="div" size="2" weight="bold" mb="1" className="text-gray-700">Bidang / Divisi</Text>
+                              <Select.Root value={updateFormData.divisi} onValueChange={v => setUpdateFormData({...updateFormData, divisi: v})}>
+                                <Select.Trigger className="w-full" placeholder="Pilih Bidang" />
+                                <Select.Content>
+                                  {BIDANG_OPSI.map(bidang => (
+                                    <Select.Item key={bidang} value={bidang}>{bidang}</Select.Item>
+                                  ))}
+                                </Select.Content>
+                              </Select.Root>
+                            </Box>
+                          </Grid>
+
+                          <Flex justify="between" align="center" className="bg-gray-50 p-3 rounded-lg border border-gray-200 mt-1">
+                            <Box>
+                              <Text as="div" size="2" weight="bold" className="text-gray-800">Status Akun</Text>
+                              <Text as="div" size="1" color="gray">Izin login user</Text>
+                            </Box>
+                            <Switch
+                              checked={updateFormData.isActive}
+                              onCheckedChange={checked => setUpdateFormData({...updateFormData, isActive: checked})}
+                            />
+                          </Flex>
                         </Flex>
+
                         <Flex gap="3" mt="6" justify="end">
                           <Dialog.Close><Button variant="soft" color="gray">Batal</Button></Dialog.Close>
-                          <Button onClick={() => handleUpdate(user.id)} disabled={isUpdating === user.id}>Simpan</Button>
+                          <Button onClick={() => handleUpdate(user.id)} disabled={isUpdating === user.id}>Simpan Perubahan</Button>
                         </Flex>
                       </Dialog.Content>
                     </Dialog.Root>
-
-                    <IconButton size="1" color={user.isActive ? "orange" : "green"} variant="outline" onClick={() => handleToggleStatus(user.id)}>
-                      {user.isActive ? <Cross2Icon width="14" height="14" /> : <CheckIcon width="14" height="14" />}
-                    </IconButton>
 
                     <AlertDialog.Root>
                       <AlertDialog.Trigger>
@@ -291,7 +389,7 @@ export default function ManageUsersPage() {
                       </AlertDialog.Trigger>
                       <AlertDialog.Content maxWidth="450px">
                         <AlertDialog.Title>Hapus User</AlertDialog.Title>
-                        <AlertDialog.Description>Yakin hapus <strong>{user.username}</strong>?</AlertDialog.Description>
+                        <AlertDialog.Description>Yakin hapus akun <strong>{user.username}</strong>?</AlertDialog.Description>
                         <Flex gap="3" mt="4" justify="end">
                           <AlertDialog.Cancel><Button variant="soft" color="gray">Batal</Button></AlertDialog.Cancel>
                           <AlertDialog.Action><Button variant="solid" color="red" onClick={() => handleDelete(user.id)}>Hapus</Button></AlertDialog.Action>

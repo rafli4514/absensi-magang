@@ -1,7 +1,7 @@
 import api from '../lib/api';
 import type { PengajuanIzin } from '../types';
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
@@ -24,6 +24,8 @@ export interface CreatePengajuanIzinRequest {
   tanggalSelesai: string;
   alasan: string;
   dokumenPendukung?: string;
+  // Field status ditambahkan agar bisa di-update
+  status?: "PENDING" | "DISETUJUI" | "DITOLAK";
 }
 
 export interface PengajuanIzinStats {
