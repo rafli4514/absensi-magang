@@ -7,6 +7,7 @@ import pengajuanIzinRoutes = require('./pengajuanIzinRoutes');
 import logbookRoutes = require('./logbookRoutes');
 import dashboardRoutes = require('./dashboardRoutes');
 import settingsRoutes = require('./settingsRoutes');
+import serverMonitorRoutes = require('./serverMonitorRoutes');
 
 const router = Router();
 
@@ -31,5 +32,9 @@ router.use('/pengajuan-izin', pengajuanIzinRoutes);
 router.use('/logbook', logbookRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/settings', settingsRoutes);
+
+// [BARU] Daftarkan route server monitor
+// Ini akan membuat endpoint: /api/server/specs dan /api/server/stats
+router.use('/server', serverMonitorRoutes);
 
 module.exports = router;
