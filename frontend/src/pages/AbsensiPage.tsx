@@ -8,12 +8,12 @@ import {
   Card,
   Dialog,
   Flex,
-  Grid,
   IconButton,
   Select,
   Table,
   Text,
   TextField,
+  DropdownMenu,
 } from "@radix-ui/themes";
 import {
   CameraIcon,
@@ -29,69 +29,57 @@ import {
   ChevronRightIcon,
   DoubleArrowLeftIcon,
   DoubleArrowRightIcon,
+  FileTextIcon,
+  FileIcon,
 } from "@radix-ui/react-icons";
+
+// HAPUS IMPORT PRISMA/EXPRESS DISINI (SOURCE MASALAH ANDA)
+// GANTI DENGAN SERVICE FRONTEND:
 import absensiService from "../services/absensiService";
 import Avatar from "../components/Avatar";
-import { parseQRCodeData, formatQRCodeType, getQRCodeTypeColor } from "../lib/qrCodeUtils";
 
+// Import Assets
+import LogoPLN from "../assets/64eb562e223ee070362018.png";
+
+// Import Library Export
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
+// --- Helper Components ---
 const StatusIcon = ({ status }: { status: Absensi["status"] }) => {
   switch (status) {
-    case "VALID":
-      return <CheckCircledIcon color="green" />;
-    case "TERLAMBAT":
-      return <InfoCircledIcon color="orange" />;
-    case "INVALID":
-      return <CrossCircledIcon color="red" />;
-    default:
-      return <CircleBackslashIcon color="gray" />;
+    case "VALID": return <CheckCircledIcon color="green" />;
+    case "TERLAMBAT": return <InfoCircledIcon color="orange" />;
+    case "INVALID": return <CrossCircledIcon color="red" />;
+    default: return <CircleBackslashIcon color="gray" />;
   }
 };
 
 const StatusBadge = ({ status }: { status: Absensi["status"] }) => {
-  const statusConfig = {
+  const statusConfig: any = {
     VALID: { color: "bg-green-100 text-green-800", label: "Valid" },
     TERLAMBAT: { color: "bg-yellow-100 text-yellow-800", label: "Terlambat" },
     INVALID: { color: "bg-red-100 text-red-800", label: "Tidak Valid" },
   };
-
-  const config = statusConfig[status] || {
-    color: "bg-gray-100 text-gray-800",
-    label: status,
-  };
-
-  return (
-    <span
-      className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full ${config.color}`}
-    >
-      {config.label}
-    </span>
-  );
+  const config = statusConfig[status] || { color: "bg-gray-100 text-gray-800", label: status };
+  return <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full ${config.color}`}>{config.label}</span>;
 };
 
 const TypeBadge = ({ tipe }: { tipe: Absensi["tipe"] }) => {
-  const typeConfig = {
+  const typeConfig: any = {
     MASUK: { color: "bg-blue-100 text-blue-800", label: "Masuk" },
     KELUAR: { color: "bg-purple-100 text-purple-800", label: "Keluar" },
     IZIN: { color: "bg-orange-100 text-orange-800", label: "Izin" },
     SAKIT: { color: "bg-red-100 text-red-800", label: "Sakit" },
     CUTI: { color: "bg-green-100 text-green-800", label: "Cuti" },
   };
-
-  const config = typeConfig[tipe] || {
-    color: "bg-gray-100 text-gray-800",
-    label: tipe,
-  };
-
-  return (
-    <span
-      className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full ${config.color}`}
-    >
-      {config.label}
-    </span>
-  );
+  const config = typeConfig[tipe] || { color: "bg-gray-100 text-gray-800", label: tipe };
+  return <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full ${config.color}`}>{config.label}</span>;
 };
 
 export default function AbsensiPage() {
+  // ============ STATE ============
   const [absensi, setAbsensi] = useState<Absensi[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,11 +90,11 @@ export default function AbsensiPage() {
   const [typeFilter, setTypeFilter] = useState<string>("Semua");
   const [dateFilter, setDateFilter] = useState("");
 
-  // Pagination State
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<string>("20");
 
-  // Fetch data on component mount
+  // ============ FETCH DATA ============
   useEffect(() => {
     fetchAbsensi();
   }, []);
@@ -114,7 +102,8 @@ export default function AbsensiPage() {
   const fetchAbsensi = async () => {
     try {
       setLoading(true);
-      const response = await absensiService.getAbsensi();
+      // Panggil API lewat Service, BUKAN Prisma langsung
+      const response = await absensiService.getAbsensi({ limit: 1000 });
       if (response.success && response.data) {
         setAbsensi(response.data);
       } else {
@@ -130,14 +119,9 @@ export default function AbsensiPage() {
     }
   };
 
-  const handleUpdateStatus = async (
-    id: string,
-    newStatus: Absensi["status"]
-  ) => {
+  const handleUpdateStatus = async (id: string, newStatus: Absensi["status"]) => {
     try {
-      const response = await absensiService.updateAbsensi(id, {
-        status: newStatus,
-      });
+      const response = await absensiService.updateAbsensi(id, { status: newStatus });
       if (response.success) {
         await fetchAbsensi();
       } else {
@@ -149,9 +133,8 @@ export default function AbsensiPage() {
     }
   };
 
-  const hasPesertaMagang = (
-    record: Absensi
-  ): record is Absensi & { pesertaMagang: PesertaMagang } => {
+  // ============ FILTER LOGIC ============
+  const hasPesertaMagang = (record: Absensi): record is Absensi & { pesertaMagang: PesertaMagang } => {
     return record.pesertaMagang !== undefined && record.pesertaMagang !== null;
   };
 
@@ -162,12 +145,14 @@ export default function AbsensiPage() {
 
     const matchesStatus = statusFilter === "Semua" || record.status === statusFilter;
     const matchesType = typeFilter === "Semua" || record.tipe === typeFilter;
-    const matchesDate = !dateFilter || new Date(record.timestamp).toDateString() === new Date(dateFilter).toDateString();
+
+    const recordDate = new Date(record.timestamp).toISOString().split('T')[0];
+    const matchesDate = !dateFilter || recordDate === dateFilter;
 
     return matchesSearch && matchesStatus && matchesType && matchesDate;
   });
 
-  // Pagination Logic
+  // ============ PAGINATION LOGIC ============
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, typeFilter, dateFilter, itemsPerPage]);
@@ -181,10 +166,89 @@ export default function AbsensiPage() {
     currentPage * pageSize
   );
 
+  // ============ EXPORT LOGIC ============
+  const addHeaderToPDF = (doc: jsPDF, title: string) => {
+    const PLN_BLUE = "#0066CC";
+    const DARK_GREY = "#333333";
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    try {
+      doc.addImage(LogoPLN, "PNG", 14, 10, 50, 20);
+    } catch (e) {
+      console.warn("Logo failed to load", e);
+    }
+
+    doc.setTextColor(PLN_BLUE);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("PT PLN ICON PLUS", 70, 18);
+
+    doc.setTextColor(DARK_GREY);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Kantor Perwakilan Aceh Jl. Teuku Umar No. 426", 70, 24);
+
+    doc.setDrawColor(PLN_BLUE);
+    doc.setLineWidth(1);
+    doc.line(14, 35, pageWidth - 14, 35);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(title, 14, 45);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString("id-ID")}`, 14, 51);
+
+    return 55;
+  };
+
+  const handleExport = (format: "excel" | "pdf") => {
+    const fileName = `Monitoring_Absensi_${new Date().toISOString().split("T")[0]}`;
+
+    const dataToExport = filteredAbsensi.map(item => ({
+      "Nama": item.pesertaMagang.nama,
+      "Tipe": item.tipe,
+      "Waktu": new Date(item.timestamp).toLocaleString("id-ID"),
+      "Lokasi": item.lokasi?.alamat || "-",
+      "Status": item.status,
+      "Catatan": item.catatan || "-"
+    }));
+
+    if (format === "excel") {
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Data Absensi");
+      XLSX.writeFile(workbook, `${fileName}.xlsx`);
+    } else if (format === "pdf") {
+      const doc = new jsPDF();
+      const startY = addHeaderToPDF(doc, "MONITORING ABSENSI HARIAN");
+
+      const tableColumn = ["Nama", "Tipe", "Waktu", "Status", "Lokasi"];
+      const tableRows = filteredAbsensi.map(item => [
+        item.pesertaMagang.nama,
+        item.tipe,
+        new Date(item.timestamp).toLocaleString("id-ID", {dateStyle: 'short', timeStyle: 'short'}),
+        item.status,
+        item.lokasi?.alamat ? item.lokasi.alamat.substring(0, 30) + "..." : "-"
+      ]);
+
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: startY,
+        theme: 'striped',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [0, 102, 204] }
+      });
+
+      doc.save(`${fileName}.pdf`);
+    }
+  };
+
   const renderPaginationButtons = () => {
     const buttons = [];
     const maxVisiblePages = 5;
-
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
@@ -240,19 +304,30 @@ export default function AbsensiPage() {
           </p>
         </div>
 
-        {/* Export button */}
-        <Button size="2" className="flex items-center cursor-pointer">
-          <DownloadIcon className="w-3.5 h-3.5 mr-1.5" />
-          Export Data
-        </Button>
+        {/* Export Dropdown */}
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger>
+            <Button size="2" className="flex items-center cursor-pointer bg-blue-600 text-white hover:bg-blue-700">
+              <DownloadIcon className="w-3.5 h-3.5 mr-1.5" />
+              Export Data
+            </Button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content>
+            <DropdownMenu.Item onClick={() => handleExport('excel')} className="cursor-pointer">
+              <FileIcon className="mr-2 h-4 w-4 text-green-600"/> Excel
+            </DropdownMenu.Item>
+            <DropdownMenu.Item onClick={() => handleExport('pdf')} className="cursor-pointer">
+              <FileTextIcon className="mr-2 h-4 w-4 text-red-600"/> PDF
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
       </div>
 
-      {/* Filters - Compact */}
+      {/* Filters */}
       <Card className="shadow-sm">
         <Box p="3">
           <Flex direction="column" gap="3">
             <Flex gap="3" wrap="wrap" align="center" justify="between">
-
               {/* Search */}
               <div className="flex-1 min-w-[200px]">
                 <TextField.Root
@@ -309,7 +384,7 @@ export default function AbsensiPage() {
                     type="date"
                     value={dateFilter}
                     onChange={(e) => setDateFilter(e.target.value)}
-                    className="bg-gray-50 border border-gray-200 text-xs text-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-1.5"
+                    className="bg-gray-50 border border-gray-200 text-xs text-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-1.5 h-8"
                   />
                 </div>
               </Flex>
@@ -318,16 +393,14 @@ export default function AbsensiPage() {
         </Box>
       </Card>
 
-      {/* Absensi records - Compact Table */}
+      {/* Table Section */}
       <Card className="shadow-sm overflow-hidden">
-        {/* Table Header Wrapper */}
         <Flex direction="row" justify="between" align="center" className="border-b border-gray-100 bg-gray-50/50" p="3">
           <Flex align="center" gap="2">
             <ClockIcon width="16" height="16" className="text-gray-700"/>
             <Text weight="bold" size="2" className="text-gray-900">Riwayat Kehadiran</Text>
           </Flex>
 
-          {/* Rows Per Page */}
           <Flex align="center" gap="2">
             <Text size="1" color="gray">Show:</Text>
             <Select.Root value={itemsPerPage} onValueChange={setItemsPerPage} size="1">
@@ -445,13 +518,12 @@ export default function AbsensiPage() {
                               </div>
                             </div>
 
+                            {/* Detail Fields */}
                             <div className="grid grid-cols-2 gap-2 text-sm">
                               <Text className="text-gray-500 text-xs">Tipe</Text>
                               <div className="text-right"><TypeBadge tipe={item.tipe} /></div>
-
                               <Text className="text-gray-500 text-xs">Waktu</Text>
                               <Text className="text-right font-medium text-xs">{new Date(item.timestamp).toLocaleString()}</Text>
-
                               <Text className="text-gray-500 text-xs">Status</Text>
                               <div className="text-right"><StatusBadge status={item.status} /></div>
                             </div>
@@ -460,9 +532,6 @@ export default function AbsensiPage() {
                               <Text className="text-xs font-bold text-gray-700 block">Lokasi</Text>
                               <Text className="text-xs text-gray-600 block leading-relaxed">
                                 {item.lokasi?.alamat || "Tidak ada data lokasi"}
-                              </Text>
-                              <Text className="text-[10px] text-gray-400 block font-mono">
-                                {item.lokasi?.latitude}, {item.lokasi?.longitude}
                               </Text>
                             </div>
 
@@ -500,35 +569,17 @@ export default function AbsensiPage() {
                         <Dialog.Description size="2" className="mb-4">
                           Validasi kehadiran berdasarkan foto selfie peserta.
                         </Dialog.Description>
-
                         <div className="space-y-4">
                           <div className="relative rounded-lg overflow-hidden border border-gray-200">
                             <AspectRatio ratio={4/3}>
-                              <img
-                                src={item.selfieUrl || "../assets/placeholder.jpg"}
-                                alt="Foto Selfie"
-                                className="w-full h-full object-cover"
-                              />
+                              <img src={item.selfieUrl || "../assets/placeholder.jpg"} alt="Foto Selfie" className="w-full h-full object-cover" />
                             </AspectRatio>
-                            <div className="absolute bottom-0 left-0 right-0 bg-black/50 p-2 text-white text-xs backdrop-blur-sm">
-                              <p>Waktu: {new Date(item.timestamp).toLocaleTimeString()}</p>
-                            </div>
                           </div>
-
                           <div className="flex gap-3 justify-end pt-2">
-                            <Button
-                              variant="soft"
-                              color="red"
-                              onClick={() => handleUpdateStatus(item.id, "INVALID")}
-                              disabled={item.status === "INVALID"}
-                            >
+                            <Button variant="soft" color="red" onClick={() => handleUpdateStatus(item.id, "INVALID")} disabled={item.status === "INVALID"}>
                               <CrossCircledIcon className="mr-1" /> Tidak Valid
                             </Button>
-                            <Button
-                              color="green"
-                              onClick={() => handleUpdateStatus(item.id, "VALID")}
-                              disabled={item.status === "VALID"}
-                            >
+                            <Button color="green" onClick={() => handleUpdateStatus(item.id, "VALID")} disabled={item.status === "VALID"}>
                               <CheckCircledIcon className="mr-1" /> Valid
                             </Button>
                           </div>
@@ -542,42 +593,25 @@ export default function AbsensiPage() {
           </Table.Body>
         </Table.Root>
 
+        {/* Empty State & Pagination */}
         {filteredAbsensi.length === 0 && (
           <Box className="text-center py-10 bg-gray-50/30">
             <ClockIcon className="h-6 w-6 text-gray-300 mx-auto mb-2" />
-            <Flex direction="column" justify="center">
-              <Text size="2" color="gray" weight="medium">
-                Tidak ada data absensi yang ditemukan
-              </Text>
-            </Flex>
+            <Text size="2" color="gray" weight="medium">Tidak ada data absensi yang ditemukan</Text>
           </Box>
         )}
 
-        {/* Pagination Footer */}
         {filteredAbsensi.length > 0 && itemsPerPage !== "All" && (
           <Flex justify="between" align="center" p="3" className="border-t border-gray-100 bg-gray-50/30">
             <Text size="1" color="gray">
-              Showing <span className="font-medium text-gray-900">{(currentPage - 1) * pageSize + 1}</span> to{" "}
-              <span className="font-medium text-gray-900">{Math.min(currentPage * pageSize, totalItems)}</span> of{" "}
-              <span className="font-medium text-gray-900">{totalItems}</span> entries
+              Showing <span className="font-medium text-gray-900">{(currentPage - 1) * pageSize + 1}</span> to <span className="font-medium text-gray-900">{Math.min(currentPage * pageSize, totalItems)}</span> of <span className="font-medium text-gray-900">{totalItems}</span> entries
             </Text>
-
             <Flex gap="1" align="center">
-              <Button variant="soft" color="gray" size="1" disabled={currentPage === 1} onClick={() => setCurrentPage(1)} className="cursor-pointer">
-                <DoubleArrowLeftIcon width="12" height="12" />
-              </Button>
-              <Button variant="soft" color="gray" size="1" disabled={currentPage === 1} onClick={() => setCurrentPage(curr => Math.max(1, curr - 1))} className="cursor-pointer">
-                <ChevronLeftIcon width="12" height="12" />
-              </Button>
-
+              <Button variant="soft" color="gray" size="1" disabled={currentPage === 1} onClick={() => setCurrentPage(1)}><DoubleArrowLeftIcon width="12" height="12" /></Button>
+              <Button variant="soft" color="gray" size="1" disabled={currentPage === 1} onClick={() => setCurrentPage(curr => Math.max(1, curr - 1))}><ChevronLeftIcon width="12" height="12" /></Button>
               <div className="flex gap-1 mx-1">{renderPaginationButtons()}</div>
-
-              <Button variant="soft" color="gray" size="1" disabled={currentPage === totalPages} onClick={() => setCurrentPage(curr => Math.min(totalPages, curr + 1))} className="cursor-pointer">
-                <ChevronRightIcon width="12" height="12" />
-              </Button>
-              <Button variant="soft" color="gray" size="1" disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)} className="cursor-pointer">
-                <DoubleArrowRightIcon width="12" height="12" />
-              </Button>
+              <Button variant="soft" color="gray" size="1" disabled={currentPage === totalPages} onClick={() => setCurrentPage(curr => Math.min(totalPages, curr + 1))}><ChevronRightIcon width="12" height="12" /></Button>
+              <Button variant="soft" color="gray" size="1" disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)}><DoubleArrowRightIcon width="12" height="12" /></Button>
             </Flex>
           </Flex>
         )}

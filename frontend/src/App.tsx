@@ -1,15 +1,19 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Theme } from "@radix-ui/themes";
+import "./App.css";
+
+// Components
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { Theme } from "@radix-ui/themes";
+
+// Pages
 import Login from "./pages/LoginPage";
-import UserManagementPage from "./pages/UserManagementPage";
-import ManageUsersPage from "./pages/ManageUsersPage";
+import UserDashboardPage from "./pages/DashboardPage"; // Dashboard User
+import ServerDashboardPage from "./pages/ServerDashboardPage"; // Dashboard Server (Baru)
 import AbsensiPage from "./pages/AbsensiPage";
-import "./App.css";
-import DashboardPage from "./pages/DashboardPage";
 import PengajuanIzinPage from "./pages/PengajuanIzinPage";
 import LaporanPage from "./pages/LaporanPage";
+import UserManagementPage from "./pages/UserManagementPage";
 import PengaturanPage from "./pages/PengaturanPage";
 import ProfilPage from "./pages/ProfilPage";
 import ProfilPesertaMagangPage from "./pages/ProfilPesertaMagangPage";
@@ -17,10 +21,12 @@ import BarcodePage from "./pages/BarcodePage";
 
 function App() {
   return (
-    <Theme> 
+    <Theme>
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+
+          {/* Main Layout dengan Proteksi */}
           <Route
             path="/"
             element={
@@ -29,14 +35,26 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<DashboardPage />} />
-            <Route path="/manage-users" element={<UserManagementPage />} />
-            <Route path="/peserta-magang" element={<UserManagementPage />} />
-            <Route path="/absensi" element={<AbsensiPage />} />
-            <Route path="/izin" element={<PengajuanIzinPage />} />
-            <Route path="/laporan" element={<LaporanPage />} />
+            {/* Dashboard Routing */}
+            <Route index element={<UserDashboardPage />} />
+            <Route path="dashboard/server" element={<ServerDashboardPage />} />
+
+            {/* Fitur Utama */}
+            <Route path="absensi" element={<AbsensiPage />} />
+            <Route path="izin" element={<PengajuanIzinPage />} />
+            <Route path="laporan" element={<LaporanPage />} />
+
+            {/* User Management */}
+            <Route path="manage-users" element={<UserManagementPage />} />
+            <Route path="peserta-magang" element={<UserManagementPage />} />
+
+            {/* Profile Detail */}
+            <Route path="profil-pengguna" element={<ProfilPage />} />
+            <Route path="profil-peserta/:id" element={<ProfilPesertaMagangPage />} />
+
+            {/* Admin Only Routes */}
             <Route
-              path="/pengaturan"
+              path="pengaturan"
               element={
                 <ProtectedRoute requiredRole="ADMIN">
                   <PengaturanPage />
@@ -44,18 +62,12 @@ function App() {
               }
             />
             <Route
-              path="/barcode"
+              path="barcode"
               element={
                 <ProtectedRoute requiredRole="ADMIN">
                   <BarcodePage />
                 </ProtectedRoute>
               }
-            />
-
-            <Route path="/profil-pengguna" element={<ProfilPage />} />
-            <Route
-              path="/profil-peserta/:id"
-              element={<ProfilPesertaMagangPage />}
             />
           </Route>
         </Routes>
