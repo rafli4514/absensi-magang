@@ -118,7 +118,7 @@ export const loginPesertaMagang = async (req: Request, res: Response) => {
         avatar: user.pesertaMagang.avatar,
       },
       token,
-      expiresIn: "24h",
+      expiresIn: "30d",
     });
   } catch (error) {
     console.error("Peserta magang login error:", error);

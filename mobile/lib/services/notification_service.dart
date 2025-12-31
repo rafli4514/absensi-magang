@@ -11,13 +11,12 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   Future<void> initialize() async {
-    // 1. Inisialisasi Timezone
     tz.initializeTimeZones();
 
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    // 2. Setup iOS (Request Permission saat init)
+    // Setup iOS
     const DarwinInitializationSettings iosSettings =
         DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -31,6 +30,20 @@ class NotificationService {
     );
 
     await _notifications.initialize(settings);
+
+    // [TAMBAHAN] Request permission untuk Android
+    await _requestAndroidPermission();
+  }
+
+  // Tambahkan method ini
+  Future<void> _requestAndroidPermission() async {
+    final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+        _notifications.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidImplementation != null) {
+      await androidImplementation.requestNotificationsPermission();
+    }
   }
 
   // Menampilkan notifikasi instan

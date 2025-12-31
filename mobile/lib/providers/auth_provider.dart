@@ -34,7 +34,6 @@ class AuthProvider with ChangeNotifier {
           await StorageService.getString(AppConstants.userDataKey);
       final token = await StorageService.getString(AppConstants.tokenKey);
 
-      // Pastikan string tidak kosong sebelum decode
       if (userDataStr != null &&
           userDataStr.isNotEmpty &&
           token != null &&
@@ -45,9 +44,19 @@ class AuthProvider with ChangeNotifier {
           _token = token;
           notifyListeners();
         } catch (e) {
-          // Jika JSON error (misal format berubah), hapus data corrupt agar user login ulang
-          print('Data corrupt, clearing storage...');
-          await logout();
+          // [PERBAIKAN KRUSIAL]
+          // Jangan panggil logout() di sini!
+          // Jika parsing gagal sedikit (misal format tanggal beda), biarkan user tetap login
+          // dan coba perbaiki lewat refreshProfile() nanti.
+
+          print(
+              '⚠️ Warning: Data user lokal bermasalah, tapi token masih ada.');
+          print('Error details: $e');
+
+          // Tetap set token agar checkAuthentication() mengembalikan true
+          _token = token;
+          // _user mungkin null, nanti akan diisi oleh refreshProfile()
+          notifyListeners();
         }
       }
     } catch (e) {
