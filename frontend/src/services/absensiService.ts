@@ -1,7 +1,7 @@
 import api from '../lib/api';
 import type { Absensi } from '../types';
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
@@ -32,6 +32,17 @@ export interface CreateAbsensiRequest {
   catatan?: string;
   ipAddress?: string;
   device?: string;
+}
+
+// Interface untuk parameter pencarian
+export interface GetAbsensiParams {
+  page?: number;
+  limit?: number;
+  pesertaMagangId?: string;
+  tipe?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 class AbsensiService {
@@ -84,14 +95,13 @@ class AbsensiService {
   }): Promise<ApiResponse<Absensi>> {
     return this.createAbsensi({
       pesertaMagangId,
-      tipe: 'MASUK',
+      ...(options || {}), // Spread options first
+      tipe: 'MASUK',      // Overwrite/Force tipe
       timestamp: new Date().toISOString(),
       status: 'VALID',
-      ...options,
     });
   }
 
-  // Helper untuk get current user ID
   private getCurrentUserId(): string | null {
     try {
       const userStr = localStorage.getItem('user');
@@ -105,7 +115,6 @@ class AbsensiService {
     return null;
   }
 
-  // Submit absensi dengan auto user ID
   async submitAbsensi(options: {
     tipe: 'MASUK' | 'KELUAR';
     lokasi?: { latitude: number; longitude: number; alamat: string };
@@ -117,17 +126,17 @@ class AbsensiService {
       throw new Error('User tidak terautentikasi. Silakan login ulang.');
     }
 
+    const { tipe, ...restOptions } = options;
+
     return this.createAbsensi({
       pesertaMagangId: userId,
       // PERBAIKAN 2: Menghapus 'tipe: options.tipe' karena sudah ada di ...options
       // Ini mencegah error "tipe is specified more than once"
       timestamp: new Date().toISOString(),
       status: 'VALID',
-      ...options,
     });
   }
 
-  // Helper method untuk absensi keluar
   async absensiKeluar(pesertaMagangId: string, options?: {
     lokasi?: { latitude: number; longitude: number; alamat: string };
     selfieUrl?: string;
@@ -135,10 +144,10 @@ class AbsensiService {
   }): Promise<ApiResponse<Absensi>> {
     return this.createAbsensi({
       pesertaMagangId,
+      ...(options || {}),
       tipe: 'KELUAR',
       timestamp: new Date().toISOString(),
       status: 'VALID',
-      ...options,
     });
   }
 }

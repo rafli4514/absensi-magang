@@ -12,7 +12,7 @@ export interface PesertaMagang {
   id: string;
   nama: string;
   username: string;
-  id_peserta_magang?: string; // NISN/NIM
+  id_peserta_magang?: string;
   divisi: string;
   instansi: string;
   id_instansi?: string;
@@ -28,7 +28,6 @@ export interface PesertaMagang {
 export interface Absensi {
   id: string;
   pesertaMagangId: string;
-  // Embedded pesertaMagang is optional when the API expands relations
   pesertaMagang?: PesertaMagang;
   tipe: "MASUK" | "KELUAR" | "IZIN" | "SAKIT" | "CUTI";
   timestamp: string;
@@ -64,7 +63,8 @@ export interface PengajuanIzin {
   id: string;
   pesertaMagangId: string;
   pesertaMagang?: PesertaMagang;
-  tipe: "SAKIT" | "IZIN" | "CUTI";
+  // UPDATE DISINI: Tambahkan tipe baru
+  tipe: "SAKIT" | "IZIN" | "CUTI" | "PULANG_CEPAT" | "ALPHA";
   tanggalMulai: string;
   tanggalSelesai: string;
   alasan: string;
@@ -85,4 +85,33 @@ export interface DashboardStats {
   absensiKeluarHariIni: number;
   tingkatKehadiran: number;
   aktivitasBaruBaruIni: Absensi[];
+  // Tambahan untuk Dashboard Kehadiran
+  attendance?: {
+    present: number;
+    permission: number;
+    sick: number;
+    pending: number;
+    alpha: number;
+  };
+}
+
+// Tipe Gabungan untuk UI (Unified Row)
+export interface UnifiedAttendanceLog {
+  id: string;
+  sourceType: 'ABSENSI' | 'IZIN';
+  peserta: PesertaMagang | undefined;
+  timestamp: string;
+  
+  // Normalized Status
+  statusDisplay: "HADIR" | "TERLAMBAT" | "IZIN" | "SAKIT" | "PENDING" | "INVALID" | "REJECTED";
+  statusColor: "green" | "orange" | "blue" | "red" | "yellow" | "gray";
+  
+  // Detail Data
+  tipe: string;
+  detailTimeOrDuration: string;
+  lokasiOrAlasan: string;
+  buktiUrl?: string;
+  
+  // Original Data (untuk aksi API)
+  originalData: Absensi | PengajuanIzin;
 }

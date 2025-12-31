@@ -2,10 +2,40 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../models/enum/activity_type.dart'; // Pastikan import ini ada
 import '../themes/app_themes.dart';
 import '../widgets/custom_dialog.dart';
 import 'global_context.dart';
 import 'haptic_util.dart';
+
+// --- HELPER FUNCTIONS (Diletakkan di tingkat atas) ---
+
+Color getActivityColor(ActivityType type) {
+  return type.color;
+}
+
+Color getActivityTextColor(ActivityType type) {
+  switch (type) {
+    case ActivityType.sakit:
+    case ActivityType.alpha:
+    case ActivityType.deadline:
+      return Colors.red.shade900;
+    case ActivityType.izin:
+    case ActivityType.meeting:
+      return Colors.blue.shade900;
+    case ActivityType.cuti:
+      return Colors.purple.shade900;
+    case ActivityType.pulangCepat:
+    case ActivityType.training:
+      return Colors.orange.shade900;
+    case ActivityType.presentation:
+      return Colors.green.shade900;
+    default:
+      return Colors.grey.shade900;
+  }
+}
+
+// --- CLASSES ---
 
 class GlobalSnackBar {
   static OverlayEntry? _overlayEntry;
@@ -30,7 +60,7 @@ class GlobalSnackBar {
     Color iconBgColor =
         isDark ? AppThemes.infoColor.withOpacity(0.15) : AppThemes.infoLight;
     IconData defaultIcon = Icons.info_outline_rounded;
-    String defaultTitle = 'Informasi'; // Translate
+    String defaultTitle = 'Informasi';
 
     if (isSuccess) {
       strokeColor = AppThemes.successColor;
@@ -38,7 +68,7 @@ class GlobalSnackBar {
           ? AppThemes.successColor.withOpacity(0.15)
           : AppThemes.successLight;
       defaultIcon = Icons.check_circle_outline_rounded;
-      defaultTitle = 'Sukses'; // Translate
+      defaultTitle = 'Sukses';
       HapticUtil.success();
     } else if (isError) {
       strokeColor = AppThemes.errorColor;
@@ -46,7 +76,7 @@ class GlobalSnackBar {
           ? AppThemes.errorColor.withOpacity(0.15)
           : AppThemes.errorLight;
       defaultIcon = Icons.error_outline_rounded;
-      defaultTitle = 'Gagal'; // Translate
+      defaultTitle = 'Gagal';
       HapticUtil.error();
     } else if (isWarning) {
       strokeColor = AppThemes.warningColor;
@@ -54,7 +84,7 @@ class GlobalSnackBar {
           ? AppThemes.warningColor.withOpacity(0.15)
           : AppThemes.warningLight;
       defaultIcon = Icons.warning_amber_rounded;
-      defaultTitle = 'Peringatan'; // Translate
+      defaultTitle = 'Peringatan';
       HapticUtil.medium();
     } else {
       HapticUtil.light();
@@ -89,11 +119,6 @@ class GlobalSnackBar {
     _overlayEntry = null;
   }
 }
-
-// ... (Kelas _TopSnackBarWidget, AppDialog, AppToast tetap sama)
-// Pastikan menyertakan kode sisanya jika menyalin file ini secara utuh.
-// Untuk mempersingkat, saya hanya menampilkan bagian yang berubah di atas.
-// Jika Anda copy-paste, pastikan bagian _TopSnackBarWidget ke bawah tetap ada.
 
 class _TopSnackBarWidget extends StatefulWidget {
   final String title;

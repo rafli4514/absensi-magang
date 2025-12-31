@@ -20,14 +20,14 @@ class ActivitiesStatistics extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final dailyChart = _ChartCard(
-      title: 'Distribusi Aktivitas', // Translate
+      title: 'Distribusi Aktivitas',
       isDark: isDark,
       height: 250,
       child: _buildPieChart(isDark),
     );
 
     final weeklyChart = _ChartCard(
-      title: 'Performa Mingguan', // Translate
+      title: 'Performa Mingguan',
       isDark: isDark,
       height: 250,
       child: _buildLineChart(isDark),
@@ -43,16 +43,14 @@ class ActivitiesStatistics extends StatelessWidget {
       return _buildEmptyState(isDark);
     }
 
-    // Hitung distribusi berdasarkan tipe
     final typeDistribution = <String, int>{};
     for (final logbook in logbooks) {
-      String? category;
+      String category = 'Lainnya'; // Default value
+
       if (logbook.type != null) {
         category = logbook.type!.displayName;
       } else if (logbook.status != null) {
         category = logbook.status!.displayName;
-      } else {
-        category = 'Lainnya';
       }
 
       typeDistribution[category] = (typeDistribution[category] ?? 0) + 1;
@@ -63,7 +61,10 @@ class ActivitiesStatistics extends StatelessWidget {
     }
 
     final pieChartData = typeDistribution.entries.toList();
-    final totalWithType = typeDistribution.values.reduce((a, b) => a + b);
+    final totalWithType = typeDistribution.values.fold(0, (a, b) => a + b);
+
+    if (totalWithType == 0) return _buildEmptyState(isDark);
+
     final colors = [
       AppThemes.primaryColor,
       AppThemes.successColor,
@@ -104,7 +105,6 @@ class ActivitiesStatistics extends StatelessWidget {
       return _buildEmptyState(isDark);
     }
 
-    // Cek range tanggal
     DateTime? minDate;
     DateTime? maxDate;
 
@@ -114,7 +114,7 @@ class ActivitiesStatistics extends StatelessWidget {
         if (minDate == null || logDate.isBefore(minDate)) minDate = logDate;
         if (maxDate == null || logDate.isAfter(maxDate)) maxDate = logDate;
       } catch (e) {
-        // Skip invalid dates
+        // Skip invalid
       }
     }
 
@@ -126,7 +126,6 @@ class ActivitiesStatistics extends StatelessWidget {
     final weeklyData = <String, int>{};
     final weekRanges = <String, List<DateTime>>{};
 
-    // Hitung 8 minggu ke belakang
     for (int i = 7; i >= 0; i--) {
       final weekDate = now.subtract(Duration(days: i * 7));
       final daysFromMonday = weekDate.weekday - 1;
@@ -140,7 +139,6 @@ class ActivitiesStatistics extends StatelessWidget {
       weekRanges[weekKey] = [weekStart, weekEnd];
     }
 
-    // Hitung logbook per minggu
     for (final logbook in logbooks) {
       try {
         final logDate = DateTime.parse(logbook.tanggal);
@@ -203,7 +201,7 @@ class ActivitiesStatistics extends StatelessWidget {
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 30, // Diperkecil agar rapi
+              reservedSize: 30,
               getTitlesWidget: (value, meta) => Text(
                 value.toInt().toString(),
                 style: TextStyle(

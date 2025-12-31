@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/logbook.dart';
 import '../../themes/app_themes.dart';
+import '../utils/ui_utils.dart';
 
 class LogBookCard extends StatelessWidget {
   final LogBook log;
@@ -106,11 +107,14 @@ class LogBookCard extends StatelessWidget {
                     if (log.type != null)
                       _buildBadge(
                         text: log.type!.displayName,
-                        color: Color(log.type!.color),
+                        // PERBAIKAN DISINI: ubah 'item' menjadi 'log'
+                        color: getActivityColor(log.type!),
                       ),
                     if (log.status != null)
                       _buildBadge(
                         text: log.status!.displayName,
+                        // Pastikan status.color berupa int (0xFF...) atau Color object
+                        // Jika status.color sudah int, gunakan Color(log.status!.color)
                         color: Color(log.status!.color),
                       ),
                   ],
@@ -137,7 +141,7 @@ class LogBookCard extends StatelessWidget {
                             size: 18,
                             color: isDark ? AppThemes.darkTextPrimary : null),
                         const SizedBox(width: 8),
-                        Text('Ubah', // Translate
+                        Text('Ubah',
                             style: TextStyle(
                                 color:
                                     isDark ? AppThemes.darkTextPrimary : null)),
@@ -151,7 +155,7 @@ class LogBookCard extends StatelessWidget {
                         Icon(Icons.delete,
                             size: 18, color: AppThemes.errorColor),
                         SizedBox(width: 8),
-                        Text('Hapus', // Translate
+                        Text('Hapus',
                             style: TextStyle(color: AppThemes.errorColor)),
                       ],
                     ),
