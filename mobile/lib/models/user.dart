@@ -38,34 +38,52 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    // Safety check: pastikan json tidak null/kosong
+    if (json.isEmpty) return User(id: '', username: '', role: 'user');
+
     final pesertaMagang = json['pesertaMagang'];
 
+    // Helper untuk mengambil nilai aman
+    String safeString(dynamic val) => val?.toString() ?? '';
+
     return User(
-      id: json['id']?.toString() ?? '',
-      username: json['username'] ?? '',
-      nama: json['nama'] ?? json['name'] ?? pesertaMagang?['nama'],
+      id: safeString(json['id']),
+      username: safeString(json['username']),
+      nama: json['nama'] ?? json['name'] ?? pesertaMagang?['nama'] ?? 'User',
       email: json['email'],
-      role: (json['role']?.toLowerCase() ?? ''),
+
+      // Handle Role (bisa string, bisa object, huruf besar/kecil)
+      role: safeString(json['role']).toLowerCase().isEmpty
+          ? 'peserta_magang'
+          : safeString(json['role']).toLowerCase(),
+
       idPesertaMagang: json['idPesertaMagang'] ??
           pesertaMagang?['id_peserta_magang'] ??
           pesertaMagang?['idPesertaMagang'],
+
       divisi: json['divisi'] ?? pesertaMagang?['divisi'],
       instansi: json['instansi'] ?? pesertaMagang?['instansi'],
+
       nomorHp:
           json['nomorHp'] ?? pesertaMagang?['nomorHp'] ?? json['phoneNumber'],
+
       tanggalMulai: json['tanggalMulai'] ?? pesertaMagang?['tanggalMulai'],
       tanggalSelesai:
           json['tanggalSelesai'] ?? pesertaMagang?['tanggalSelesai'],
       avatar: json['avatar'] ?? pesertaMagang?['avatar'],
-
-      // --- MAPPING NAMA MENTOR ---
       namaMentor: json['namaMentor'] ?? pesertaMagang?['namaMentor'],
 
-      isActive: json['isActive'] ?? true,
-      createdAt:
-          json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
-      updatedAt:
-          json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      // Handle boolean isActive dengan aman
+      isActive: json['isActive'] == true || json['isActive'] == 'true',
+
+      // Parsing tanggal dengan try-parse agar tidak error
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString())
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'].toString())
+          : null,
+
       token: json['token'],
     );
   }

@@ -180,11 +180,11 @@ class _HomeScreenState extends State<HomeScreen> {
             await StorageService.setBool(storageKey, true);
 
             // [STOP LOGIC] Matikan refresh karena status sudah final
-            _stopRealtimeChecking();
+            // _stopRealtimeChecking();
           } else {
             // Jika sudah pernah lihat notif, tapi timer masih jalan, matikan saja
-            // karena status sudah final (Approved)
-            _stopRealtimeChecking();
+            // // karena status sudah final (Approved)
+            // _stopRealtimeChecking();
           }
         }
       }
