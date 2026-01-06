@@ -1,24 +1,11 @@
-import 'dart:convert';
-
-import 'package:http/http.dart' as http;
-
 import '../models/api_response.dart';
 import '../models/attendance.dart';
-import '../services/storage_service.dart';
 import '../utils/constants.dart';
 import '../utils/indonesian_time.dart';
+import 'api_service.dart';
 
 class AttendanceService {
-  static const String baseUrl = AppConstants.baseUrl;
-  static const Duration timeout = Duration(seconds: 30);
-
-  static Future<Map<String, String>> _getHeaders() async {
-    final token = await StorageService.getString(AppConstants.tokenKey);
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': token != null ? 'Bearer $token' : '',
-    };
-  }
+  static final ApiService _apiService = ApiService();
 
   static Future<ApiResponse<List<Attendance>>> getAllAttendance({
     int page = 1,
@@ -29,48 +16,21 @@ class AttendanceService {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
-    try {
-      final headers = await _getHeaders();
-      final params = <String, String>{
-        'page': page.toString(),
-        'limit': limit.toString(),
-        if (pesertaMagangId != null && pesertaMagangId.isNotEmpty)
-          'pesertaMagangId': pesertaMagangId,
-        if (tipe != null && tipe.isNotEmpty && tipe != 'Semua') 'tipe': tipe,
-        if (status != null && status.isNotEmpty && status != 'Semua')
-          'status': status,
-      };
+    String query = '?page=$page&limit=$limit';
+    if (pesertaMagangId != null && pesertaMagangId.isNotEmpty)
+      query += '&pesertaMagangId=$pesertaMagangId';
+    if (tipe != null && tipe.isNotEmpty && tipe != 'Semua')
+      query += '&tipe=$tipe';
+    if (status != null && status.isNotEmpty && status != 'Semua')
+      query += '&status=$status';
 
-      final uri = Uri.parse(
-        '$baseUrl/absensi',
-      ).replace(queryParameters: params);
-      final response = await http.get(uri, headers: headers).timeout(timeout);
+    // Note: startDate & endDate logic can be added here if backend supports it
 
-      final data = jsonDecode(response.body);
-
-      if (data['success'] == true) {
-        final List<Attendance> attendanceList = (data['data'] as List)
-            .map((item) => Attendance.fromJson(item))
-            .toList();
-
-        return ApiResponse(
-          success: true,
-          data: attendanceList,
-          message: data['message'],
-          pagination: data['pagination'],
-        );
-      } else {
-        return ApiResponse(
-          success: false,
-          message: data['message'] ?? 'Failed to retrieve attendance',
-        );
-      }
-    } catch (e) {
-      return ApiResponse(
-        success: false,
-        message: 'Failed to retrieve attendance: $e',
-      );
-    }
+    return await _apiService.get(
+      '${AppConstants.attendanceEndpoint}$query',
+      (data) =>
+          (data as List).map((item) => Attendance.fromJson(item)).toList(),
+    );
   }
 
   static Future<ApiResponse<Attendance>> createAttendance({
@@ -84,171 +44,51 @@ class AttendanceService {
     String? ipAddress,
     String? device,
   }) async {
-    try {
-      final headers = await _getHeaders();
+    final body = {
+      'pesertaMagangId': pesertaMagangId,
+      'tipe': tipe,
+      'timestamp': timestamp.toIso8601String(),
+      'lokasi': lokasi,
+      'selfieUrl': selfieUrl,
+      'qrCodeData': qrCodeData,
+      'catatan': catatan,
+      'ipAddress': ipAddress,
+      'device': device,
+    };
 
-      final requestBody = {
-        'pesertaMagangId': pesertaMagangId,
-        'tipe': tipe,
-        'timestamp': timestamp.toIso8601String(),
-        'lokasi': lokasi,
-        'selfieUrl': selfieUrl,
-        'qrCodeData': qrCodeData,
-        'catatan': catatan,
-        'ipAddress': ipAddress,
-        'device': device,
-      };
-
-      print('[ATTENDANCE SERVICE] Creating attendance: $requestBody');
-
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/absensi'),
-            headers: headers,
-            body: jsonEncode(requestBody),
-          )
-          .timeout(timeout);
-
-      print('[ATTENDANCE SERVICE] Response status: ${response.statusCode}');
-      print('[ATTENDANCE SERVICE] Response body: ${response.body}');
-
-      final responseBody = response.body;
-
-      // Handle empty response body
-      if (responseBody.isEmpty) {
-        return ApiResponse(
-          success: false,
-          message: 'Server returned empty response',
-          statusCode: response.statusCode,
-        );
-      }
-
-      final data = jsonDecode(responseBody);
-
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300 &&
-          data['success'] == true) {
-        final attendance = Attendance.fromJson(data['data']);
-        return ApiResponse(
-          success: true,
-          data: attendance,
-          message: data['message'],
-        );
-      } else {
-        // Get error message from response
-        final errorMessage =
-            data['message'] ?? data['error'] ?? 'Failed to create attendance';
-        return ApiResponse(
-          success: false,
-          message: errorMessage,
-          statusCode: response.statusCode,
-        );
-      }
-    } on http.ClientException catch (e) {
-      return ApiResponse(
-        success: false,
-        message: 'Network error: ${e.message}',
-      );
-    } on FormatException catch (e) {
-      return ApiResponse(
-        success: false,
-        message: 'Invalid server response: ${e.message}',
-      );
-    } catch (e) {
-      return ApiResponse(
-        success: false,
-        message: 'Failed to create attendance: ${e.toString()}',
-      );
-    }
+    return await _apiService.post(
+      AppConstants.attendanceEndpoint,
+      body,
+      (data) => Attendance.fromJson(data),
+    );
   }
 
   static Future<ApiResponse<Attendance>> getAttendanceById(String id) async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http
-          .get(Uri.parse('$baseUrl/absensi/$id'), headers: headers)
-          .timeout(timeout);
-
-      final data = jsonDecode(response.body);
-
-      if (data['success'] == true) {
-        final attendance = Attendance.fromJson(data['data']);
-        return ApiResponse(
-          success: true,
-          data: attendance,
-          message: data['message'],
-        );
-      } else {
-        return ApiResponse(
-          success: false,
-          message: data['message'] ?? 'Failed to retrieve attendance',
-        );
-      }
-    } catch (e) {
-      return ApiResponse(
-        success: false,
-        message: 'Failed to retrieve attendance: $e',
-      );
-    }
+    return await _apiService.get(
+      '${AppConstants.attendanceEndpoint}/$id',
+      (data) => Attendance.fromJson(data),
+    );
   }
 
   static Future<ApiResponse<List<Attendance>>> getTodayAttendance() async {
-    try {
-      final headers = await _getHeaders();
-      final today = DateTime.now().toIso8601String().split('T')[0];
-      final uri = Uri.parse(
-        '$baseUrl/absensi',
-      ).replace(queryParameters: {'tanggal': today, 'limit': '50'});
-
-      final response = await http.get(uri, headers: headers).timeout(timeout);
-      final data = jsonDecode(response.body);
-
-      if (data['success'] == true) {
-        final List<Attendance> attendanceList = (data['data'] as List)
-            .map((item) => Attendance.fromJson(item))
-            .toList();
-
-        return ApiResponse(
-          success: true,
-          data: attendanceList,
-          message: data['message'],
-        );
-      } else {
-        return ApiResponse(
-          success: false,
-          message: data['message'] ?? 'Failed to retrieve today\'s attendance',
-        );
-      }
-    } catch (e) {
-      return ApiResponse(
-        success: false,
-        message: 'Failed to retrieve today\'s attendance: $e',
-      );
-    }
+    final today = DateTime.now().toIso8601String().split('T')[0];
+    return await _apiService.get(
+      '${AppConstants.attendanceEndpoint}?tanggal=$today&limit=50',
+      (data) =>
+          (data as List).map((item) => Attendance.fromJson(item)).toList(),
+    );
   }
 
-  // [BARU] Helper untuk cek apakah sudah jam pulang
   static bool isClockOutTimeReached(String workEndTime) {
     if (workEndTime.isEmpty) return false;
-
     try {
-      final now = IndonesianTime.now; // Gunakan waktu Indonesia
+      final now = IndonesianTime.now;
       final parts = workEndTime.split(':');
-
       if (parts.length != 2) return false;
-
       final endHour = int.parse(parts[0]);
       final endMinute = int.parse(parts[1]);
-
-      final endTime = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        endHour,
-        endMinute,
-      );
-
-      // Return true jika waktu sekarang >= waktu pulang
+      final endTime =
+          DateTime(now.year, now.month, now.day, endHour, endMinute);
       return now.isAfter(endTime) || now.isAtSameMomentAs(endTime);
     } catch (e) {
       return false;

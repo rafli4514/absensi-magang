@@ -1,12 +1,9 @@
-// auth_service.dart
-import "package:flutter/foundation.dart";
-
-import '../../models/api_response.dart';
-import '../../models/login_response.dart';
-import '../../models/user.dart';
-import '../../services/api_service.dart';
-import '../../services/storage_service.dart';
-import '../../utils/constants.dart';
+import '../models/api_response.dart';
+import '../models/login_response.dart';
+import '../models/user.dart';
+import '../utils/constants.dart';
+import 'api_service.dart';
+import 'storage_service.dart';
 
 class AuthService {
   static final ApiService _apiService = ApiService();
@@ -15,53 +12,21 @@ class AuthService {
     String username,
     String password,
   ) async {
-    if (kDebugMode) {
-      print('🔵 [AUTH SERVICE] Attempting login with username: $username');
-    }
-
-    final response = await _apiService.post(
-        AppConstants.loginEndpoint,
-        {
-          'username': username,
-          'password': password,
-        },
-        (data) => LoginResponse.fromJson(data));
-
-    print(
-      '🔵 [AUTH SERVICE] Login response: ${response.success} - ${response.message}',
+    // Endpoint bisa berbeda antara user biasa dan peserta,
+    // sesuaikan jika backend membedakan route
+    return await _apiService.post(
+      AppConstants.loginEndpoint,
+      {'username': username, 'password': password},
+      (data) => LoginResponse.fromJson(data),
     );
-    return response;
   }
 
-  // Login untuk peserta magang
-  static Future<ApiResponse<LoginResponse>> loginPesertaMagang(
-    String username,
-    String password,
-  ) async {
-    print(
-      '鳩 [AUTH SERVICE] Attempting peserta login with username: $username',
-    );
-
-    final response = await _apiService.post(
-        AppConstants.loginPesertaEndpoint,
-        {
-          'username': username,
-          'password': password,
-        },
-        (data) => LoginResponse.fromJson(data));
-
-    print(
-      '鳩 [AUTH SERVICE] Peserta login response: ${response.success} - ${response.message}',
-    );
-    return response;
-  }
-
-  // Register peserta magang dengan endpoint baru /auth/register-peserta-magang
+  // Unified Register Method
   static Future<ApiResponse<LoginResponse>> registerPesertaMagang({
     required String nama,
     required String username,
     required String password,
-    String? idPesertaMagang, // NISN/NIM
+    String? idPesertaMagang,
     required String divisi,
     required String nomorHp,
     required String tanggalMulai,
@@ -71,11 +36,6 @@ class AuthService {
     String? idInstansi,
     String? status,
   }) async {
-    print(
-      '🐛 [AUTH SERVICE] Attempting register peserta magang with username: $username',
-    );
-
-    // Prepare data sesuai dengan endpoint /auth/register-peserta-magang
     final data = {
       'nama': nama,
       'username': username,
@@ -84,27 +44,20 @@ class AuthService {
       'nomorHp': nomorHp,
       'tanggalMulai': tanggalMulai,
       'tanggalSelesai': tanggalSelesai,
-      if (idPesertaMagang != null && idPesertaMagang.isNotEmpty)
-        'id_peserta_magang': idPesertaMagang,
-      if (instansi != null && instansi.isNotEmpty) 'instansi': instansi,
-      if (idInstansi != null && idInstansi.isNotEmpty)
-        'id_instansi': idInstansi,
-      if (status != null && status.isNotEmpty) 'status': status,
-      if (namaMentor != null && namaMentor.isNotEmpty)
-        'namaMentor': namaMentor, // <--- Kirim ke Backend
+      if (idPesertaMagang != null) 'id_peserta_magang': idPesertaMagang,
+      if (instansi != null) 'instansi': instansi,
+      if (idInstansi != null) 'id_instansi': idInstansi,
+      if (status != null) 'status': status,
+      if (namaMentor != null) 'namaMentor': namaMentor,
     };
 
-    print('[AUTH SERVICE] Registration data: $data');
-
-    final response = await _apiService.post(
+    return await _apiService.post(
       AppConstants.registerPesertaMagangEndpoint,
       data,
       (data) {
-        // Backend mengembalikan { user, pesertaMagang, token, expiresIn }
-        // Gabungkan data pesertaMagang ke user agar UI mendapatkan nama/divisi/instansi/dates.
+        // Logic mapping user + pesertaMagang (sama seperti sebelumnya)
         final userMap = <String, dynamic>{
           ...(data['user'] ?? {}),
-          // mapping kolom peserta magang ke user
           if (data['pesertaMagang'] != null) ...{
             'nama': data['pesertaMagang']['nama'],
             'idPesertaMagang': data['pesertaMagang']['id_peserta_magang'],
@@ -116,11 +69,9 @@ class AuthService {
             'avatar': data['pesertaMagang']['avatar'],
             'namaMentor': data['pesertaMagang']['namaMentor'],
           },
-          // pastikan role terisi
           if (!(data['user'] ?? {}).containsKey('role'))
             'role': 'PESERTA_MAGANG',
         };
-
         return LoginResponse(
           user: User.fromJson(userMap),
           token: data['token'] ?? '',
@@ -128,86 +79,8 @@ class AuthService {
         );
       },
     );
-
-    print(
-      '[AUTH SERVICE] Register peserta magang response: ${response.success} - ${response.message}',
-    );
-    return response;
   }
 
-  // Register peserta magang dengan endpoint baru /auth/register-peserta-magang
-  static Future<ApiResponse<LoginResponse>> registerPesertaMagangEndpoint({
-    required String nama,
-    required String username,
-    required String password,
-    required String divisi,
-    required String nomorHp,
-    required String tanggalMulai,
-    required String tanggalSelesai,
-    String? namaMentor,
-    String? instansi,
-    String? idInstansi,
-    String? status,
-  }) async {
-    print(
-      '🔵 [AUTH SERVICE] Attempting register peserta magang with username: $username',
-    );
-
-    // Prepare data sesuai dengan endpoint /auth/register-peserta-magang
-    final data = {
-      'nama': nama,
-      'username': username,
-      'password': password,
-      'divisi': divisi,
-      'nomorHp': nomorHp,
-      'tanggalMulai': tanggalMulai,
-      'tanggalSelesai': tanggalSelesai,
-      if (instansi != null && instansi.isNotEmpty) 'instansi': instansi,
-      if (idInstansi != null && idInstansi.isNotEmpty)
-        'id_instansi': idInstansi,
-      if (status != null && status.isNotEmpty) 'status': status,
-    };
-
-    print('[AUTH SERVICE] Registration data: $data');
-
-    final response = await _apiService.post(
-      AppConstants.registerPesertaMagangEndpoint,
-      data,
-      (data) {
-        // Backend mengembalikan { user, pesertaMagang, token, expiresIn }
-        // Gabungkan data pesertaMagang ke user agar UI mendapatkan nama/divisi/instansi/dates.
-        final userMap = <String, dynamic>{
-          ...(data['user'] ?? {}),
-          // mapping kolom peserta magang ke user
-          if (data['pesertaMagang'] != null) ...{
-            'nama': data['pesertaMagang']['nama'],
-            'divisi': data['pesertaMagang']['divisi'],
-            'instansi': data['pesertaMagang']['instansi'],
-            'nomorHp': data['pesertaMagang']['nomorHp'],
-            'tanggalMulai': data['pesertaMagang']['tanggalMulai'],
-            'tanggalSelesai': data['pesertaMagang']['tanggalSelesai'],
-            'avatar': data['pesertaMagang']['avatar'],
-          },
-          // pastikan role terisi
-          if (!(data['user'] ?? {}).containsKey('role'))
-            'role': 'PESERTA_MAGANG',
-        };
-
-        return LoginResponse(
-          user: User.fromJson(userMap),
-          token: data['token'] ?? '',
-          expiresIn: data['expiresIn'] ?? '24h',
-        );
-      },
-    );
-
-    print(
-      '🔵[AUTH SERVICE] Register peserta magang response: ${response.success} - ${response.message}',
-    );
-    return response;
-  }
-
-  // Register dengan semua field untuk peserta magang
   static Future<ApiResponse<LoginResponse>> register({
     required String username,
     required String password,
@@ -217,58 +90,43 @@ class AuthService {
     String? nomorHp,
     String? tanggalMulai,
     String? tanggalSelesai,
-    String? role = "user", // Default sesuai backend
+    String? role = "USER",
   }) async {
-    print('🔵 [AUTH SERVICE] Attempting register with username: $username');
-
-    // Prepare data sesuai dengan yang diharapkan backend
     final data = {
       'username': username,
       'password': password,
-      'role': role?.toUpperCase() ?? 'USER', // Backend expects uppercase
-      if (nama != null && nama.isNotEmpty) 'nama': nama,
-      if (divisi != null && divisi.isNotEmpty) 'divisi': divisi,
-      if (instansi != null && instansi.isNotEmpty) 'instansi': instansi,
-      if (nomorHp != null && nomorHp.isNotEmpty) 'nomorHp': nomorHp,
-      if (tanggalMulai != null && tanggalMulai.isNotEmpty)
-        'tanggalMulai': tanggalMulai,
-      if (tanggalSelesai != null && tanggalSelesai.isNotEmpty)
-        'tanggalSelesai': tanggalSelesai,
+      'role': role?.toUpperCase() ?? 'USER',
+      if (nama != null) 'nama': nama,
+      if (divisi != null) 'divisi': divisi,
+      if (instansi != null) 'instansi': instansi,
+      if (nomorHp != null) 'nomorHp': nomorHp,
+      if (tanggalMulai != null) 'tanggalMulai': tanggalMulai,
+      if (tanggalSelesai != null) 'tanggalSelesai': tanggalSelesai,
     };
 
-    print('[AUTH SERVICE] Registration data: $data');
-
-    final response = await _apiService.post(
+    return await _apiService.post(
       AppConstants.registerEndpoint,
       data,
       (data) => LoginResponse.fromJson(data),
     );
-
-    print(
-      '🔵 [AUTH SERVICE] Register response: ${response.success} - ${response.message}',
-    );
-    return response;
   }
 
-  // Get profile (protected route)
   static Future<ApiResponse<User>> getProfile() async {
-    final response = await _apiService.get(
+    return await _apiService.get(
       AppConstants.profileEndpoint,
       (data) => User.fromJson(data),
     );
-    return response;
   }
 
   static Future<ApiResponse<User>> updateProfile({
     String? username,
     String? nama,
-    String? idPesertaMagang, // NISN/NIM
+    String? idPesertaMagang,
     String? divisi,
     String? instansi,
     String? nomorHp,
     String? currentPassword,
     String? newPassword,
-    // Menambahkan parameter tanggal agar AuthProvider tidak error
     String? tanggalMulai,
     String? tanggalSelesai,
     String? namaMentor,
@@ -281,78 +139,23 @@ class AuthService {
     if (instansi != null) body['instansi'] = instansi;
     if (nomorHp != null) body['nomorHp'] = nomorHp;
     if (namaMentor != null) body['namaMentor'] = namaMentor;
-    // Menambahkan logic untuk mengirim tanggal ke backend
     if (tanggalMulai != null) body['tanggalMulai'] = tanggalMulai;
     if (tanggalSelesai != null) body['tanggalSelesai'] = tanggalSelesai;
 
-    // Password change logic sesuai backend
     if (newPassword != null) {
       body['newPassword'] = newPassword;
-      if (currentPassword != null) {
-        body['currentPassword'] = currentPassword;
-      }
+      if (currentPassword != null) body['currentPassword'] = currentPassword;
     }
 
-    final response = await _apiService.put(
+    return await _apiService.put(
       AppConstants.profileEndpoint,
       body,
       (data) => User.fromJson(data),
     );
-    return response;
   }
 
-  // Upload avatar
-  static Future<ApiResponse<Map<String, dynamic>>> uploadAvatar(
-    List<int> imageBytes,
-    String fileName,
-  ) async {
-    try {
-      final response = await _apiService.multipartPost(
-        '${AppConstants.profileEndpoint}/upload-avatar',
-        {}, // additional fields if needed
-        imageBytes,
-        fileName,
-        'avatar',
-        fromJson: (data) => data as Map<String, dynamic>,
-      );
-      return response;
-    } catch (e) {
-      return ApiResponse<Map<String, dynamic>>(
-        success: false,
-        message: 'Failed to upload avatar: ${e.toString()}',
-        statusCode: 500,
-      );
-    }
-  }
-
-  // Remove avatar
-  static Future<ApiResponse<User>> removeAvatar() async {
-    final response = await _apiService.delete(
-      '${AppConstants.profileEndpoint}/avatar',
-      (data) => User.fromJson(data),
-    );
-    return response;
-  }
-
-  // Refresh token
-  static Future<ApiResponse<Map<String, dynamic>>> refreshToken() async {
-    final response = await _apiService.post(
-      AppConstants.refreshTokenEndpoint,
-      {},
-      (data) => data as Map<String, dynamic>,
-    );
-    return response;
-  }
-
-  // Logout (hanya hapus token di local)
   static Future<void> logout() async {
     await StorageService.remove(AppConstants.tokenKey);
     await StorageService.remove(AppConstants.userDataKey);
-  }
-
-  // Check if user is logged in
-  static Future<bool> isLoggedIn() async {
-    final token = await StorageService.getString(AppConstants.tokenKey);
-    return token != null && token.isNotEmpty;
   }
 }

@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
 import '../../models/enum/attendance_record.dart';
@@ -61,7 +60,6 @@ class _ReportScreenState extends State<ReportScreen> {
           final userData = jsonDecode(userDataStr);
           pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
         }
-
         if ((pesertaMagangId == null || pesertaMagangId.isEmpty) && mounted) {
           await authProvider.refreshProfile();
           final refreshedUserDataStr =
@@ -72,44 +70,12 @@ class _ReportScreenState extends State<ReportScreen> {
                 refreshedUserData['pesertaMagang']?['id']?.toString();
           }
         }
-
-        // Fallback fetch manual jika storage kosong
-        if ((pesertaMagangId == null || pesertaMagangId.isEmpty) &&
-            user.id.isNotEmpty) {
-          try {
-            final token = await StorageService.getString(AppConstants.tokenKey);
-            if (token != null) {
-              final headers = {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer $token',
-              };
-
-              final response = await http
-                  .get(
-                    Uri.parse(
-                        '${AppConstants.baseUrl}/peserta-magang/user/${user.id}'),
-                    headers: headers,
-                  )
-                  .timeout(const Duration(seconds: 10));
-
-              if (response.statusCode == 200) {
-                final responseData = jsonDecode(response.body);
-                if (responseData['success'] == true &&
-                    responseData['data'] != null) {
-                  pesertaMagangId = responseData['data']['id']?.toString();
-                }
-              }
-            }
-          } catch (_) {}
-        }
       } catch (e) {
         if (kDebugMode) print('Error getting pesertaMagangId: $e');
       }
 
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
-        if (mounted) {
-          _showError('ID Peserta Magang tidak ditemukan.');
-        }
+        if (mounted) _showError('ID Peserta Magang tidak ditemukan.');
         return;
       }
 
@@ -181,7 +147,7 @@ class _ReportScreenState extends State<ReportScreen> {
           _attendanceRecords = mappedRecords;
         });
       } else {
-        _showError(response.message ?? 'Gagal memuat data');
+        _showError(response.message);
       }
     } catch (e) {
       _showError('Terjadi kesalahan: ${e.toString()}');
@@ -218,6 +184,16 @@ class _ReportScreenState extends State<ReportScreen> {
     }
   }
 
+  // --- HELPER NAVIGASI QR ---
+  Future<void> _handleQRScan() async {
+    final result = await Navigator.pushNamed(context, RouteNames.qrScan);
+    if (result != null && result is Map && result['success'] == true) {
+      if (mounted) {
+        NavigationHelper.navigateWithoutAnimation(context, RouteNames.home);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -248,262 +224,229 @@ class _ReportScreenState extends State<ReportScreen> {
         title: 'Laporan Absensi',
         showBackButton: false,
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: _isLoading
-                  ? Center(
-                      child: CircularProgressIndicator(
-                        color: isDark
-                            ? AppThemes.darkAccentBlue
-                            : AppThemes.primaryColor,
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              final itemWidth = (constraints.maxWidth - 24) / 3;
-                              return Wrap(
-                                spacing: 12,
-                                runSpacing: 12,
-                                children: [
-                                  _buildSummaryItem(
-                                      'Hadir',
-                                      validCount.toString(),
-                                      AppThemes.successColor,
-                                      Icons.check_circle_rounded,
-                                      isDark,
-                                      itemWidth),
-                                  _buildSummaryItem(
-                                      'Terlambat',
-                                      terlambatCount.toString(),
-                                      AppThemes.warningColor,
-                                      Icons.schedule_rounded,
-                                      isDark,
-                                      itemWidth),
-                                  _buildSummaryItem(
-                                      'Sakit',
-                                      sakitCount.toString(),
-                                      AppThemes.infoColor,
-                                      Icons.medical_services_rounded,
-                                      isDark,
-                                      itemWidth),
-                                  _buildSummaryItem(
-                                      'Izin',
-                                      izinCount.toString(),
-                                      Colors.orange,
-                                      Icons.assignment_turned_in_rounded,
-                                      isDark,
-                                      itemWidth),
-                                  _buildSummaryItem(
-                                      'Tanpa Ket.',
-                                      alphaCount.toString(),
-                                      AppThemes.errorColor,
-                                      Icons.person_off_rounded,
-                                      isDark,
-                                      itemWidth),
-                                  _buildSummaryItem(
-                                      'Invalid',
-                                      invalidCount.toString(),
-                                      Colors.grey,
-                                      Icons.cancel_rounded,
-                                      isDark,
-                                      itemWidth),
-                                ],
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Date Filter
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? AppThemes.darkSurface
-                                  : AppThemes.surfaceColor,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isDark
-                                    ? AppThemes.darkOutline
-                                    : Colors.grey.withOpacity(0.2),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black
-                                      .withOpacity(isDark ? 0.2 : 0.05),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Row(
+      // --- PERBAIKAN: Gunakan Stack agar navbar konsisten ---
+      body: Stack(
+        children: [
+          // 1. LAYER KONTEN
+          _isLoading
+              ? Center(
+                  child: CircularProgressIndicator(
+                    color: isDark
+                        ? AppThemes.darkAccentBlue
+                        : AppThemes.primaryColor,
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadData,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    // Tambahkan padding bawah agar konten tidak tertutup navbar
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+                    child: Column(
+                      children: [
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final itemWidth = (constraints.maxWidth - 24) / 3;
+                            return Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: (isDark
-                                            ? AppThemes.darkAccentBlue
-                                            : AppThemes.primaryColor)
-                                        .withOpacity(0.1),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.calendar_today_outlined,
-                                    size: 20,
-                                    color: isDark
-                                        ? AppThemes.darkAccentBlue
-                                        : AppThemes.primaryColor,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Pilih Tanggal',
-                                        style:
-                                            theme.textTheme.bodySmall?.copyWith(
-                                          color: isDark
-                                              ? AppThemes.darkTextSecondary
-                                              : theme.hintColor,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        _formatMonth(_selectedMonth),
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                          color: isDark
-                                              ? AppThemes.darkTextPrimary
-                                              : theme
-                                                  .textTheme.bodyMedium?.color,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.arrow_drop_down_rounded,
-                                    color: isDark
-                                        ? AppThemes.darkTextPrimary
-                                        : theme.iconTheme.color,
-                                    size: 24,
-                                  ),
-                                  onPressed: _selectDate,
-                                ),
+                                _buildSummaryItem(
+                                    'Hadir',
+                                    validCount.toString(),
+                                    AppThemes.successColor,
+                                    Icons.check_circle_rounded,
+                                    isDark,
+                                    itemWidth),
+                                _buildSummaryItem(
+                                    'Terlambat',
+                                    terlambatCount.toString(),
+                                    AppThemes.warningColor,
+                                    Icons.schedule_rounded,
+                                    isDark,
+                                    itemWidth),
+                                _buildSummaryItem(
+                                    'Sakit',
+                                    sakitCount.toString(),
+                                    AppThemes.infoColor,
+                                    Icons.medical_services_rounded,
+                                    isDark,
+                                    itemWidth),
+                                _buildSummaryItem(
+                                    'Izin',
+                                    izinCount.toString(),
+                                    Colors.orange,
+                                    Icons.assignment_turned_in_rounded,
+                                    isDark,
+                                    itemWidth),
+                                _buildSummaryItem(
+                                    'Tanpa Ket.',
+                                    alphaCount.toString(),
+                                    AppThemes.errorColor,
+                                    Icons.person_off_rounded,
+                                    isDark,
+                                    itemWidth),
+                                _buildSummaryItem(
+                                    'Invalid',
+                                    invalidCount.toString(),
+                                    Colors.grey,
+                                    Icons.cancel_rounded,
+                                    isDark,
+                                    itemWidth),
                               ],
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-
-                          // Attendance List Header
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Riwayat Absensi',
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        // Date Filter Card
+                        _buildDateFilterCard(theme, isDark),
+                        const SizedBox(height: 28),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Riwayat Absensi',
                                   style: theme.textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: isDark
-                                        ? AppThemes.darkTextPrimary
-                                        : theme.textTheme.titleLarge?.color,
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: (isDark
-                                            ? AppThemes.darkAccentBlue
-                                            : AppThemes.primaryColor)
-                                        .withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '${_attendanceRecords.length} Data',
-                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.w700,
                                       color: isDark
+                                          ? AppThemes.darkTextPrimary
+                                          : theme.textTheme.titleLarge?.color)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: (isDark
                                           ? AppThemes.darkAccentBlue
-                                          : AppThemes.primaryColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
+                                          : AppThemes.primaryColor)
+                                      .withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          if (_attendanceRecords.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 40),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    Icons.history_toggle_off_rounded,
-                                    size: 48,
-                                    color: isDark
-                                        ? AppThemes.darkTextSecondary
-                                            .withOpacity(0.5)
-                                        : AppThemes.hintColor.withOpacity(0.5),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Tidak ada riwayat absensi',
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: isDark
-                                          ? AppThemes.darkTextSecondary
-                                          : AppThemes.hintColor,
-                                    ),
-                                  ),
-                                ],
+                                child: Text('${_attendanceRecords.length} Data',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                        color: isDark
+                                            ? AppThemes.darkAccentBlue
+                                            : AppThemes.primaryColor,
+                                        fontWeight: FontWeight.w600)),
                               ),
-                            )
-                          else
-                            ..._attendanceRecords.map(
-                              (record) =>
-                                  _buildModernAttendanceItem(record, isDark),
-                            ),
-                          const SizedBox(height: 20),
-                        ],
-                      ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (_attendanceRecords.isEmpty)
+                          _buildEmptyState(isDark, theme)
+                        else
+                          ..._attendanceRecords.map((record) =>
+                              _buildModernAttendanceItem(record, isDark)),
+                      ],
                     ),
-            ),
-            FloatingBottomNav(
+                  ),
+                ),
+
+          // 2. LAYER NAVIGASI
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: FloatingBottomNav(
               currentRoute: RouteNames.report,
-              onQRScanTap: () {
-                NavigationHelper.navigateWithoutAnimation(
-                    context, RouteNames.qrScan);
-              },
+              onQRScanTap: _handleQRScan, // Fix Navigation
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  // --- HELPER WIDGETS ---
+  // --- WIDGET HELPERS ---
 
-  Widget _buildSummaryItem(
-    String title,
-    String value,
-    Color color,
-    IconData icon,
-    bool isDarkMode,
-    double width,
-  ) {
+  Widget _buildDateFilterCard(ThemeData theme, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color:
+                isDark ? AppThemes.darkOutline : Colors.grey.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color:
+                  (isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor)
+                      .withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.calendar_today_outlined,
+                size: 20,
+                color:
+                    isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Pilih Tanggal',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                        color: isDark
+                            ? AppThemes.darkTextSecondary
+                            : theme.hintColor,
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 2),
+                Text(_formatMonth(_selectedMonth),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isDark
+                            ? AppThemes.darkTextPrimary
+                            : theme.textTheme.bodyMedium?.color)),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.arrow_drop_down_rounded,
+                color:
+                    isDark ? AppThemes.darkTextPrimary : theme.iconTheme.color,
+                size: 24),
+            onPressed: _selectDate,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(bool isDark, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 40),
+      child: Column(
+        children: [
+          Icon(Icons.history_toggle_off_rounded,
+              size: 48,
+              color: isDark
+                  ? AppThemes.darkTextSecondary.withOpacity(0.5)
+                  : AppThemes.hintColor.withOpacity(0.5)),
+          const SizedBox(height: 16),
+          Text('Tidak ada riwayat absensi',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                  color: isDark
+                      ? AppThemes.darkTextSecondary
+                      : AppThemes.hintColor)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(String title, String value, Color color,
+      IconData icon, bool isDarkMode, double width) {
     return Container(
       width: width,
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
@@ -517,28 +460,20 @@ class _ReportScreenState extends State<ReportScreen> {
         children: [
           Icon(icon, color: color, size: 24),
           const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.w700, color: color)),
           const SizedBox(height: 4),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: isDarkMode
-                  ? AppThemes.darkTextSecondary
-                  : AppThemes.hintColor,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          Text(title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode
+                      ? AppThemes.darkTextSecondary
+                      : AppThemes.hintColor),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
         ],
       ),
     );
@@ -556,16 +491,14 @@ class _ReportScreenState extends State<ReportScreen> {
         color: isDarkMode ? AppThemes.darkSurface : AppThemes.surfaceColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDarkMode
-              ? AppThemes.darkOutline
-              : Colors.grey.withOpacity(0.15),
-        ),
+            color: isDarkMode
+                ? AppThemes.darkOutline
+                : Colors.grey.withOpacity(0.15)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
+              color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 3))
         ],
       ),
       child: Row(
@@ -574,26 +507,16 @@ class _ReportScreenState extends State<ReportScreen> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
+                color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  record.date.day.toString(),
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: primaryColor,
-                  ),
-                ),
-                Text(
-                  _getMonthAbbreviation(record.date.month),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: primaryColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text(record.date.day.toString(),
+                    style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700, color: primaryColor)),
+                Text(_getMonthAbbreviation(record.date.month),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                        color: primaryColor, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -604,57 +527,45 @@ class _ReportScreenState extends State<ReportScreen> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      _getDayName(record.date.weekday),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: isDarkMode
-                            ? AppThemes.darkTextSecondary
-                            : AppThemes.hintColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    Text(_getDayName(record.date.weekday),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                            color: isDarkMode
+                                ? AppThemes.darkTextSecondary
+                                : AppThemes.hintColor,
+                            fontWeight: FontWeight.w500)),
                     const Spacer(),
                     _buildModernStatusChip(record.status, isDarkMode),
                   ],
                 ),
                 const SizedBox(height: 8),
-
-                // Logic Perbaikan Error: Cek Null sebelum akses .isNotEmpty
                 if (record.status == AttendanceStatus.sakit ||
                     record.status == AttendanceStatus.izin ||
                     record.status == AttendanceStatus.alpha)
                   _buildTimeRow(
-                    Icons.info_outline_rounded,
-                    (record.catatan != null && record.catatan!.isNotEmpty)
-                        ? record.catatan!
-                        : 'Tidak ada keterangan', // <--- FIX ERROR DI SINI
-                    isDarkMode ? AppThemes.darkTextPrimary : Colors.black87,
-                    isDarkMode,
-                  )
+                      Icons.info_outline_rounded,
+                      (record.catatan != null && record.catatan!.isNotEmpty)
+                          ? record.catatan!
+                          : 'Tidak ada keterangan',
+                      isDarkMode ? AppThemes.darkTextPrimary : Colors.black87,
+                      isDarkMode)
                 else ...[
                   if (record.checkIn != null)
                     _buildTimeRow(
-                      Icons.login_rounded,
-                      'Masuk: ${_formatTime(record.checkIn!)}',
-                      record.status == AttendanceStatus.terlambat
-                          ? AppThemes.warningColor
-                          : AppThemes.successColor,
-                      isDarkMode,
-                    ),
+                        Icons.login_rounded,
+                        'Masuk: ${_formatTime(record.checkIn!)}',
+                        record.status == AttendanceStatus.terlambat
+                            ? AppThemes.warningColor
+                            : AppThemes.successColor,
+                        isDarkMode),
                   if (record.checkOut != null)
                     _buildTimeRow(
-                      Icons.logout_rounded,
-                      'Keluar: ${_formatTime(record.checkOut!)}',
-                      AppThemes.infoColor,
-                      isDarkMode,
-                    ),
+                        Icons.logout_rounded,
+                        'Keluar: ${_formatTime(record.checkOut!)}',
+                        AppThemes.infoColor,
+                        isDarkMode),
                   if (record.checkIn == null && record.checkOut == null)
-                    _buildTimeRow(
-                      Icons.close_rounded,
-                      'Belum Absen',
-                      AppThemes.errorColor,
-                      isDarkMode,
-                    ),
+                    _buildTimeRow(Icons.close_rounded, 'Belum Absen',
+                        AppThemes.errorColor, isDarkMode),
                 ]
               ],
             ),
@@ -674,17 +585,14 @@ class _ReportScreenState extends State<ReportScreen> {
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 6),
           Expanded(
-            child: Text(
-              text,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: isDarkMode
-                    ? AppThemes.darkTextSecondary
-                    : theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            child: Text(text,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                    color: isDarkMode
+                        ? AppThemes.darkTextSecondary
+                        : theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
+                    fontWeight: FontWeight.w500),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
           ),
         ],
       ),
@@ -696,42 +604,40 @@ class _ReportScreenState extends State<ReportScreen> {
       AttendanceStatus.valid: {
         'label': 'Hadir',
         'color': AppThemes.successColor,
-        'lightColor': AppThemes.successLight,
+        'lightColor': AppThemes.successLight
       },
       AttendanceStatus.terlambat: {
         'label': 'Terlambat',
         'color': AppThemes.warningColor,
-        'lightColor': AppThemes.warningLight,
+        'lightColor': AppThemes.warningLight
       },
       AttendanceStatus.sakit: {
         'label': 'Sakit',
         'color': AppThemes.infoColor,
-        'lightColor': AppThemes.infoLight,
+        'lightColor': AppThemes.infoLight
       },
       AttendanceStatus.izin: {
         'label': 'Izin',
         'color': Colors.orange,
-        'lightColor': Colors.orange.shade100,
+        'lightColor': Colors.orange.shade100
       },
       AttendanceStatus.alpha: {
         'label': 'Alpha',
         'color': AppThemes.errorColor,
-        'lightColor': AppThemes.errorLight,
+        'lightColor': AppThemes.errorLight
       },
       AttendanceStatus.invalid: {
         'label': 'Invalid',
         'color': Colors.grey,
-        'lightColor': Colors.grey.shade200,
+        'lightColor': Colors.grey.shade200
       },
       AttendanceStatus.pending: {
         'label': 'Proses',
         'color': Colors.blueGrey,
-        'lightColor': Colors.blueGrey.shade100,
+        'lightColor': Colors.blueGrey.shade100
       },
     };
-
     final data = statusData[status] ?? statusData[AttendanceStatus.pending]!;
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -739,14 +645,9 @@ class _ReportScreenState extends State<ReportScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: data['color'].withOpacity(0.3), width: 1),
       ),
-      child: Text(
-        data['label'],
-        style: TextStyle(
-          color: data['color'],
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+      child: Text(data['label'],
+          style: TextStyle(
+              color: data['color'], fontSize: 12, fontWeight: FontWeight.w600)),
     );
   }
 
@@ -781,7 +682,6 @@ class _ReportScreenState extends State<ReportScreen> {
     final DateTime now = DateTime.now();
     final DateTime maxDate = DateTime(now.year + 1, 12, 31);
     final DateTime minDate = DateTime(2023, 1, 1);
-
     DateTime initialDate = _selectedMonth;
     if (initialDate.isAfter(maxDate)) initialDate = maxDate;
     if (initialDate.isBefore(minDate)) initialDate = minDate;
@@ -797,12 +697,11 @@ class _ReportScreenState extends State<ReportScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
-              primary:
-                  isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor,
-              onPrimary: Colors.white,
-              surface: isDark ? AppThemes.darkSurface : theme.cardColor,
-              onSurface: isDark ? AppThemes.darkTextPrimary : Colors.black,
-            ),
+                primary:
+                    isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor,
+                onPrimary: Colors.white,
+                surface: isDark ? AppThemes.darkSurface : theme.cardColor,
+                onSurface: isDark ? AppThemes.darkTextPrimary : Colors.black),
             dialogBackgroundColor:
                 isDark ? AppThemes.darkSurface : theme.cardColor,
           ),
@@ -841,13 +740,9 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 }
 
-// Extension sederhana untuk copyWith di AttendanceRecord agar coding lebih bersih
 extension AttendanceRecordExtension on AttendanceRecord {
-  AttendanceRecord copyWith({
-    DateTime? checkIn,
-    DateTime? checkOut,
-    AttendanceStatus? status,
-  }) {
+  AttendanceRecord copyWith(
+      {DateTime? checkIn, DateTime? checkOut, AttendanceStatus? status}) {
     return AttendanceRecord(
       id: id,
       userId: userId,

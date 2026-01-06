@@ -28,79 +28,90 @@ class AuthProvider with ChangeNotifier {
     _loadUserData();
   }
 
+  // --- CORE LOGIC: LOAD DATA AMAN ---
   Future<void> _loadUserData() async {
     try {
       final userDataStr =
           await StorageService.getString(AppConstants.userDataKey);
       final token = await StorageService.getString(AppConstants.tokenKey);
 
-      if (userDataStr != null &&
-          userDataStr.isNotEmpty &&
-          token != null &&
-          token.isNotEmpty) {
+      // [PERBAIKAN MUTLAK DISINI]
+      // Simpan token DULUAN. Jangan peduli data user rusak atau tidak.
+      // Selama ada string token di HP, kita anggap dia login.
+      if (token != null && token.isNotEmpty) {
+        _token = token;
+      }
+
+      // Baru coba parsing data user
+      if (userDataStr != null && userDataStr.isNotEmpty) {
         try {
           final userData = jsonDecode(userDataStr);
           _user = User.fromJson(userData);
-          _token = token;
-          notifyListeners();
         } catch (e) {
-          // [PERBAIKAN KRUSIAL]
-          // Jangan panggil logout() di sini!
-          // Jika parsing gagal sedikit (misal format tanggal beda), biarkan user tetap login
-          // dan coba perbaiki lewat refreshProfile() nanti.
-
           print(
-              '⚠️ Warning: Data user lokal bermasalah, tapi token masih ada.');
-          print('Error details: $e');
-
-          // Tetap set token agar checkAuthentication() mengembalikan true
-          _token = token;
-          // _user mungkin null, nanti akan diisi oleh refreshProfile()
-          notifyListeners();
+              '⚠️ Data user lokal korup, tapi Token AMAN. Aplikasi akan auto-repair.');
+          // Jangan lakukan apa-apa di sini. Biarkan _user null.
+          // Nanti checkAuthentication() yang akan sadar _token ada tapi _user null,
+          // lalu dia akan fetch data baru.
         }
       }
+      notifyListeners();
     } catch (e) {
-      if (kDebugMode) print('❌ [AUTH PROVIDER] Error loading user data: $e');
+      if (kDebugMode) print('❌ [AUTH PROVIDER] Error loading storage: $e');
     }
   }
 
-  // --- ACTIONS ---
-
-  // Perbaikan Logika Check Authentication
+  // --- LOGIC CHECK AUTH (STAY LOGIN) ---
   Future<bool> checkAuthentication() async {
-    // 1. Wajib tunggu load data dari HP selesai dulu
+    // 1. Load data dari HP
     await _loadUserData();
 
-    // 2. Cek apakah di HP ada Token & Data User
-    if (_token != null && _user != null) {
-      // 3. Coba sync data terbaru ke server di background (Silent Sync)
-      // Kita tidak await ini agar app cepat masuk ke Home
-      // dan jika offline, user tetap bisa masuk.
-      refreshProfile().catchError((e) {
-        if (kDebugMode) print('Offline mode or sync failed: $e');
-      });
-
-      return true; // Izinkan masuk karena ada data di local
+    // 2. Cek apakah Token ada?
+    if (_token == null || _token!.isEmpty) {
+      return false; // Tidak ada token, harus login
     }
 
-    return false; // Tidak ada data login
+    // 3. Skenario A: Data User Lengkap (Ideal)
+    if (_user != null) {
+      // Sync data terbaru di background agar tidak memblokir UI
+      refreshProfile().catchError((e) {
+        if (kDebugMode) print('Background sync failed (Offline?): $e');
+      });
+      return true; // IZINKAN MASUK
+    }
+
+    // 4. Skenario B: Token Ada, tapi Data User Hilang/Rusak
+    // Coba pulihkan session dengan meminta data baru ke server
+    print("⚠️ Memulihkan sesi menggunakan Token...");
+    try {
+      await refreshProfile(); // Tunggu sampai selesai
+
+      if (_user != null) {
+        print("✅ Sesi berhasil dipulihkan!");
+        return true; // IZINKAN MASUK
+      }
+    } catch (e) {
+      print("❌ Gagal memulihkan sesi: $e");
+    }
+
+    // 5. Jika semua gagal, baru return false
+    return false;
   }
 
-  // 1. Refresh Profile (Ambil data terbaru dari server)
+  // --- REFRESH PROFILE ---
   Future<void> refreshProfile() async {
     try {
-      // Get raw data from API to preserve pesertaMagang structure
+      // Ambil data profile terbaru
       final response = await AuthService.getProfile();
       if (response.success && response.data != null) {
         _user = response.data;
 
-        // Also fetch raw data to preserve pesertaMagang in storage
+        // Simpan data mentah agar struktur lengkap (termasuk relasi) terjaga di storage
         try {
-          final token = await StorageService.getString(AppConstants.tokenKey);
-          if (token != null) {
+          if (_token != null) {
             final headers = {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token',
+              'Authorization': 'Bearer $_token',
             };
 
             final httpResponse = await http
@@ -113,7 +124,6 @@ class AuthProvider with ChangeNotifier {
             if (httpResponse.statusCode == 200) {
               final rawData = jsonDecode(httpResponse.body);
               if (rawData['success'] == true && rawData['data'] != null) {
-                // Save raw data (including pesertaMagang) to storage
                 await StorageService.setString(
                   AppConstants.userDataKey,
                   jsonEncode(rawData['data']),
@@ -122,14 +132,14 @@ class AuthProvider with ChangeNotifier {
             }
           }
         } catch (e) {
-          // Fallback to saving User.toJson() if raw fetch fails
-          if (kDebugMode) print('⚠️ Could not save raw profile data: $e');
+          // Fallback save jika raw fetch gagal
           await _saveUserData(_user!);
         }
 
-        notifyListeners(); // Update UI
+        notifyListeners();
       } else if (response.statusCode == 401) {
-        // Jika token expired (401), baru kita logout paksa
+        // Hanya logout jika server menolak token (Token Expired/Invalid)
+        print("🔒 Token expired, logging out...");
         await logout();
       }
     } catch (e) {
@@ -137,11 +147,11 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // 2. Update Profile + Auto Sync
+  // --- UPDATE PROFILE ---
   Future<bool> updateUserProfile({
     String? username,
     String? nama,
-    String? idPesertaMagang, // NISN/NIM
+    String? idPesertaMagang,
     String? divisi,
     String? instansi,
     String? nomorHp,
@@ -167,14 +177,11 @@ class AuthProvider with ChangeNotifier {
       );
 
       if (response.success) {
-        // PENTING: Ambil data profile terbaru agar UI sinkron
-        await refreshProfile();
-
+        await refreshProfile(); // Refresh agar UI update
         _isLoading = false;
         notifyListeners();
         return true;
       } else {
-        // FIX: response.message tidak null, jadi ?? redundant
         _error = response.message;
         _isLoading = false;
         notifyListeners();
@@ -188,7 +195,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // 3. Change Password
+  // --- CHANGE PASSWORD ---
   Future<bool> changePassword(
     String currentPassword,
     String newPassword,
@@ -208,7 +215,6 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        // FIX: response.message tidak null, jadi ?? redundant
         _error = response.message;
         _isLoading = false;
         notifyListeners();
@@ -222,6 +228,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // --- LOGOUT ---
   Future<void> logout() async {
     await StorageService.remove(AppConstants.tokenKey);
     await StorageService.remove(AppConstants.userDataKey);
@@ -230,7 +237,7 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // --- AUTH METHODS (Login/Register standard) ---
+  // --- AUTH METHODS (LOGIN/REGISTER) ---
 
   Future<bool> login(String username, String password) async {
     _isLoading = true;

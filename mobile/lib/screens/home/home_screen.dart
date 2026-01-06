@@ -43,35 +43,24 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   PerformanceStats? _performanceStats;
   bool _isLoadingPerformance = false;
-
-  // Variabel Jam Pulang
   String _workEndTime = "17:00";
   bool _canClockOut = false;
-
-  // [BARU] Timer Agresif
   Timer? _realtimeTimer;
-  bool _stopRealtimeCheck = false; // Flag untuk menghentikan pengecekan
-
-  // Variabel Status Izin Hari Ini
-  String? _todayLeaveStatus; // 'IZIN', 'SAKIT', atau null
+  bool _stopRealtimeCheck = false;
+  String? _todayLeaveStatus;
 
   @override
   void initState() {
     super.initState();
-
-    // 1. Initial Load (Sekali di awal)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initialDataLoad();
     });
 
-    // 2. [BARU] Timer Real-time (Setiap 3 Detik)
-    // Timer ini akan terus berjalan sampai _stopRealtimeCheck menjadi true
     _realtimeTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (!_stopRealtimeCheck && mounted) {
-        _checkClockOutTime(); // Cek jam pulang (ringan)
-        _checkStatusUpdatesBackground(); // Cek status izin (API)
+        _checkClockOutTime();
+        _checkStatusUpdatesBackground();
       } else {
-        // Jika flag stop nyala, matikan timer
         timer.cancel();
       }
     });
@@ -83,16 +72,12 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // --- LOGIC CENTRALIZED DATA LOADING (Dipanggil saat Init / Pull Refresh) ---
   Future<void> _initialDataLoad() async {
     if (!mounted) return;
-
-    // Reset flag stop jika user melakukan manual refresh
     setState(() {
       _stopRealtimeCheck = false;
     });
 
-    // Hidupkan timer lagi jika sudah mati
     if (_realtimeTimer != null && !_realtimeTimer!.isActive) {
       _realtimeTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
         if (!_stopRealtimeCheck && mounted) {
@@ -112,13 +97,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     await Future.wait([
       _loadSettings(),
-      _checkStatusUpdatesBackground(), // Cek status izin
+      _checkStatusUpdatesBackground(),
       _loadPerformanceData(),
       attendanceProvider.refreshTodayAttendance(preserveLocalState: false),
     ]);
   }
 
-  // --- LOGIC 1: Ambil Peserta ID Helper ---
   Future<String?> _getPesertaId() async {
     try {
       final userDataStr =
@@ -132,12 +116,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return null;
   }
 
-  // --- LOGIC 2: Pengecekan Status Realtime (Background) ---
   Future<void> _checkStatusUpdatesBackground() async {
     try {
       String? pesertaId = await _getPesertaId();
-
-      // Jika ID null, coba refresh profile sekali
       if (pesertaId == null && mounted) {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         await authProvider.refreshProfile();
@@ -146,20 +127,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (pesertaId == null) return;
 
-      // A. Cek Status DISETUJUI (Approved)
       final status = await LeaveService.getTodayLeaveStatus(pesertaId);
 
       if (mounted) {
-        // Update UI jika status berubah
         if (_todayLeaveStatus != status) {
           setState(() {
             _todayLeaveStatus = status;
           });
         }
 
-        // Jika status ada (IZIN/SAKIT) -> Berarti sudah diapprove
         if (status != null) {
-          // Cek apakah notifikasi sudah pernah muncul hari ini
           final now = DateTime.now();
           final dateKey = '${now.year}-${now.month}-${now.day}';
           final storageKey = 'notif_seen_${dateKey}_APPROVED';
@@ -169,28 +146,16 @@ class _HomeScreenState extends State<HomeScreen> {
             final title = status == 'SAKIT'
                 ? 'Izin Sakit Disetujui'
                 : 'Permohonan Izin Disetujui';
-
             await NotificationService().showNotification(
               id: 200,
               title: title,
-              body:
-                  'Pengajuan $status Anda telah disetujui. Refresh otomatis dimatikan.',
+              body: 'Pengajuan $status Anda telah disetujui.',
             );
-
             await StorageService.setBool(storageKey, true);
-
-            // [STOP LOGIC] Matikan refresh karena status sudah final
-            // _stopRealtimeChecking();
-          } else {
-            // Jika sudah pernah lihat notif, tapi timer masih jalan, matikan saja
-            // // karena status sudah final (Approved)
-            // _stopRealtimeChecking();
           }
         }
       }
 
-      // B. Cek Status DITOLAK (Rejected)
-      // Hanya cek jika belum Approved (karena Approved prioritas tampil di UI)
       if (status == null) {
         await _checkRejectedLeave(pesertaId);
       }
@@ -199,14 +164,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Helper untuk mematikan timer
   void _stopRealtimeChecking() {
     if (mounted && !_stopRealtimeCheck) {
       setState(() {
-        _stopRealtimeCheck =
-            true; // Ini akan membuat Timer.periodic berhenti di tick berikutnya
+        _stopRealtimeCheck = true;
       });
-      print("🛑 Status Final tercapai. Auto-refresh dimatikan.");
     }
   }
 
@@ -214,7 +176,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final response = await LeaveService.getLeaves(
           pesertaMagangId: pesertaId, status: 'DITOLAK');
-
       if (response.success && response.data != null) {
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
@@ -229,9 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (tglMulai != null) {
             final tglIzin =
                 DateTime(tglMulai.year, tglMulai.month, tglMulai.day);
-
             if (tglIzin.isAtSameMomentAs(today)) {
-              // Cek history notif
               final leaveId = leave['id'].toString();
               final storageKey = 'notif_seen_${dateKey}_REJECTED_$leaveId';
               final hasSeen = await StorageService.getBool(storageKey) ?? false;
@@ -240,16 +199,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 await NotificationService().showNotification(
                   id: 201,
                   title: 'Pengajuan Izin Ditolak',
-                  body:
-                      'Maaf, pengajuan izin Anda ditolak. Refresh otomatis dimatikan.',
+                  body: 'Maaf, pengajuan izin Anda ditolak.',
                 );
-
                 await StorageService.setBool(storageKey, true);
-
-                // [STOP LOGIC] Matikan refresh karena status sudah final (Ditolak)
                 _stopRealtimeChecking();
               } else {
-                // Jika sudah dilihat hari ini, matikan refresh juga
                 _stopRealtimeChecking();
               }
               break;
@@ -260,7 +214,6 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {}
   }
 
-  // --- LOGIC 3: Load Settings & Jam Pulang ---
   Future<void> _loadSettings() async {
     try {
       final response = await SettingsService.getSettings();
@@ -289,7 +242,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- LOGIC 4: Load Performance ---
   Future<void> _loadPerformanceData() async {
     if (!mounted) return;
     setState(() => _isLoadingPerformance = true);
@@ -348,7 +300,6 @@ class _HomeScreenState extends State<HomeScreen> {
         attendanceProvider.clockIn(time);
         await Future.delayed(const Duration(milliseconds: 500));
         await _initialDataLoad();
-
         GlobalSnackBar.show('Berhasil melakukan Absen Masuk pada $time',
             isSuccess: true);
       } else if (attendanceType.isEmpty) {
@@ -434,14 +385,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (mounted) {
         Navigator.pop(context);
-
         if (attendanceResponse.success) {
           final attendanceProvider =
               Provider.of<AttendanceProvider>(context, listen: false);
           final time = IndonesianTime.formatTime(IndonesianTime.now);
           attendanceProvider.clockOut(time);
           await _initialDataLoad();
-
           GlobalSnackBar.show('Absen pulang berhasil dilakukan',
               isSuccess: true);
         } else {
@@ -500,8 +449,6 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pop(context);
               if (response.success) {
                 await _initialDataLoad();
-
-                // Nyalakan ulang monitoring realtime karena status berubah jadi PENDING
                 setState(() {
                   _stopRealtimeCheck = false;
                 });
@@ -515,7 +462,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     }
                   });
                 }
-
                 GlobalSnackBar.show('Pengajuan berhasil dikirim.',
                     isSuccess: true);
               } else {
@@ -549,7 +495,6 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: Icon(
               Icons.notifications_outlined,
-              // Indikator visual sederhana jika realtime aktif/mati
               color: !_stopRealtimeCheck
                   ? AppThemes.successColor
                   : (isDark
@@ -578,8 +523,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const WelcomeHeaderWidget(),
                       const SizedBox(height: 24),
-
-                      // --- ATTENDANCE CARD ---
                       AttendanceCard(
                         isClockedIn: attendanceProvider.isClockedIn,
                         isClockedOut: attendanceProvider.isClockedOut,
@@ -603,7 +546,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                         onRequestLeave: _handleRequestLeave,
                       ),
-
                       const SizedBox(height: 16),
                       AttendanceStatusCard(
                         clockInTime: attendanceProvider.clockInTime,

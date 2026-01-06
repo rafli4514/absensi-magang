@@ -25,7 +25,7 @@ import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
 import '../../widgets/error_widget.dart';
 import '../../widgets/floating_bottom_nav.dart';
-import '../../widgets/loading_indicator.dart'; // Pastikan import LoadingIndicator
+import '../../widgets/loading_indicator.dart';
 import '../../widgets/logbook_card.dart';
 import '../../widgets/logbook_form_dialog.dart';
 
@@ -95,7 +95,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       String? pesertaMagangId;
       try {
         final userDataStr =
-            await StorageService.getString(AppConstants.userDataKey);
+        await StorageService.getString(AppConstants.userDataKey);
         if (userDataStr != null) {
           final userData = jsonDecode(userDataStr);
           pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
@@ -107,7 +107,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       if (pesertaMagangId == null || pesertaMagangId.isEmpty) {
         await authProvider.refreshProfile();
         final refreshedUserDataStr =
-            await StorageService.getString(AppConstants.userDataKey);
+        await StorageService.getString(AppConstants.userDataKey);
         if (refreshedUserDataStr != null) {
           final refreshedUserData = jsonDecode(refreshedUserDataStr);
           pesertaMagangId =
@@ -190,17 +190,31 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
         try {
           final logDate = DateTime.parse(log.tanggal);
           return logDate.isAfter(
-                weekStartDate.subtract(const Duration(seconds: 1)),
-              ) &&
+            weekStartDate.subtract(const Duration(seconds: 1)),
+          ) &&
               logDate.isBefore(weekEndDate);
         } catch (e) {
           return log.createdAt.isAfter(
-                weekStartDate.subtract(const Duration(seconds: 1)),
-              ) &&
+            weekStartDate.subtract(const Duration(seconds: 1)),
+          ) &&
               log.createdAt.isBefore(weekEndDate);
         }
       }).toList();
     });
+  }
+
+  // --- HELPER UNTUK NAVIGASI QR ---
+  Future<void> _handleQRScan() async {
+    // Gunakan pushNamed agar bisa 'Back', bukan pushReplacement
+    final result = await Navigator.pushNamed(context, RouteNames.qrScan);
+
+    // Jika result sukses (ada data absensi), pindah ke Home
+    if (result != null && result is Map && result['success'] == true) {
+      if (mounted) {
+        // Pindah ke Home tanpa animasi (seperti tab switch)
+        NavigationHelper.navigateWithoutAnimation(context, RouteNames.home);
+      }
+    }
   }
 
   @override
@@ -210,16 +224,16 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
 
     return Scaffold(
       backgroundColor:
-          isDark ? AppThemes.darkBackground : AppThemes.backgroundColor,
+      isDark ? AppThemes.darkBackground : AppThemes.backgroundColor,
       appBar: CustomAppBar(
-        title: 'Aktivitas', // Translate
+        title: 'Aktivitas',
         showBackButton: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list_rounded),
             onPressed: () {
               GlobalSnackBar.show(
-                'Fitur filter segera hadir', // Translate
+                'Fitur filter segera hadir',
                 title: 'Info',
                 isInfo: true,
               );
@@ -227,81 +241,81 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
           ),
         ],
       ),
-      body: ResponsiveLayout(
-        mobileBody: _buildMobileLayout(isDark),
-        tabletBody: _buildTabletLayout(isDark),
+      body: Stack(
+        children: [
+          // CONTENT LAYER
+          ResponsiveLayout(
+            mobileBody: _buildMobileLayout(isDark),
+            tabletBody: _buildTabletLayout(isDark),
+          ),
+
+          // NAVIGATION LAYER
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: FloatingBottomNav(
+              currentRoute: RouteNames.activities,
+              onQRScanTap: _handleQRScan, // MENGGUNAKAN LOGIKA BARU
+            ),
+          ),
+        ],
       ),
     );
   }
 
   // === LAYOUT BUILDERS ===
   Widget _buildMobileLayout(bool isDark) {
-    return Stack(
-      children: [
-        CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            if (_errorMessage != null)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: CustomErrorWidget(
-                    message: _errorMessage!,
-                    onDismiss: () => setState(() => _errorMessage = null),
-                  ),
-                ),
-              ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: ActivitiesHeader(
-                  onAddActivity: () => _showActivityForm(context, null),
-                  onAddLogbook: () => _showLogBookForm(context, null),
-                ),
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        if (_errorMessage != null)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: CustomErrorWidget(
+                message: _errorMessage!,
+                onDismiss: () => setState(() => _errorMessage = null),
               ),
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ActivitiesStatistics(
-                  isMobile: true,
-                  logbooks: _allLogBooks,
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: ActivitiesTimeline(activities: _timelineActivities),
-              ),
-            ),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _StickyTabDelegate(
-                isDark: isDark,
-                selectedIndex: _selectedTabIndex,
-                onTabSelected: (index) =>
-                    setState(() => _selectedTabIndex = index),
-              ),
-            ),
-            if (_selectedTabIndex == 1)
-              SliverToBoxAdapter(child: _buildWeekFilter(isDark)),
-            _buildListContent(isDark),
-            const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
-          ],
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: FloatingBottomNav(
-            currentRoute: RouteNames.activities,
-            onQRScanTap: () => NavigationHelper.navigateWithoutAnimation(
-              context,
-              RouteNames.qrScan,
+          ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: ActivitiesHeader(
+              onAddActivity: () => _showActivityForm(context, null),
+              onAddLogbook: () => _showLogBookForm(context, null),
             ),
           ),
         ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ActivitiesStatistics(
+              isMobile: true,
+              logbooks: _allLogBooks,
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: ActivitiesTimeline(activities: _timelineActivities),
+          ),
+        ),
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _StickyTabDelegate(
+            isDark: isDark,
+            selectedIndex: _selectedTabIndex,
+            onTabSelected: (index) =>
+                setState(() => _selectedTabIndex = index),
+          ),
+        ),
+        if (_selectedTabIndex == 1)
+          SliverToBoxAdapter(child: _buildWeekFilter(isDark)),
+        _buildListContent(isDark),
+        const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
       ],
     );
   }
@@ -358,14 +372,14 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                     child: Row(
                       children: [
                         _TabButton(
-                          title: 'Aktivitas Terbaru', // Translate
+                          title: 'Aktivitas Terbaru',
                           isActive: _selectedTabIndex == 0,
                           onTap: () => setState(() => _selectedTabIndex = 0),
                           isDark: isDark,
                         ),
                         const SizedBox(width: 8),
                         _TabButton(
-                          title: 'Log Book', // Translate
+                          title: 'Log Book',
                           isActive: _selectedTabIndex == 1,
                           onTap: () => setState(() => _selectedTabIndex = 1),
                           isDark: isDark,
@@ -440,8 +454,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                       color: isSelected
                           ? Colors.white
                           : (isDark
-                              ? AppThemes.darkTextPrimary
-                              : AppThemes.onSurfaceColor),
+                          ? AppThemes.darkTextPrimary
+                          : AppThemes.onSurfaceColor),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -452,8 +466,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                       color: isSelected
                           ? Colors.white.withOpacity(0.9)
                           : (isDark
-                              ? AppThemes.darkTextSecondary
-                              : AppThemes.hintColor),
+                          ? AppThemes.darkTextSecondary
+                          : AppThemes.hintColor),
                     ),
                   ),
                 ],
@@ -472,8 +486,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
           .toList();
 
       final displayLogbooks = (activityLogbooks.isNotEmpty
-              ? activityLogbooks
-              : _allLogBooks)
+          ? activityLogbooks
+          : _allLogBooks)
           .toList()
         ..sort((a, b) {
           try {
@@ -498,33 +512,33 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
 
       return displayLogbooks.isEmpty
           ? _buildEmptyState(
-              isDark, 'Tidak ada aktivitas ditemukan') // Translate
+          isDark, 'Tidak ada aktivitas ditemukan')
           : SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final logbook = displayLogbooks[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
-                    ),
-                    child: LogBookCard(
-                      log: logbook,
-                      isDark: isDark,
-                      onEdit: () => _showLogBookForm(context, logbook),
-                      onDelete: () {
-                        final deleteIndex =
-                            _allLogBooks.indexWhere((l) => l.id == logbook.id);
-                        if (deleteIndex != -1) {
-                          _confirmDeleteLog(context, deleteIndex);
-                        }
-                      },
-                    ),
-                  );
+        delegate: SliverChildBuilderDelegate(
+              (context, index) {
+            final logbook = displayLogbooks[index];
+            return Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 6,
+              ),
+              child: LogBookCard(
+                log: logbook,
+                isDark: isDark,
+                onEdit: () => _showLogBookForm(context, logbook),
+                onDelete: () {
+                  final deleteIndex =
+                  _allLogBooks.indexWhere((l) => l.id == logbook.id);
+                  if (deleteIndex != -1) {
+                    _confirmDeleteLog(context, deleteIndex);
+                  }
                 },
-                childCount: displayLogbooks.length,
               ),
             );
+          },
+          childCount: displayLogbooks.length,
+        ),
+      );
     } else {
       if (_isLoadingLogbooks) {
         return SliverFillRemaining(
@@ -539,25 +553,25 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
 
       return _filteredLogBooks.isEmpty
           ? _buildEmptyState(
-              isDark, 'Belum ada Log Book di Minggu ini') // Translate
+          isDark, 'Belum ada Log Book di Minggu ini')
           : SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
-                  ),
-                  child: LogBookCard(
-                    log: _filteredLogBooks[index],
-                    isDark: isDark,
-                    onEdit: () =>
-                        _showLogBookForm(context, _filteredLogBooks[index]),
-                    onDelete: () => _confirmDeleteLog(context, index),
-                  ),
-                ),
-                childCount: _filteredLogBooks.length,
-              ),
-            );
+        delegate: SliverChildBuilderDelegate(
+              (context, index) => Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 6,
+            ),
+            child: LogBookCard(
+              log: _filteredLogBooks[index],
+              isDark: isDark,
+              onEdit: () =>
+                  _showLogBookForm(context, _filteredLogBooks[index]),
+              onDelete: () => _confirmDeleteLog(context, index),
+            ),
+          ),
+          childCount: _filteredLogBooks.length,
+        ),
+      );
     }
   }
 
@@ -566,10 +580,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       context: context,
       builder: (context) => LogBookFormDialog(
         existingLog: existingLog,
-        // Update callback onSave untuk menerima foto
         onSave:
             (tanggal, kegiatan, deskripsi, durasi, type, status, foto) async {
-          // Tampilkan loading
           showDialog(
             context: context,
             barrierDismissible: false,
@@ -578,14 +590,14 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
 
           try {
             final authProvider =
-                Provider.of<AuthProvider>(context, listen: false);
+            Provider.of<AuthProvider>(context, listen: false);
             final user = authProvider.user;
 
             if (user == null) {
               if (mounted) {
                 Navigator.pop(context); // Tutup loading
                 GlobalSnackBar.show(
-                  'User tidak ditemukan. Silakan login kembali.', // Translate
+                  'User tidak ditemukan. Silakan login kembali.',
                   title: 'Auth Error',
                   isError: true,
                 );
@@ -593,11 +605,10 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               return;
             }
 
-            // ... (Logic get ID)
             String? pesertaMagangId;
             try {
               final userDataStr =
-                  await StorageService.getString(AppConstants.userDataKey);
+              await StorageService.getString(AppConstants.userDataKey);
               if (userDataStr != null) {
                 final userData = jsonDecode(userDataStr);
                 pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
@@ -605,7 +616,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               if (pesertaMagangId == null && user.id.isNotEmpty) {
                 await authProvider.refreshProfile(); // Refresh if missing
                 final refreshedUserDataStr =
-                    await StorageService.getString(AppConstants.userDataKey);
+                await StorageService.getString(AppConstants.userDataKey);
                 if (refreshedUserDataStr != null) {
                   final refreshedUserData = jsonDecode(refreshedUserDataStr);
                   pesertaMagangId =
@@ -626,7 +637,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               return;
             }
 
-            // Panggil Service dengan Foto
             final response = await LogbookService.createLogbook(
               pesertaMagangId: pesertaMagangId,
               tanggal: tanggal,
@@ -635,7 +645,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               durasi: durasi,
               type: type?.value,
               status: status?.value,
-              foto: foto, // Kirim foto
+              foto: foto,
             );
 
             if (mounted) {
@@ -671,7 +681,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     LogBook? logBook;
     if (existingActivity != null) {
       logBook = _allLogBooks.firstWhere(
-        (log) => log.id == existingActivity.id,
+            (log) => log.id == existingActivity.id,
         orElse: () => LogBook(
           id: existingActivity.id,
           pesertaMagangId: existingActivity.pesertaMagangId,
@@ -693,16 +703,15 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     await showDialog(
       context: context,
       builder: (context) => CustomDialog(
-        title: 'Hapus Log?', // Translate
-        content: 'Data yang dihapus tidak dapat dikembalikan.', // Translate
-        primaryButtonText: 'Hapus', // Translate
+        title: 'Hapus Log?',
+        content: 'Data yang dihapus tidak dapat dikembalikan.',
+        primaryButtonText: 'Hapus',
         primaryButtonColor: AppThemes.errorColor,
-        secondaryButtonText: 'Batal', // Translate
+        secondaryButtonText: 'Batal',
         onPrimaryButtonPressed: () async {
           final itemToDelete = _filteredLogBooks[index];
           Navigator.pop(context);
 
-          // Tampilkan loading
           showDialog(
             context: context,
             barrierDismissible: false,
@@ -716,13 +725,13 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
             if (response.success) {
               await _loadLogbooks();
               GlobalSnackBar.show(
-                'Logbook berhasil dihapus', // Translate
+                'Logbook berhasil dihapus',
                 title: 'Sukses',
                 isSuccess: true,
               );
             } else {
               GlobalSnackBar.show(
-                response.message ?? 'Gagal menghapus logbook', // Translate
+                response.message ?? 'Gagal menghapus logbook',
                 title: 'Gagal',
                 isError: true,
               );
@@ -750,7 +759,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               message,
               style: TextStyle(
                 color:
-                    isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
+                isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
               ),
             ),
           ],
@@ -773,10 +782,10 @@ class _StickyTabDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+      BuildContext context,
+      double shrinkOffset,
+      bool overlapsContent,
+      ) {
     return SizedBox.expand(
       child: Container(
         color: isDark ? AppThemes.darkBackground : AppThemes.backgroundColor,
@@ -784,14 +793,14 @@ class _StickyTabDelegate extends SliverPersistentHeaderDelegate {
         child: Row(
           children: [
             _TabButton(
-              title: 'Aktivitas Terbaru', // Translate
+              title: 'Aktivitas Terbaru',
               isActive: selectedIndex == 0,
               onTap: () => onTabSelected(0),
               isDark: isDark,
             ),
             const SizedBox(width: 12),
             _TabButton(
-              title: 'Log Book', // Translate
+              title: 'Log Book',
               isActive: selectedIndex == 1,
               onTap: () => onTabSelected(1),
               isDark: isDark,
@@ -809,7 +818,7 @@ class _StickyTabDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(_StickyTabDelegate oldDelegate) =>
       selectedIndex != oldDelegate.selectedIndex ||
-      isDark != oldDelegate.isDark;
+          isDark != oldDelegate.isDark;
 }
 
 class _TabButton extends StatelessWidget {

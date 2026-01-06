@@ -30,15 +30,18 @@ class _MenteeDetailScreenState extends State<MenteeDetailScreen> {
   Future<void> _loadHistory() async {
     final id = widget.menteeData['id'];
 
-    // Ambil data logbook (Client-side filter)
-    final res = await LogbookService.getAllLogbook(limit: 100);
+    // FIX OPTIMASI: Kirim pesertaMagangId ke API untuk filter di server
+    final res = await LogbookService.getAllLogbook(
+      limit: 100,
+      pesertaMagangId: id.toString(), // Parameter baru
+    );
 
     if (mounted) {
       setState(() {
         _isLoading = false;
         if (res.success && res.data != null) {
-          _allLogbooks =
-              res.data!.where((l) => l.pesertaMagangId == id).toList();
+          _allLogbooks = res.data!; // Langsung pakai data dari API
+          // Sort by date descending (terbaru diatas)
           _allLogbooks.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         }
       });

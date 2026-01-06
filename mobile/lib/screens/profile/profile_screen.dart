@@ -39,6 +39,16 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  // --- HELPER NAVIGASI QR ---
+  Future<void> _handleQRScan(BuildContext context) async {
+    final result = await Navigator.pushNamed(context, RouteNames.qrScan);
+    if (result != null && result is Map && result['success'] == true) {
+      if (context.mounted) {
+        NavigationHelper.navigateWithoutAnimation(context, RouteNames.home);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -46,7 +56,7 @@ class ProfileScreen extends StatelessWidget {
     final isDarkMode = themeProvider.isDarkMode;
     final user = authProvider.user;
 
-    // Logic Extract Data
+    // Logic Extract Data menggunakan pattern matching (Dart 3.0+)
     final (:displayDivisi, :displayInstansi, :mentorName, :isStudent) =
         ProfileLogic.extractUserData(user, authProvider);
 
@@ -63,14 +73,16 @@ class ProfileScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: CustomAppBar(title: 'Profil', showBackButton: false),
+      // --- FIX: Gunakan Stack agar navigasi bar tetap di bawah ---
       body: Stack(
         children: [
+          // 1. LAYER KONTEN
           SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            // Padding bawah ditambah (100) agar tidak tertutup nav bar
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
             child: Column(
               children: [
                 // 1. IDENTITY CARD (Header + Info Diri dalam satu card)
-                // Menggabungkan Nama, Username, Role dengan NIM, HP, Instansi
                 IdentityCard(
                   user: user,
                   isDarkMode: isDarkMode,
@@ -166,13 +178,11 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 100),
               ],
             ),
           ),
 
-          // BOTTOM NAV SESUAI ROLE
+          // 2. LAYER NAVIGASI BAR
           Positioned(
             left: 0,
             right: 0,
@@ -183,11 +193,7 @@ class ProfileScreen extends StatelessWidget {
                     ? const SizedBox.shrink()
                     : FloatingBottomNav(
                         currentRoute: RouteNames.profile,
-                        onQRScanTap: () =>
-                            NavigationHelper.navigateWithoutAnimation(
-                          context,
-                          RouteNames.qrScan,
-                        ),
+                        onQRScanTap: () => _handleQRScan(context),
                       ),
           ),
         ],

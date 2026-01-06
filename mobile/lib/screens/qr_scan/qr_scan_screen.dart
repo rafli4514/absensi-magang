@@ -94,7 +94,6 @@ class _QrScanScreenState extends State<QrScanScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
     _startScan();
     _animationController = AnimationController(
       vsync: this,
@@ -117,7 +116,6 @@ class _QrScanScreenState extends State<QrScanScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!mounted) return;
-
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       cameraController.stop();
@@ -136,20 +134,14 @@ class _QrScanScreenState extends State<QrScanScreen>
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     _attendanceType = args?['type'] ?? 'CLOCK_IN';
-
-    if (_attendanceType != 'CLOCK_IN') {
-      _attendanceType = 'CLOCK_IN';
-    }
-
+    if (_attendanceType != 'CLOCK_IN') _attendanceType = 'CLOCK_IN';
     _loadLocationSettings();
   }
 
   Future<void> _loadLocationSettings() async {
     if (!mounted) return;
     setState(() => _isLocationLoading = true);
-
     final response = await LocationService.getLocationSettings();
-
     if (!mounted) return;
     if (response.success && response.data != null) {
       setState(() {
@@ -161,36 +153,28 @@ class _QrScanScreenState extends State<QrScanScreen>
         _locationStatus = 'Gagal memuat lokasi';
       });
     }
-
     if (mounted) setState(() => _isLocationLoading = false);
   }
 
   Future<void> _getCurrentLocation() async {
     final hasPermission = await PermissionService.requestLocationPermission();
-
     if (!hasPermission) {
-      _showPermissionDialog(
-        'Izin Lokasi Diperlukan',
-        'Harap berikan akses lokasi untuk melakukan presensi.',
-      );
+      _showPermissionDialog('Izin Lokasi Diperlukan',
+          'Harap berikan akses lokasi untuk melakukan presensi.');
       return;
     }
-
     if (!mounted) return;
     setState(() {
       _isLocationLoading = true;
       _locationStatus = 'Mendeteksi lokasi...';
     });
-
     _currentLocation = await LocationService.getCurrentLocation();
-
     if (!mounted) return;
     if (_currentLocation != null) {
       setState(() => _locationStatus = 'Lokasi Terdeteksi');
     } else {
       setState(() => _locationStatus = 'Gagal mendeteksi lokasi');
     }
-
     if (mounted) setState(() => _isLocationLoading = false);
   }
 
@@ -237,17 +221,12 @@ class _QrScanScreenState extends State<QrScanScreen>
   }
 
   void _showErrorNotification(String message) {
-    GlobalSnackBar.show(
-      message,
-      title: 'Gagal Presensi',
-      isError: true,
-    );
+    GlobalSnackBar.show(message, title: 'Gagal Presensi', isError: true);
     if (mounted) setState(() => _isProcessing = false);
   }
 
   void _showPermissionDialog(String title, String message) {
     cameraController.stop();
-
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -272,22 +251,17 @@ class _QrScanScreenState extends State<QrScanScreen>
   Future<bool> _validateLocation() async {
     if (_locationSettings == null) {
       _showLocationErrorDialog(
-        'Pengaturan lokasi kantor tidak ditemukan. Silakan coba lagi.',
-      );
+          'Pengaturan lokasi kantor tidak ditemukan. Silakan coba lagi.');
       return false;
     }
-
     await _getCurrentLocation();
     if (_currentLocation == null) {
       _showLocationErrorDialog(
-        'Tidak dapat mendeteksi lokasi Anda. Pastikan GPS aktif.',
-      );
+          'Tidak dapat mendeteksi lokasi Anda. Pastikan GPS aktif.');
       return false;
     }
-
-    final isWithinRadius = await LocationService.isWithinOfficeRadius(
-      _locationSettings!,
-    );
+    final isWithinRadius =
+        await LocationService.isWithinOfficeRadius(_locationSettings!);
     if (!isWithinRadius) {
       final distance = LocationService.calculateDistance(
         _currentLocation!['latitude'],
@@ -295,11 +269,8 @@ class _QrScanScreenState extends State<QrScanScreen>
         _locationSettings!.latitude,
         _locationSettings!.longitude,
       );
-
       _showLocationErrorDialog(
-        'Anda berada di luar jangkauan kantor.\n'
-        'Jarak: ${distance.toStringAsFixed(0)} meter\n'
-        'Radius diizinkan: ${_locationSettings!.radius} meter',
+        'Anda berada di luar jangkauan kantor.\nJarak: ${distance.toStringAsFixed(0)} meter\nRadius diizinkan: ${_locationSettings!.radius} meter',
       );
       return false;
     }
@@ -308,12 +279,10 @@ class _QrScanScreenState extends State<QrScanScreen>
 
   void _submitAttendance() async {
     if (_isProcessing || _hasPopped) return;
-
     if (_attendanceType == 'CLOCK_OUT' && !_isValidClockOutTime()) {
       _showTimeErrorDialog();
       return;
     }
-
     final isLocationValid = await _validateLocation();
     if (!isLocationValid) return;
 
@@ -322,7 +291,6 @@ class _QrScanScreenState extends State<QrScanScreen>
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.user;
-
       if (user == null) {
         _showErrorNotification(
             'Data user tidak ditemukan. Silakan login ulang.');
@@ -338,9 +306,7 @@ class _QrScanScreenState extends State<QrScanScreen>
           pesertaMagangId = userData['pesertaMagang']?['id']?.toString();
         }
       } catch (e) {
-        if (mounted) {
-          _showErrorNotification('Error getting user data: $e');
-        }
+        if (mounted) _showErrorNotification('Error getting user data: $e');
         return;
       }
 
@@ -361,10 +327,7 @@ class _QrScanScreenState extends State<QrScanScreen>
         return;
       }
 
-      if (_attendanceType.isEmpty) {
-        _attendanceType = 'CLOCK_IN';
-      }
-
+      if (_attendanceType.isEmpty) _attendanceType = 'CLOCK_IN';
       if (_attendanceType != 'CLOCK_IN') {
         _showErrorNotification(
             'QR scan hanya untuk check-in. Gunakan tombol pulang untuk checkout.');
@@ -395,7 +358,6 @@ class _QrScanScreenState extends State<QrScanScreen>
           'location': _currentLocation,
           'success': true,
         };
-
         _safePop(result);
       } else {
         _showErrorNotification(attendanceResponse.message);
@@ -411,26 +373,22 @@ class _QrScanScreenState extends State<QrScanScreen>
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop(result);
     } else {
-      Navigator.of(
-        context,
-      ).pushReplacementNamed(RouteNames.home, arguments: result);
+      Navigator.of(context)
+          .pushReplacementNamed(RouteNames.home, arguments: result);
     }
   }
 
   Future<void> _checkPermissionsOnStart() async {
     final permissions = await PermissionService.checkAllPermissions();
     if (!permissions['location']! && mounted) {
-      _showPermissionDialog(
-        'Izin Lokasi Diperlukan',
-        'Aplikasi membutuhkan akses lokasi untuk validasi presensi.',
-      );
+      _showPermissionDialog('Izin Lokasi Diperlukan',
+          'Aplikasi membutuhkan akses lokasi untuk validasi presensi.');
     }
   }
 
   void _startScan() {
     if (_isScanning || _isProcessing) return;
     setState(() => _isScanning = true);
-
     try {
       cameraController.start().catchError((error) {
         if (mounted) setState(() => _isScanning = false);
@@ -448,7 +406,6 @@ class _QrScanScreenState extends State<QrScanScreen>
 
   void _handleBarcodeDetected(BarcodeCapture capture) {
     if (!_isScanning || _isProcessing || _hasPopped) return;
-
     final barcodes = capture.barcodes;
     if (barcodes.isNotEmpty) {
       final barcode = barcodes.first;
@@ -470,23 +427,15 @@ class _QrScanScreenState extends State<QrScanScreen>
   Future<void> _pickImageFromGallery() async {
     try {
       if (_isProcessing || _hasPopped) return;
-
       cameraController.stop();
-
       final hasPermission = await PermissionService.requestGalleryPermission();
-
       if (!hasPermission) {
-        _showPermissionDialog(
-          'Izin Galeri Diperlukan',
-          'Berikan akses galeri untuk memilih kode QR.',
-        );
+        _showPermissionDialog('Izin Galeri Diperlukan',
+            'Berikan akses galeri untuk memilih kode QR.');
         return;
       }
-
-      final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-      );
-
+      final XFile? image =
+          await _imagePicker.pickImage(source: ImageSource.gallery);
       if (image == null) {
         _startScan();
       } else {
@@ -494,11 +443,8 @@ class _QrScanScreenState extends State<QrScanScreen>
       }
     } catch (e) {
       if (mounted) {
-        GlobalSnackBar.show(
-          'Gagal mengambil gambar',
-          title: 'Error Galeri',
-          isError: true,
-        );
+        GlobalSnackBar.show('Gagal mengambil gambar',
+            title: 'Error Galeri', isError: true);
         _startScan();
       }
     }
@@ -507,7 +453,6 @@ class _QrScanScreenState extends State<QrScanScreen>
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       backgroundColor: isDarkMode ? Colors.black : Colors.white,
       extendBodyBehindAppBar: true,
@@ -520,14 +465,10 @@ class _QrScanScreenState extends State<QrScanScreen>
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.3),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.arrow_back_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                      color: Colors.black.withOpacity(0.3),
+                      shape: BoxShape.circle),
+                  child: const Icon(Icons.arrow_back_rounded,
+                      color: Colors.white, size: 20),
                 ),
                 onPressed: _handleBackButton,
               ),
@@ -611,9 +552,7 @@ class _QrScanScreenState extends State<QrScanScreen>
                   child: Text(
                     _locationStatus,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
+                        color: Colors.white, fontWeight: FontWeight.w500),
                   ),
                 ),
               ],
@@ -630,15 +569,12 @@ class _QrScanScreenState extends State<QrScanScreen>
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: AppThemes.primaryColor.withOpacity(0.8),
-                    width: 3,
-                  ),
+                      color: AppThemes.primaryColor.withOpacity(0.8), width: 3),
                   boxShadow: [
                     BoxShadow(
-                      color: AppThemes.primaryColor.withOpacity(0.3),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                    ),
+                        color: AppThemes.primaryColor.withOpacity(0.3),
+                        blurRadius: 20,
+                        spreadRadius: 2),
                   ],
                 ),
                 child: ClipRRect(
@@ -658,10 +594,9 @@ class _QrScanScreenState extends State<QrScanScreen>
                                 color: AppThemes.primaryColor,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppThemes.primaryColor,
-                                    blurRadius: 10,
-                                    spreadRadius: 1,
-                                  ),
+                                      color: AppThemes.primaryColor,
+                                      blurRadius: 10,
+                                      spreadRadius: 1)
                                 ],
                               ),
                             ),
@@ -674,16 +609,15 @@ class _QrScanScreenState extends State<QrScanScreen>
               ),
               const SizedBox(height: 32),
               Text(
-                'Pindai QR Code Presensi', // Translate
+                'Pindai QR Code Presensi',
                 style: theme.textTheme.titleLarge?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   shadows: [
                     const Shadow(
-                      color: Colors.black54,
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
+                        color: Colors.black54,
+                        blurRadius: 4,
+                        offset: Offset(0, 2))
                   ],
                 ),
               ),
@@ -691,15 +625,14 @@ class _QrScanScreenState extends State<QrScanScreen>
               Text(
                 _isProcessing
                     ? 'Memproses data...'
-                    : 'Posisikan kode QR di dalam bingkai', // Translate
+                    : 'Posisikan kode QR di dalam bingkai',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: Colors.white.withOpacity(0.9),
                   shadows: [
                     const Shadow(
-                      color: Colors.black54,
-                      blurRadius: 4,
-                      offset: Offset(0, 1),
-                    ),
+                        color: Colors.black54,
+                        blurRadius: 4,
+                        offset: Offset(0, 1))
                   ],
                 ),
                 textAlign: TextAlign.center,
@@ -715,16 +648,12 @@ class _QrScanScreenState extends State<QrScanScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 3,
-                  ),
+                      color: Colors.white, strokeWidth: 3),
                   const SizedBox(height: 20),
                   Text(
                     'Mencatat Kehadiran...',
                     style: theme.textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
+                        color: Colors.white, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -734,11 +663,8 @@ class _QrScanScreenState extends State<QrScanScreen>
     );
   }
 
-  Widget _buildInfoBadge({
-    required IconData icon,
-    required Widget child,
-    required Color color,
-  }) {
+  Widget _buildInfoBadge(
+      {required IconData icon, required Widget child, required Color color}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
@@ -765,20 +691,20 @@ class _QrScanScreenState extends State<QrScanScreen>
         children: [
           _buildFloatingButton(
             icon: _isFlashOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-            label: _isFlashOn ? 'Senter' : 'Senter', // Translate
+            label: _isFlashOn ? 'Senter' : 'Senter',
             color: _isFlashOn ? AppThemes.warningColor : AppThemes.primaryColor,
             onPressed: _isProcessing ? () {} : _toggleFlash,
           ),
           _buildFloatingButton(
             icon: Icons.qr_code_scanner_rounded,
-            label: 'Pindai', // Translate
+            label: 'Pindai',
             color: AppThemes.primaryColor,
             onPressed: _isProcessing ? () {} : _startScan,
             isLarge: true,
           ),
           _buildFloatingButton(
             icon: Icons.photo_library_rounded,
-            label: 'Galeri', // Translate
+            label: 'Galeri',
             color: AppThemes.infoColor,
             onPressed: _isProcessing ? () {} : _pickImageFromGallery,
           ),
@@ -795,7 +721,6 @@ class _QrScanScreenState extends State<QrScanScreen>
     bool isLarge = false,
   }) {
     final bool isDisabled = _isProcessing;
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -806,17 +731,14 @@ class _QrScanScreenState extends State<QrScanScreen>
             color: isDisabled ? color.withOpacity(0.1) : color.withOpacity(0.2),
             borderRadius: BorderRadius.circular(isLarge ? 20 : 16),
             border: Border.all(
-              color: isDisabled ? color.withOpacity(0.3) : color,
-              width: 2,
-            ),
+                color: isDisabled ? color.withOpacity(0.3) : color, width: 2),
             boxShadow: isDisabled
                 ? []
                 : [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4))
                   ],
           ),
           child: Material(
@@ -824,11 +746,9 @@ class _QrScanScreenState extends State<QrScanScreen>
             child: InkWell(
               onTap: onPressed,
               borderRadius: BorderRadius.circular(isLarge ? 20 : 16),
-              child: Icon(
-                icon,
-                color: isDisabled ? color.withOpacity(0.4) : color,
-                size: isLarge ? 28 : 24,
-              ),
+              child: Icon(icon,
+                  color: isDisabled ? color.withOpacity(0.4) : color,
+                  size: isLarge ? 28 : 24),
             ),
           ),
         ),
@@ -836,10 +756,9 @@ class _QrScanScreenState extends State<QrScanScreen>
         Text(
           label,
           style: TextStyle(
-            color: isDisabled ? Colors.white.withOpacity(0.5) : Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
+              color: isDisabled ? Colors.white.withOpacity(0.5) : Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600),
         ),
       ],
     );

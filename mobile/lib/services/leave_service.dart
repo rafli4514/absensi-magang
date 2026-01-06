@@ -1,210 +1,90 @@
-import 'dart:convert';
-
-import 'package:flutter/foundation.dart'; // Untuk kDebugMode
-import 'package:http/http.dart' as http;
-
 import '../models/api_response.dart';
-import '../utils/constants.dart';
-import 'storage_service.dart';
+import 'api_service.dart';
 
 class LeaveService {
-  static const String baseUrl = AppConstants.baseUrl;
+  static final ApiService _apiService = ApiService();
 
-  static Future<Map<String, String>> _getHeaders() async {
-    final token = await StorageService.getString(AppConstants.tokenKey);
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': token != null ? 'Bearer $token' : '',
-    };
-  }
-
-  // --- 1. GET: Ambil daftar izin ---
   static Future<ApiResponse<List<Map<String, dynamic>>>> getLeaves({
     String? status,
     String? pesertaMagangId,
   }) async {
-    try {
-      final headers = await _getHeaders();
-      final uri =
-          Uri.parse('$baseUrl/pengajuan-izin').replace(queryParameters: {
-        'limit': '100', // Ambil cukup banyak data
-        if (status != null) 'status': status,
-        if (pesertaMagangId != null) 'pesertaMagangId': pesertaMagangId,
-      });
+    String query = '?limit=100';
+    if (status != null) query += '&status=$status';
+    if (pesertaMagangId != null) query += '&pesertaMagangId=$pesertaMagangId';
 
-      if (kDebugMode) {
-        print('📡 [LeaveService] Fetching: $uri');
-      }
-
-      final response = await http.get(uri, headers: headers);
-
-      if (kDebugMode) {
-        print('📥 [LeaveService] Status: ${response.statusCode}');
-        print('📥 [LeaveService] Body: ${response.body}');
-      }
-
-      final data = jsonDecode(response.body);
-
-      if (data['success'] == true && data['data'] != null) {
-        return ApiResponse(
-          success: true,
-          message: data['message'],
-          data: List<Map<String, dynamic>>.from(data['data']),
-        );
-      } else {
-        return ApiResponse(
-            success: false, message: data['message'] ?? 'Gagal memuat data');
-      }
-    } catch (e) {
-      print('❌ [LeaveService] Error: $e');
-      return ApiResponse(success: false, message: e.toString());
-    }
+    return await _apiService.get(
+      '/pengajuan-izin$query',
+      (data) => List<Map<String, dynamic>>.from(data),
+    );
   }
 
-  // --- 2. POST: Buat Pengajuan Izin ---
   static Future<ApiResponse> createLeave({
     required String pesertaMagangId,
     required String tipe,
     required String alasan,
     required String tanggalMulai,
     required String tanggalSelesai,
-    String? dokumenPendukung,
   }) async {
-    try {
-      final headers = await _getHeaders();
-      final body = jsonEncode({
-        'pesertaMagangId': pesertaMagangId,
-        'tipe': tipe,
-        'alasan': alasan,
-        'tanggalMulai': tanggalMulai,
-        'tanggalSelesai': tanggalSelesai,
-        if (dokumenPendukung != null) 'dokumenPendukung': dokumenPendukung,
-      });
+    final body = {
+      'pesertaMagangId': pesertaMagangId,
+      'tipe': tipe,
+      'alasan': alasan,
+      'tanggalMulai': tanggalMulai,
+      'tanggalSelesai': tanggalSelesai,
+    };
 
-      print('📤 [LeaveService] Sending: $body');
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/pengajuan-izin'),
-        headers: headers,
-        body: body,
-      );
-
-      print('📥 [LeaveService] Create Response: ${response.body}');
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return ApiResponse(
-          success: true,
-          message: data['message'] ?? 'Pengajuan berhasil dikirim',
-          data: data['data'],
-        );
-      } else {
-        return ApiResponse(
-          success: false,
-          message: data['message'] ?? 'Gagal mengirim pengajuan',
-        );
-      }
-    } catch (e) {
-      return ApiResponse(success: false, message: 'Error: $e');
-    }
+    return await _apiService.post(
+      '/pengajuan-izin',
+      body,
+      null, // Return null data jika tidak butuh parsing detail
+    );
   }
 
-  // --- 3. APPROVE & REJECT ---
   static Future<bool> approveLeave(String id, {String catatan = ''}) async {
-    try {
-      final headers = await _getHeaders();
-      final url = Uri.parse('$baseUrl/pengajuan-izin/$id/approve');
-
-      if (kDebugMode) {
-        print('📡 [LeaveService] Approving: $url');
-      }
-
-      final response = await http.patch(
-        url,
-        headers: headers,
-        body: jsonEncode({'catatan': catatan}),
-      );
-
-      if (kDebugMode) {
-        print('📥 [LeaveService] Approve Status: ${response.statusCode}');
-        print('📥 [LeaveService] Approve Body: ${response.body}');
-      }
-
-      final data = jsonDecode(response.body);
-      return data['success'] == true;
-    } catch (e) {
-      print('❌ [LeaveService] Approve Error: $e');
-      return false;
-    }
+    final response = await _apiService.patch(
+      '/pengajuan-izin/$id/approve',
+      {'catatan': catatan},
+      null,
+    );
+    return response.success;
   }
 
   static Future<bool> rejectLeave(String id, {String catatan = ''}) async {
-    try {
-      final headers = await _getHeaders();
-      final url = Uri.parse('$baseUrl/pengajuan-izin/$id/reject');
-
-      if (kDebugMode) {
-        print('📡 [LeaveService] Rejecting: $url');
-      }
-
-      final response = await http.patch(
-        url,
-        headers: headers,
-        body: jsonEncode({'catatan': catatan}),
-      );
-
-      if (kDebugMode) {
-        print('📥 [LeaveService] Reject Status: ${response.statusCode}');
-        print('📥 [LeaveService] Reject Body: ${response.body}');
-      }
-
-      final data = jsonDecode(response.body);
-      return data['success'] == true;
-    } catch (e) {
-      print('❌ [LeaveService] Reject Error: $e');
-      return false;
-    }
+    final response = await _apiService.patch(
+      '/pengajuan-izin/$id/reject',
+      {'catatan': catatan},
+      null,
+    );
+    return response.success;
   }
 
-  // --- 4. LOGIC BISNIS: Cek Status Izin Hari Ini ---
   static Future<String?> getTodayLeaveStatus(String pesertaMagangId) async {
-    try {
-      // Panggil API getLeaves internal
-      final response = await getLeaves(
-        pesertaMagangId: pesertaMagangId,
-        status: 'DISETUJUI',
-      );
+    final response = await getLeaves(
+      pesertaMagangId: pesertaMagangId,
+      status: 'DISETUJUI',
+    );
 
-      if (response.success && response.data != null) {
-        final now = DateTime.now();
-        final dateNow =
-            DateTime(now.year, now.month, now.day); // Normalisasi hari ini
+    if (response.success && response.data != null) {
+      final now = DateTime.now();
+      final dateNow = DateTime(now.year, now.month, now.day);
 
-        for (var leave in response.data!) {
-          try {
-            final start = DateTime.parse(leave['tanggalMulai']);
-            final end = DateTime.parse(leave['tanggalSelesai']);
+      for (var leave in response.data!) {
+        try {
+          final start = DateTime.parse(leave['tanggalMulai']);
+          final end = DateTime.parse(leave['tanggalSelesai']);
 
-            // Normalisasi tanggal mulai & selesai
-            final dateStart = DateTime(start.year, start.month, start.day);
-            final dateEnd = DateTime(end.year, end.month, end.day);
+          final dateStart = DateTime(start.year, start.month, start.day);
+          final dateEnd = DateTime(end.year, end.month, end.day);
 
-            // Cek apakah hari ini masuk dalam range izin
-            if ((dateNow.isAtSameMomentAs(dateStart) ||
-                    dateNow.isAfter(dateStart)) &&
-                (dateNow.isAtSameMomentAs(dateEnd) ||
-                    dateNow.isBefore(dateEnd))) {
-              return leave['tipe']; // Mengembalikan 'IZIN' atau 'SAKIT'
-            }
-          } catch (e) {
-            continue; // Skip jika format tanggal error
+          if ((dateNow.isAtSameMomentAs(dateStart) ||
+                  dateNow.isAfter(dateStart)) &&
+              (dateNow.isAtSameMomentAs(dateEnd) ||
+                  dateNow.isBefore(dateEnd))) {
+            return leave['tipe'];
           }
-        }
+        } catch (_) {}
       }
-    } catch (e) {
-      if (kDebugMode) print('❌ Error checking leave status: $e');
     }
-    return null; // Tidak ada izin hari ini
+    return null;
   }
 }

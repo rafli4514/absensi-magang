@@ -1,3 +1,5 @@
+import org.gradle.kotlin.dsl.all
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -30,7 +32,23 @@ android {
 
     buildTypes {
         release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            activities_screen
             signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+
+    applicationVariants.all {
+        outputs.all {
+            // Sintaks khusus Kotlin DSL untuk ganti nama file
+            val output = this as? com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            output?.outputFileName = "MyInternPlus.apk"
         }
     }
 }
@@ -41,4 +59,25 @@ dependencies {
 
 flutter {
     source = "../.."
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+val newBuildDir: Directory =
+    rootProject.layout.buildDirectory
+        .dir("../../build")
+        .get()
+rootProject.layout.buildDirectory.value(newBuildDir)
+
+subprojects {
+    val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
+    project.layout.buildDirectory.value(newSubprojectBuildDir)
+}
+subprojects {
+    project.evaluationDependsOn(":app")
 }
