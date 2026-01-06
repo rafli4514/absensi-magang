@@ -9,8 +9,8 @@ Dokumentasi ini menjelaskan langkah-langkah pembuatan CRUD (Create, Read, Update
 
 #### Langkah 1.1: Install Prisma
 ```bash
-npm install prisma @prisma/client
-npm install -D prisma
+npm ci prisma @prisma/client
+npm ci -D prisma
 ```
 
 #### Langkah 1.2: Initialize Prisma

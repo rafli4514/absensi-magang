@@ -59,7 +59,6 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     // Check if user is authenticated
-    // Check if user is authenticated
     final isAuthenticated = await authProvider.checkAuthentication();
 
     if (isAuthenticated) {

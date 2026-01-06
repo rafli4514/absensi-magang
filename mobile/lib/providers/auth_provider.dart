@@ -15,24 +15,40 @@ class AuthProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   String? _token;
+  bool _isInitialized = false;
+  Future<void>? _initializationFuture;
 
   User? get user => _user;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get isAuthenticated => _user != null;
+  bool get isAuthenticated => _user != null && _token != null && _token!.isNotEmpty;
   bool get isAdmin => _user?.isAdmin ?? false;
   bool get isStudent => _user?.isStudent ?? false;
   bool get isMentor => _user?.isPembimbing ?? false;
 
   AuthProvider() {
-    _loadUserData();
+    // Initialize data loading but don't await here
+    _initializationFuture = _loadUserData();
   }
 
   Future<void> _loadUserData() async {
+    // Prevent multiple simultaneous loads
+    if (_isInitialized) {
+      if (kDebugMode) print('🔍 [AUTH] Data already initialized, skipping load');
+      return;
+    }
+
     try {
+      if (kDebugMode) print('🔍 [AUTH] Loading user data from storage...');
+      
       final userDataStr =
           await StorageService.getString(AppConstants.userDataKey);
       final token = await StorageService.getString(AppConstants.tokenKey);
+
+      if (kDebugMode) {
+        print('🔍 [AUTH] Token exists: ${token != null && token.isNotEmpty}');
+        print('🔍 [AUTH] User data exists: ${userDataStr != null && userDataStr.isNotEmpty}');
+      }
 
       // Pastikan string tidak kosong sebelum decode
       if (userDataStr != null &&
@@ -43,14 +59,22 @@ class AuthProvider with ChangeNotifier {
           final userData = jsonDecode(userDataStr);
           _user = User.fromJson(userData);
           _token = token;
+          _isInitialized = true;
+          
+          if (kDebugMode) print('✅ [AUTH] User data loaded successfully');
           notifyListeners();
         } catch (e) {
           // Jika JSON error (misal format berubah), hapus data corrupt agar user login ulang
-          print('Data corrupt, clearing storage...');
+          if (kDebugMode) print('❌ [AUTH] Data corrupt, clearing storage...');
           await logout();
+          _isInitialized = true; // Mark as initialized even after logout
         }
+      } else {
+        _isInitialized = true; // Mark as initialized even if no data
+        if (kDebugMode) print('⚠️ [AUTH] No user data found in storage');
       }
     } catch (e) {
+      _isInitialized = true; // Mark as initialized even on error
       if (kDebugMode) print('❌ [AUTH PROVIDER] Error loading user data: $e');
     }
   }
@@ -59,21 +83,37 @@ class AuthProvider with ChangeNotifier {
 
   // Perbaikan Logika Check Authentication
   Future<bool> checkAuthentication() async {
-    // 1. Wajib tunggu load data dari HP selesai dulu
-    await _loadUserData();
+    // 1. Tunggu initialization selesai (jika belum selesai)
+    if (_initializationFuture != null) {
+      await _initializationFuture;
+    }
+    
+    // 2. Pastikan data sudah di-load
+    if (!_isInitialized) {
+      await _loadUserData();
+    }
 
-    // 2. Cek apakah di HP ada Token & Data User
-    if (_token != null && _user != null) {
-      // 3. Coba sync data terbaru ke server di background (Silent Sync)
+    if (kDebugMode) {
+      print('🔍 [AUTH] Checking authentication...');
+      print('🔍 [AUTH] Token: ${_token != null && _token!.isNotEmpty}');
+      print('🔍 [AUTH] User: ${_user != null}');
+    }
+
+    // 3. Cek apakah di HP ada Token & Data User
+    if (_token != null && _token!.isNotEmpty && _user != null) {
+      if (kDebugMode) print('✅ [AUTH] User is authenticated');
+      
+      // 4. Coba sync data terbaru ke server di background (Silent Sync)
       // Kita tidak await ini agar app cepat masuk ke Home
       // dan jika offline, user tetap bisa masuk.
       refreshProfile().catchError((e) {
-        if (kDebugMode) print('Offline mode or sync failed: $e');
+        if (kDebugMode) print('⚠️ [AUTH] Offline mode or sync failed: $e');
       });
 
       return true; // Izinkan masuk karena ada data di local
     }
 
+    if (kDebugMode) print('❌ [AUTH] User is NOT authenticated');
     return false; // Tidak ada data login
   }
 
@@ -214,11 +254,15 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> logout() async {
+    if (kDebugMode) print('🔍 [AUTH] Logging out...');
     await StorageService.remove(AppConstants.tokenKey);
     await StorageService.remove(AppConstants.userDataKey);
     _user = null;
     _token = null;
+    _isInitialized = false; // Reset initialization flag
+    _initializationFuture = null; // Reset future
     notifyListeners();
+    if (kDebugMode) print('✅ [AUTH] Logout completed');
   }
 
   // --- AUTH METHODS (Login/Register standard) ---
@@ -317,11 +361,19 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> _handleAuthSuccess(LoginResponse loginResponse) async {
-    await StorageService.setString(AppConstants.tokenKey, loginResponse.token);
-    _user = loginResponse.user;
-    await _saveUserData(_user!);
+    if (kDebugMode) print('🔍 [AUTH] Handling auth success...');
+    
     _token = loginResponse.token;
+    _user = loginResponse.user;
+    
+    // Pastikan data tersimpan dengan benar
+    await StorageService.setString(AppConstants.tokenKey, loginResponse.token);
+    await _saveUserData(_user!);
+    
+    _isInitialized = true; // Mark as initialized after successful login
     _isLoading = false;
+    
+    if (kDebugMode) print('✅ [AUTH] Auth success handled, user logged in');
     notifyListeners();
   }
 

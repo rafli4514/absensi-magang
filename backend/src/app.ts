@@ -27,6 +27,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
+      // Mengizinkan gambar dari localhost dan format data base64
       imgSrc: ["'self'", "data:", "http://localhost:3000", "http://localhost:3000/uploads/"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
@@ -37,23 +38,23 @@ app.use(helmet({
 // CORS middleware
 app.use(corsMiddleware);
 
-// Logging middleware
+// Logging middleware (hanya di mode development)
 if (config.nodeEnv === 'development') {
   app.use(morgan('dev'));
 }
 
-// Body parsing middleware
+// Body parsing middleware dengan limit 10mb untuk upload foto
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static files
+// Memastikan direktori uploads tersedia
 const uploadsPath = path.join(__dirname, 'uploads');
 const fs = require('fs');
 if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
 }
 
-// CORS middleware for uploads
+// Konfigurasi Header untuk file statis
 app.use('/uploads', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -68,28 +69,26 @@ app.use('/uploads', (req, res, next) => {
   next();
 });
 
+// Menyajikan file statis
 app.use('/uploads', express.static(uploadsPath, {
   setHeaders: (res: any) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   },
 }));
 
-// API routes
+// Mendaftarkan rute API utama
 app.use('/api', routes);
 
-// Root endpoint
+// Endpoint Root untuk pengecekan status server
 app.get('/', (req, res) => {
   res.json({
     message: 'Absensi System API',
-    version: '1.0.0',
     status: 'Running',
-    timestamp: new Date().toISOString(),
-    docs: '/api/health'
+    timestamp: new Date().toISOString()
   });
 });
 
-// Error handling middleware (must be last)
+// Global Error Handler (Wajib diletakkan terakhir)
 app.use(errorHandler);
 
 export default app;
-

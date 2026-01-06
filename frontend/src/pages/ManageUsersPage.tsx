@@ -216,7 +216,7 @@ export default function ManageUsersPage() {
               <Grid columns="2" gap="4">
                 <Box>
                   <Text as="div" size="2" weight="bold" mb="1" className="text-gray-700">Role Akses</Text>
-                  <Select.Root value={formData.role} onValueChange={v => setFormData({...formData, role: v})}>
+                  <Select.Root value={formData.role} onValueChange={v => setFormData({...formData, role: v as 'ADMIN' | 'PESERTA_MAGANG' | 'PEMBIMBING_MAGANG'})}>
                     <Select.Trigger className="w-full" placeholder="Pilih Role" />
                     <Select.Content>
                       <Select.Item value="ADMIN">Admin</Select.Item>
@@ -341,7 +341,7 @@ export default function ManageUsersPage() {
                           <Grid columns="2" gap="4">
                             <Box>
                               <Text as="div" size="2" weight="bold" mb="1" className="text-gray-700">Role</Text>
-                              <Select.Root value={updateFormData.role} onValueChange={v => setUpdateFormData({...updateFormData, role: v})}>
+                              <Select.Root value={updateFormData.role} onValueChange={v => setUpdateFormData({...updateFormData, role: v as 'ADMIN' | 'PESERTA_MAGANG' | 'PEMBIMBING_MAGANG'})}>
                                 <Select.Trigger className="w-full" />
                                 <Select.Content>
                                   <Select.Item value="ADMIN">Admin</Select.Item>

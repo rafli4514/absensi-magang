@@ -1,14 +1,12 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: absensi-postgres
+    container_name: absensi-postgres-local
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-absensi_db}
       POSTGRES_USER: ${POSTGRES_USER:-absensi_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_this_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-absensi123}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -28,11 +26,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: absensi-backend
+    container_name: absensi-backend-local
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-absensi_user}:${POSTGRES_PASSWORD:-change_this_password}@postgres:5432/${POSTGRES_DB:-absensi_db}?schema=public
-      JWT_SECRET: ${JWT_SECRET:-change_this_jwt_secret}
-      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-absensi_user}:${POSTGRES_PASSWORD:-absensi123}@postgres:5432/${POSTGRES_DB:-absensi_db}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-your-local-jwt-secret-change-this-in-production}
+      NODE_ENV: ${NODE_ENV:-development}
       PORT: 3000
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
     ports:
@@ -46,7 +44,7 @@ services:
     restart: unless-stopped
     networks:
       - absensi-network
-    command: sh -c "npx prisma migrate deploy && node dist/index.js"
+    # Entrypoint script handles: generate, migrate, seed, and start
 
   # Frontend (React)
   frontend:
@@ -55,7 +53,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:3000/api}
-    container_name: absensi-frontend
+    container_name: absensi-frontend-local
     ports:
       - "${FRONTEND_PORT:-80}:80"
     depends_on:

@@ -5,6 +5,7 @@ export interface CreateUserRequest {
   password: string;
   role: 'ADMIN' | 'PESERTA_MAGANG' | 'PEMBIMBING_MAGANG';
   isActive?: boolean;
+  divisi?: string;
 }
 
 export interface UpdateUserRequest {
@@ -12,6 +13,7 @@ export interface UpdateUserRequest {
   password?: string;
   role?: 'ADMIN' | 'PESERTA_MAGANG' | 'PEMBIMBING_MAGANG';
   isActive?: boolean;
+  divisi?: string;
 }
 
 export interface UserFilters {

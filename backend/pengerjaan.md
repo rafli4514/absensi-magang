@@ -153,7 +153,7 @@ git clone <repository-url>
 cd backend
 
 # Install dependencies
-npm install
+npm ci
 
 # Setup environment variables
 cp .env.example .env

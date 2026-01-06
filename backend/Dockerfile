@@ -1,52 +1,37 @@
-# Backend Dockerfile
-FROM node:18-alpine AS base
-
-# Install dependencies needed for native modules
-RUN apk add --no-cache python3 make g++
+FROM node:22-alpine
 
 WORKDIR /app
+
+RUN apk add --no-cache python3 make g++ openssl
 
 # Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/
 
 # Install dependencies
-RUN npm ci
+RUN npm ci --only=production --ignore-scripts && \
+    npm cache clean --force
 
-# Generate Prisma Client
-RUN npx prisma generate
+# Install dev dependencies for build
+RUN npm install --include=dev
 
 # Copy source code
 COPY . .
 
-# Build TypeScript
-RUN npm run build
+# Generate Prisma client and build
+RUN npx prisma generate && \
+    npm run build
 
-# Production stage
-FROM node:18-alpine AS production
+# Keep ts-node and types for seeding (needed for db:seed)
+RUN npm prune --production && \
+    npm install --save-prod ts-node typescript && \
+    npm install --save-dev @types/node
 
-WORKDIR /app
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Install dependencies for production only
-COPY package*.json ./
-COPY prisma ./prisma/
-
-RUN npm ci --only=production && \
-    npx prisma generate
-
-# Copy built files from base stage
-COPY --from=base /app/dist ./dist
-
-# Create uploads directory
-RUN mkdir -p uploads && chmod 755 uploads
-
-# Expose port
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-# Start application
-CMD ["node", "dist/index.js"]
-
+# Use entrypoint script
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

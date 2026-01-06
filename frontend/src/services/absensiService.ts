@@ -130,8 +130,8 @@ class AbsensiService {
 
     return this.createAbsensi({
       pesertaMagangId: userId,
-      // PERBAIKAN 2: Menghapus 'tipe: options.tipe' karena sudah ada di ...options
-      // Ini mencegah error "tipe is specified more than once"
+      tipe: tipe, // Include tipe yang required
+      ...restOptions,
       timestamp: new Date().toISOString(),
       status: 'VALID',
     });
