@@ -1,45 +1,52 @@
 import { type Request, type Response } from "express";
 import { prisma } from "../lib/prisma";
 import {
-  sendSuccess,
-  sendError,
-  sendPaginatedSuccess,
+sendSuccess,
+sendError,
+sendPaginatedSuccess,
 } from "../utils/response";
 
 export const getAllLogbook = async (req: Request, res: Response) => {
-  try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const skip = (page - 1) * limit;
-    const pesertaMagangId = req.query.pesertaMagangId as string;
-    const tanggal = req.query.tanggal as string;
+try {
+const page = parseInt(req.query.page as string) || 1;
+const limit = parseInt(req.query.limit as string) || 10;
+const skip = (page - 1) * limit;
 
-    const where: any = {};
-    
-    if (pesertaMagangId) {
+const pesertaMagangId = req.query.pesertaMagangId as string;
+const tanggal = req.query.tanggal as string;
+// TAMBAHAN: Parameter Rentang Tanggal
+const startDate = req.query.startDate as string;
+const endDate = req.query.endDate as string;
+
+const where: any = {};
+
+if (pesertaMagangId) {
       where.pesertaMagangId = pesertaMagangId;
     }
-    
+
+    // Filter Spesifik Tanggal
     if (tanggal) {
       where.tanggal = tanggal;
     }
 
-    // If user is not admin or pembimbing, only show their own logbook
+    // TAMBAHAN: Filter Rentang Tanggal (Mingguan)
+    // Asumsi format tanggal di database adalah String 'YYYY-MM-DD'
+    if (startDate && endDate) {
+      where.tanggal = {
+        gte: startDate, // Lebih besar atau sama dengan
+        lte: endDate,   // Lebih kecil atau sama dengan
+      };
+    }
+
+    // ... (Logic permission user/admin/mentor tetap sama) ...
     if (req.user?.role !== "ADMIN" && req.user?.role !== "PEMBIMBING_MAGANG") {
-      // Get peserta magang by user id
       const pesertaMagang = await prisma.pesertaMagang.findFirst({
         where: { userId: req.user?.id },
       });
       if (pesertaMagang) {
         where.pesertaMagangId = pesertaMagang.id;
       } else {
-        // If no peserta magang found, return empty
-        return sendPaginatedSuccess(
-          res,
-          "Logbook retrieved successfully",
-          [],
-          { page, limit, total: 0, totalPages: 0 }
-        );
+        return sendPaginatedSuccess(res, "Logbook retrieved", [], { page, limit, total: 0, totalPages: 0 });
       }
     }
 

@@ -1,3 +1,4 @@
+import '../services/api_service.dart';
 import '../models/api_response.dart';
 import '../models/onboard_model.dart';
 import '../services/storage_service.dart';
@@ -6,6 +7,31 @@ import '../utils/constants.dart';
 class OnboardService {
   static Future<ApiResponse<List<OnboardPage>>> getOnboardPages() async {
     try {
+      // Fetch onboarding data from backend settings
+      try {
+        final response = await ApiService().get(
+          '/settings/category/onboard',
+          (data) => data,
+        );
+
+        if (response.success && response.data != null) {
+          final pagesData = response.data['pages'] as List;
+          final pages = pagesData
+              .map((item) => OnboardPage.fromJson(item))
+              .toList()
+            ..sort((a, b) => a.order.compareTo(b.order));
+
+          return ApiResponse(
+            success: true,
+            data: pages,
+            message: 'Onboard pages retrieved successfully',
+          );
+        }
+      } catch (e) {
+        print('Failed to fetch from backend, using fallback: $e');
+      }
+
+      // Fallback data if backend is unreachable or returns empty
       final mockPages = [
         OnboardPage(
           id: '1',
@@ -36,7 +62,7 @@ class OnboardService {
       return ApiResponse(
         success: true,
         data: mockPages,
-        message: 'Onboard pages retrieved successfully',
+        message: 'Onboard pages retrieved successfully (fallback)',
       );
     } catch (e) {
       return ApiResponse(

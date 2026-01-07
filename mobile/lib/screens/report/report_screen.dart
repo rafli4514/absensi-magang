@@ -200,6 +200,9 @@ class _ReportScreenState extends State<ReportScreen> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
 
+    // Cek apakah keyboard terbuka
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+
     final validCount = _attendanceRecords
         .where((r) => r.status == AttendanceStatus.valid)
         .length;
@@ -220,27 +223,28 @@ class _ReportScreenState extends State<ReportScreen> {
         .length;
 
     return Scaffold(
+      // [FIX] Mencegah body resize saat keyboard muncul agar navbar tetap di bawah
+      resizeToAvoidBottomInset: false,
       appBar: CustomAppBar(
         title: 'Laporan Absensi',
         showBackButton: false,
       ),
-      // --- PERBAIKAN: Gunakan Stack agar navbar konsisten ---
       body: Stack(
+        // [FIX] Memaksa stack mengisi seluruh layar
+        fit: StackFit.expand,
         children: [
           // 1. LAYER KONTEN
           _isLoading
               ? Center(
                   child: CircularProgressIndicator(
-                    color: isDark
-                        ? AppThemes.darkAccentBlue
-                        : AppThemes.primaryColor,
+                    color: AppThemes.primaryColor,
                   ),
                 )
               : RefreshIndicator(
                   onRefresh: _loadData,
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    // Tambahkan padding bawah agar konten tidak tertutup navbar
+                    // Tambahkan padding bawah yang cukup agar konten terakhir tidak tertutup navbar
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
                     child: Column(
                       children: [
@@ -309,24 +313,18 @@ class _ReportScreenState extends State<ReportScreen> {
                               Text('Riwayat Absensi',
                                   style: theme.textTheme.titleLarge?.copyWith(
                                       fontWeight: FontWeight.w700,
-                                      color: isDark
-                                          ? AppThemes.darkTextPrimary
-                                          : theme.textTheme.titleLarge?.color)),
+                                      color: theme.colorScheme.onSurface)),
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: (isDark
-                                          ? AppThemes.darkAccentBlue
-                                          : AppThemes.primaryColor)
-                                      .withOpacity(0.1),
+                                  color:
+                                      AppThemes.primaryColor.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text('${_attendanceRecords.length} Data',
                                     style: theme.textTheme.bodySmall?.copyWith(
-                                        color: isDark
-                                            ? AppThemes.darkAccentBlue
-                                            : AppThemes.primaryColor,
+                                        color: AppThemes.primaryColor,
                                         fontWeight: FontWeight.w600)),
                               ),
                             ],
@@ -344,15 +342,17 @@ class _ReportScreenState extends State<ReportScreen> {
                 ),
 
           // 2. LAYER NAVIGASI
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: FloatingBottomNav(
-              currentRoute: RouteNames.report,
-              onQRScanTap: _handleQRScan, // Fix Navigation
+          // [FIX] Sembunyikan navbar jika keyboard terbuka (konsistensi UI)
+          if (!isKeyboardOpen)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: FloatingBottomNav(
+                currentRoute: RouteNames.report,
+                onQRScanTap: _handleQRScan,
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -361,14 +361,14 @@ class _ReportScreenState extends State<ReportScreen> {
   // --- WIDGET HELPERS ---
 
   Widget _buildDateFilterCard(ThemeData theme, bool isDark) {
+    final colorScheme = theme.colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
+        color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color:
-                isDark ? AppThemes.darkOutline : Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
@@ -381,15 +381,11 @@ class _ReportScreenState extends State<ReportScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color:
-                  (isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor)
-                      .withOpacity(0.1),
+              color: AppThemes.primaryColor.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.calendar_today_outlined,
-                size: 20,
-                color:
-                    isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor),
+            child: const Icon(Icons.calendar_today_outlined,
+                size: 20, color: AppThemes.primaryColor),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -398,25 +394,19 @@ class _ReportScreenState extends State<ReportScreen> {
               children: [
                 Text('Pilih Tanggal',
                     style: theme.textTheme.bodySmall?.copyWith(
-                        color: isDark
-                            ? AppThemes.darkTextSecondary
-                            : theme.hintColor,
+                        color: colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w500)),
                 const SizedBox(height: 2),
                 Text(_formatMonth(_selectedMonth),
                     style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? AppThemes.darkTextPrimary
-                            : theme.textTheme.bodyMedium?.color)),
+                        color: colorScheme.onSurface)),
               ],
             ),
           ),
           IconButton(
             icon: Icon(Icons.arrow_drop_down_rounded,
-                color:
-                    isDark ? AppThemes.darkTextPrimary : theme.iconTheme.color,
-                size: 24),
+                color: colorScheme.onSurface, size: 24),
             onPressed: _selectDate,
           ),
         ],
@@ -425,21 +415,18 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   Widget _buildEmptyState(bool isDark, ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+
     return Padding(
       padding: const EdgeInsets.only(top: 40),
       child: Column(
         children: [
           Icon(Icons.history_toggle_off_rounded,
-              size: 48,
-              color: isDark
-                  ? AppThemes.darkTextSecondary.withOpacity(0.5)
-                  : AppThemes.hintColor.withOpacity(0.5)),
+              size: 48, color: colorScheme.onSurfaceVariant.withOpacity(0.5)),
           const SizedBox(height: 16),
           Text('Tidak ada riwayat absensi',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isDark
-                      ? AppThemes.darkTextSecondary
-                      : AppThemes.hintColor)),
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: colorScheme.onSurfaceVariant)),
         ],
       ),
     );
@@ -447,6 +434,8 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Widget _buildSummaryItem(String title, String value, Color color,
       IconData icon, bool isDarkMode, double width) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       width: width,
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
@@ -469,9 +458,7 @@ class _ReportScreenState extends State<ReportScreen> {
               style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: isDarkMode
-                      ? AppThemes.darkTextSecondary
-                      : AppThemes.hintColor),
+                  color: colorScheme.onSurfaceVariant),
               maxLines: 1,
               overflow: TextOverflow.ellipsis),
         ],
@@ -481,19 +468,16 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Widget _buildModernAttendanceItem(AttendanceRecord record, bool isDarkMode) {
     final theme = Theme.of(context);
-    final primaryColor =
-        isDarkMode ? AppThemes.darkAccentBlue : AppThemes.primaryColor;
+    final colorScheme = theme.colorScheme;
+    final primaryColor = AppThemes.primaryColor;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDarkMode ? AppThemes.darkSurface : AppThemes.surfaceColor,
+        color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: isDarkMode
-                ? AppThemes.darkOutline
-                : Colors.grey.withOpacity(0.15)),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.15)),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.05),
@@ -529,9 +513,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   children: [
                     Text(_getDayName(record.date.weekday),
                         style: theme.textTheme.bodyMedium?.copyWith(
-                            color: isDarkMode
-                                ? AppThemes.darkTextSecondary
-                                : AppThemes.hintColor,
+                            color: colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.w500)),
                     const Spacer(),
                     _buildModernStatusChip(record.status, isDarkMode),
@@ -546,7 +528,7 @@ class _ReportScreenState extends State<ReportScreen> {
                       (record.catatan != null && record.catatan!.isNotEmpty)
                           ? record.catatan!
                           : 'Tidak ada keterangan',
-                      isDarkMode ? AppThemes.darkTextPrimary : Colors.black87,
+                      colorScheme.onSurface,
                       isDarkMode)
                 else ...[
                   if (record.checkIn != null)
@@ -578,6 +560,8 @@ class _ReportScreenState extends State<ReportScreen> {
   Widget _buildTimeRow(
       IconData icon, String text, Color color, bool isDarkMode) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
@@ -587,9 +571,7 @@ class _ReportScreenState extends State<ReportScreen> {
           Expanded(
             child: Text(text,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                    color: isDarkMode
-                        ? AppThemes.darkTextSecondary
-                        : theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
+                    color: colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
@@ -604,37 +586,37 @@ class _ReportScreenState extends State<ReportScreen> {
       AttendanceStatus.valid: {
         'label': 'Hadir',
         'color': AppThemes.successColor,
-        'lightColor': AppThemes.successLight
+        'lightColor': AppThemes.successColor.withOpacity(0.1)
       },
       AttendanceStatus.terlambat: {
         'label': 'Terlambat',
         'color': AppThemes.warningColor,
-        'lightColor': AppThemes.warningLight
+        'lightColor': AppThemes.warningColor.withOpacity(0.1)
       },
       AttendanceStatus.sakit: {
         'label': 'Sakit',
         'color': AppThemes.infoColor,
-        'lightColor': AppThemes.infoLight
+        'lightColor': AppThemes.infoColor.withOpacity(0.1)
       },
       AttendanceStatus.izin: {
         'label': 'Izin',
         'color': Colors.orange,
-        'lightColor': Colors.orange.shade100
+        'lightColor': Colors.orange.withOpacity(0.1)
       },
       AttendanceStatus.alpha: {
         'label': 'Alpha',
         'color': AppThemes.errorColor,
-        'lightColor': AppThemes.errorLight
+        'lightColor': AppThemes.errorColor.withOpacity(0.1)
       },
       AttendanceStatus.invalid: {
         'label': 'Invalid',
         'color': Colors.grey,
-        'lightColor': Colors.grey.shade200
+        'lightColor': Colors.grey.withOpacity(0.1)
       },
       AttendanceStatus.pending: {
         'label': 'Proses',
         'color': Colors.blueGrey,
-        'lightColor': Colors.blueGrey.shade100
+        'lightColor': Colors.blueGrey.withOpacity(0.1)
       },
     };
     final data = statusData[status] ?? statusData[AttendanceStatus.pending]!;
@@ -697,13 +679,14 @@ class _ReportScreenState extends State<ReportScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
-                primary:
-                    isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor,
+                primary: AppThemes.primaryColor,
                 onPrimary: Colors.white,
-                surface: isDark ? AppThemes.darkSurface : theme.cardColor,
-                onSurface: isDark ? AppThemes.darkTextPrimary : Colors.black),
+                surface: isDark
+                    ? theme.colorScheme.surfaceContainer
+                    : theme.cardColor,
+                onSurface: theme.colorScheme.onSurface),
             dialogBackgroundColor:
-                isDark ? AppThemes.darkSurface : theme.cardColor,
+                isDark ? theme.colorScheme.surfaceContainer : theme.cardColor,
           ),
           child: child!,
         );

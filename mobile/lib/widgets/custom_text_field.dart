@@ -41,57 +41,62 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
   @override
   Widget build(BuildContext context) {
+    // 1. FIX TEMA: Gunakan ColorScheme agar otomatis Dark/Light Mode
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
+
+    // Deteksi mode Picker (ReadOnly + ada OnTap)
+    final bool isPicker = widget.readOnly && widget.onTap != null;
 
     return TextFormField(
       controller: widget.controller,
       obscureText: widget.isPassword ? _obscureText : false,
       keyboardType: widget.keyboardType,
       readOnly: widget.readOnly,
-
-      // --- PERBAIKAN DI SINI (WRAPPER ONTAP) ---
-      // Membungkus onTap agar return type-nya dipaksa menjadi void
-      // Ini mencegah error interop pada fungsi async
-      onTap: widget.onTap != null
-          ? () {
-              widget.onTap!();
-            }
-          : null,
-
+      onTap: widget.onTap,
       onChanged: widget.onChanged,
       maxLines: widget.maxLines,
       validator: widget.validator,
       autovalidateMode: AutovalidateMode.onUserInteraction,
+
+      // 2. FIX WEB CRASH:
+      // Jangan gunakan AbsorbPointer. Matikan interaksi seleksi & kursor jika ini Picker.
+      enableInteractiveSelection: !isPicker,
+      showCursor: !isPicker,
+
+      // Style Text Input
       style: TextStyle(
         fontSize: 13,
-        color: isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
+        color: colorScheme.onSurface, // Warna teks utama
+        fontWeight: FontWeight.w500,
       ),
+
       decoration: InputDecoration(
         labelText: widget.label,
         labelStyle: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
+          color: colorScheme.onSurfaceVariant, // Warna label
         ),
         hintText: widget.hint,
         hintStyle: TextStyle(
           fontSize: 13,
-          color: isDark
-              ? AppThemes.darkTextTertiary
-              : AppThemes.hintColor.withOpacity(0.5),
+          color: colorScheme.onSurfaceVariant.withOpacity(0.5), // Warna hint
         ),
         filled: true,
+        // Background Color (Adaptif)
         fillColor: widget.readOnly
-            ? (isDark ? AppThemes.darkSurfaceVariant : Colors.grey.shade100)
-            : (isDark ? AppThemes.darkSurface : Colors.white),
+            ? colorScheme.surfaceContainerHigh.withOpacity(0.5)
+            : colorScheme.surfaceContainer,
+
         prefixIcon: Icon(
           widget.icon,
           color: widget.readOnly
-              ? (isDark ? AppThemes.darkTextTertiary : Colors.grey)
+              ? colorScheme.onSurfaceVariant.withOpacity(0.5)
               : AppThemes.primaryColor,
           size: 18,
         ),
+
         suffixIcon: widget.isPassword
             ? IconButton(
                 icon: Icon(
@@ -110,23 +115,25 @@ class _CustomTextFieldState extends State<CustomTextField> {
                 constraints: const BoxConstraints(maxWidth: 36),
               )
             : widget.suffixIcon ??
-                ((widget.readOnly && widget.onTap != null)
+                (isPicker
                     ? const Icon(
                         Icons.arrow_drop_down_rounded,
                         color: AppThemes.primaryColor,
                       )
                     : null),
+
+        // Borders (Menggunakan outline color dari tema)
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(
-            color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
+            color: colorScheme.outline.withOpacity(0.3),
             width: 1.5,
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(
-            color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
+            color: colorScheme.outline.withOpacity(0.3),
             width: 1.5,
           ),
         ),

@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../services/permission_service.dart';
 import '../services/storage_service.dart';
 import '../utils/constants.dart';
+import '../widgets/custom_dialog.dart'; // Gunakan CustomDialog
 import 'global_context.dart';
 import 'ui_utils.dart';
 
@@ -14,7 +15,6 @@ class GlobalErrorHandler {
   static void handle(dynamic error, [BuildContext? context]) {
     final ctx = context ?? GlobalContext.navigatorKey.currentContext;
 
-    // 1. Handle ApiResponse Error (dari Backend)
     if (error is ApiResponse) {
       if (error.statusCode == 401) {
         if (ctx != null) _handleUnauthorized(ctx);
@@ -32,69 +32,64 @@ class GlobalErrorHandler {
       return;
     }
 
-    // 2. Handle Network/System Errors
     final String errorMsg = error.toString().toLowerCase();
 
     if (errorMsg.contains('socketexception') ||
         errorMsg.contains('connection refused') ||
         errorMsg.contains('network is unreachable')) {
       GlobalSnackBar.show(
-        "Tidak ada koneksi internet. Periksa jaringan Anda.", // Translate
-        title: "Koneksi Bermasalah", // Translate
+        "Tidak ada koneksi internet.",
+        title: "Koneksi Bermasalah",
         isError: true,
         icon: Icons.wifi_off_rounded,
       );
     } else if (errorMsg.contains('timeout')) {
-      GlobalSnackBar.show(
-          "Waktu koneksi habis. Silakan coba lagi.", // Translate
-          title: "Waktu Habis", // Translate
-          isWarning: true,
-          icon: Icons.timer_off_rounded);
+      GlobalSnackBar.show("Waktu koneksi habis.",
+          title: "Waktu Habis", isWarning: true, icon: Icons.timer_off_rounded);
     } else if (errorMsg.contains('permission')) {
       if (ctx != null) {
-        AppDialog.show(
-          ctx,
-          title: 'Izin Diperlukan', // Translate
-          content:
-              'Aplikasi memerlukan izin untuk fitur ini. Buka pengaturan?', // Translate
-          primaryText: 'Buka Pengaturan', // Translate
-          secondaryText: 'Batal', // Translate
-          onPrimary: () {
-            Navigator.pop(ctx);
-            PermissionService.openAppSettings();
-          },
+        // Ganti AppDialog ke CustomDialog (buat helper atau pakai langsung)
+        showDialog(
+          context: ctx,
+          builder: (context) => CustomDialog(
+            title: 'Izin Diperlukan',
+            content:
+                'Aplikasi memerlukan izin untuk fitur ini. Buka pengaturan?',
+            primaryButtonText: 'Buka Pengaturan',
+            secondaryButtonText: 'Batal',
+            onPrimaryButtonPressed: () {
+              Navigator.pop(ctx);
+              PermissionService.openAppSettings();
+            },
+          ),
         );
       }
     } else {
-      GlobalSnackBar.show(
-        "Terjadi kesalahan: ${error.toString()}", // Translate
-        title: "Error",
-        isError: true,
-      );
+      GlobalSnackBar.show("Error: ${error.toString()}",
+          title: "Error", isError: true);
     }
   }
 
   static void _handleUnauthorized(BuildContext context) async {
     final token = await StorageService.getString(AppConstants.tokenKey);
-
     if (token == null || token.isEmpty) return;
 
-    AppDialog.show(
-      null,
-      title: 'Sesi Berakhir', // Translate
-      content:
-          'Sesi login Anda telah berakhir. Silakan login kembali.', // Translate
-      primaryText: 'Login Ulang', // Translate
-      isError: true,
-      dismissible: false,
-      onPrimary: () async {
-        final navContext = GlobalContext.navigatorKey.currentContext;
-        if (navContext != null) {
-          await Provider.of<AuthProvider>(navContext, listen: false).logout();
-          Navigator.pushNamedAndRemoveUntil(
-              navContext, RouteNames.login, (r) => false);
-        }
-      },
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => CustomDialog(
+        title: 'Sesi Berakhir',
+        content: 'Sesi login Anda telah berakhir. Silakan login kembali.',
+        primaryButtonText: 'Login Ulang',
+        onPrimaryButtonPressed: () async {
+          final navContext = GlobalContext.navigatorKey.currentContext;
+          if (navContext != null) {
+            await Provider.of<AuthProvider>(navContext, listen: false).logout();
+            Navigator.pushNamedAndRemoveUntil(
+                navContext, RouteNames.login, (r) => false);
+          }
+        },
+      ),
     );
   }
 }

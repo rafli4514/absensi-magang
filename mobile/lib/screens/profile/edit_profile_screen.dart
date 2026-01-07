@@ -32,7 +32,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _nomorHpController = TextEditingController();
   final _tanggalMulaiController = TextEditingController();
   final _tanggalSelesaiController = TextEditingController();
-  final _mentorController = TextEditingController(); // HANYA SATU DEFINISI
+  final _mentorController = TextEditingController();
 
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
 
@@ -111,14 +111,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
       builder: (context, child) {
-        final isDarkMode = Provider.of<ThemeProvider>(
-          context,
-          listen: false,
-        ).isDarkMode;
-        return Theme(
-          data: isDarkMode ? AppThemes.darkTheme : AppThemes.lightTheme,
-          child: child!,
-        );
+        // Menggunakan Theme default flutter yang sudah diset di main.dart
+        return child!;
       },
     );
 
@@ -199,7 +193,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildProfilePicture(bool isDarkMode) {
+  Widget _buildProfilePicture() {
+    final colorScheme = Theme.of(context).colorScheme;
+
     if (_selectedImage != null) {
       return Container(
         width: 120,
@@ -218,15 +214,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         height: 120,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isDarkMode ? AppThemes.darkSurface : AppThemes.neutralLight,
+          // FIX: Gunakan colorScheme.surfaceContainerHigh pengganti neutralLight/darkSurface
+          color: colorScheme.surfaceContainerHigh,
           border: Border.all(color: AppThemes.primaryColor, width: 3),
         ),
-        child: Icon(Icons.person_rounded, size: 50, color: AppThemes.hintColor),
+        // FIX: Gunakan colorScheme.onSurfaceVariant pengganti hintColor
+        child: Icon(Icons.person_rounded,
+            size: 50, color: colorScheme.onSurfaceVariant),
       );
     }
   }
 
-  Widget _buildSectionTitle(String title, bool isDarkMode) {
+  Widget _buildSectionTitle(String title) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -237,17 +238,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isDarkMode
-                  ? AppThemes.darkTextPrimary
-                  : AppThemes.onSurfaceColor,
+              // FIX: Gunakan onSurface pengganti darkTextPrimary/onSurfaceColor
+              color: colorScheme.onSurface,
             ),
           ),
           Container(
             margin: const EdgeInsets.only(top: 4),
             width: 40,
             height: 3,
-            color:
-                isDarkMode ? AppThemes.darkAccentBlue : AppThemes.primaryColor,
+            // FIX: Gunakan primary color pengganti darkAccentBlue
+            color: AppThemes.primaryColor,
           ),
         ],
       ),
@@ -256,6 +256,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
     final isStudent = authProvider.isStudent;
@@ -273,7 +275,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               Center(
                 child: Stack(
                   children: [
-                    _buildProfilePicture(isDarkMode),
+                    _buildProfilePicture(),
                     Positioned(
                       bottom: 0,
                       right: 0,
@@ -299,7 +301,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              _buildSectionTitle('Info Pribadi', isDarkMode),
+              _buildSectionTitle('Info Pribadi'),
               CustomTextField(
                 controller: _nameController,
                 label: 'Nama Lengkap',
@@ -336,7 +338,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 32),
               if (isStudent) ...[
-                _buildSectionTitle('Info Magang', isDarkMode),
+                _buildSectionTitle('Info Magang'),
                 CustomTextField(
                   controller: _divisiController,
                   label: 'Divisi',
@@ -375,9 +377,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   'Durasi Magang',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: isDarkMode
-                        ? AppThemes.darkTextPrimary
-                        : AppThemes.onSurfaceColor,
+                    // FIX: Gunakan onSurface
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -394,19 +395,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               onSelected: (selected) {
                                 if (selected) _updateDuration(d);
                               },
-                              selectedColor: isDarkMode
-                                  ? AppThemes.darkAccentBlue
-                                  : AppThemes.primaryColor,
+                              // FIX: Gunakan primary color untuk selected color
+                              selectedColor: AppThemes.primaryColor,
                               labelStyle: TextStyle(
                                 color: _selectedDuration == d
                                     ? Colors.white
-                                    : (isDarkMode
-                                        ? AppThemes.darkTextPrimary
-                                        : AppThemes.onSurfaceColor),
+                                    : colorScheme.onSurface,
                               ),
-                              backgroundColor: isDarkMode
-                                  ? AppThemes.darkSurface
-                                  : Colors.grey.shade100,
+                              // FIX: Gunakan surfaceContainer untuk background
+                              backgroundColor: colorScheme.surfaceContainer,
                             ),
                           ),
                         )
@@ -431,9 +428,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     : ElevatedButton(
                         onPressed: _updateProfile,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isDarkMode
-                              ? AppThemes.darkAccentBlue
-                              : AppThemes.primaryColor,
+                          // FIX: Gunakan primary color
+                          backgroundColor: AppThemes.primaryColor,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -442,7 +438,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                         child: Text(
                           'Simpan Perubahan',
-                          style: themeProvider.themeMode == ThemeMode.dark
+                          style: isDarkMode
                               ? null
                               : const TextStyle(fontWeight: FontWeight.w600),
                         ),

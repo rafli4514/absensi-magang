@@ -18,51 +18,33 @@ class AttendanceStatusCard extends StatelessWidget {
   });
 
   String _getClockOutStatus(bool isClockedOut, bool canClockOut) {
-    if (isClockedOut) {
-      return 'Selesai';
-    } else if (canClockOut) {
-      return 'Tersedia';
-    } else {
-      return 'Belum Tersedia';
-    }
+    if (isClockedOut) return 'Selesai';
+    if (canClockOut) return 'Tersedia';
+    return 'Belum Tersedia';
   }
 
   bool _isClockOutAvailable() {
     final now = DateTime.now();
-    return now.hour >= 17; // Available setelah jam 17:00
+    return now.hour >= 17;
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     final canClockOut = _isClockOutAvailable();
     final clockOutStatus = _getClockOutStatus(isClockedOut, canClockOut);
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
+        color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: isDark
-            ? Border.all(color: AppThemes.darkOutline, width: 0.5)
-            : Border.all(
-                color: AppThemes.backgroundColor.withOpacity(0.5),
-                width: 1,
-              ),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.5)),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              // Check In Card
               Expanded(
                 child: ModernStatusCard(
                   title: 'Jam Masuk',
@@ -70,11 +52,9 @@ class AttendanceStatusCard extends StatelessWidget {
                   icon: Icons.login_rounded,
                   status: isClockedIn ? 'Valid' : 'Belum Absen',
                   isCompleted: isClockedIn,
-                  isDark: isDark,
                 ),
               ),
               const SizedBox(width: 16),
-              // Check Out Card
               Expanded(
                 child: ModernStatusCard(
                   title: 'Jam Pulang',
@@ -82,7 +62,6 @@ class AttendanceStatusCard extends StatelessWidget {
                   icon: Icons.logout_rounded,
                   status: clockOutStatus,
                   isCompleted: isClockedOut,
-                  isDark: isDark,
                 ),
               ),
             ],
@@ -93,19 +72,16 @@ class AttendanceStatusCard extends StatelessWidget {
             height: 6,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: isDark ? AppThemes.darkOutline : AppThemes.backgroundColor,
+              color: colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(3),
             ),
             child: Row(
               children: [
-                // Selesai (Hijau)
                 Expanded(
                   flex: isClockedIn ? 1 : 0,
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [AppThemes.successColor, AppThemes.successDark],
-                      ),
+                      color: AppThemes.successColor,
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(3),
                         bottomLeft: Radius.circular(3),
@@ -113,34 +89,22 @@ class AttendanceStatusCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Sedang Berjalan (Biru)
                 Expanded(
                   flex: isClockedIn && !isClockedOut ? 1 : 0,
                   child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [AppThemes.primaryColor, AppThemes.primaryDark],
-                      ),
+                    decoration: const BoxDecoration(
+                      color: AppThemes.primaryColor,
                     ),
                   ),
                 ),
-                // Belum (Abu-abu)
                 Expanded(
                   flex: !isClockedIn ? 1 : (isClockedOut ? 0 : 0),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? AppThemes.darkOutlineVariant
-                          : AppThemes.neutralLight,
-                      borderRadius: BorderRadius.only(
-                        topRight: const Radius.circular(3),
-                        bottomRight: const Radius.circular(3),
-                        topLeft: !isClockedIn
-                            ? const Radius.circular(3)
-                            : Radius.zero,
-                        bottomLeft: !isClockedIn
-                            ? const Radius.circular(3)
-                            : Radius.zero,
+                      color: colorScheme.outline.withOpacity(0.2),
+                      borderRadius: const BorderRadius.only(
+                        topRight: Radius.circular(3),
+                        bottomRight: Radius.circular(3),
                       ),
                     ),
                   ),
@@ -157,18 +121,14 @@ class AttendanceStatusCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: isDark
-                      ? AppThemes.darkTextSecondary
-                      : AppThemes.hintColor,
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
               Text(
                 'Jam Kerja: 08:00 - 17:00',
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark
-                      ? AppThemes.darkTextSecondary
-                      : AppThemes.hintColor,
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -179,12 +139,8 @@ class AttendanceStatusCard extends StatelessWidget {
   }
 
   String _getProgressText(bool isClockedIn, bool isClockedOut) {
-    if (!isClockedIn) {
-      return 'Belum Absen Masuk';
-    } else if (isClockedIn && !isClockedOut) {
-      return 'Sedang Bekerja...';
-    } else {
-      return 'Pekerjaan Selesai';
-    }
+    if (!isClockedIn) return 'Belum Absen Masuk';
+    if (isClockedIn && !isClockedOut) return 'Sedang Bekerja...';
+    return 'Pekerjaan Selesai';
   }
 }

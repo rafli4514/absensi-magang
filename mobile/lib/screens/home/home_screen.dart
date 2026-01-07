@@ -20,6 +20,7 @@ import '../../services/settings_service.dart';
 import '../../services/storage_service.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/constants.dart';
+import '../../utils/haptic_util.dart'; // [IMPORT HAPTIC]
 import '../../utils/indonesian_time.dart';
 import '../../utils/navigation_helper.dart';
 import '../../utils/ui_utils.dart';
@@ -56,10 +57,11 @@ class _HomeScreenState extends State<HomeScreen> {
       _initialDataLoad();
     });
 
-    _realtimeTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+    _realtimeTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (!_stopRealtimeCheck && mounted) {
         _checkClockOutTime();
         _checkStatusUpdatesBackground();
+        _checkForgotClockOut();
       } else {
         timer.cancel();
       }
@@ -78,17 +80,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _stopRealtimeCheck = false;
     });
 
-    if (_realtimeTimer != null && !_realtimeTimer!.isActive) {
-      _realtimeTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-        if (!_stopRealtimeCheck && mounted) {
-          _checkClockOutTime();
-          _checkStatusUpdatesBackground();
-        } else {
-          timer.cancel();
-        }
-      });
-    }
-
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final attendanceProvider =
         Provider.of<AttendanceProvider>(context, listen: false);
@@ -103,28 +94,42 @@ class _HomeScreenState extends State<HomeScreen> {
     ]);
   }
 
-  Future<String?> _getPesertaId() async {
-    try {
-      final userDataStr =
-          await StorageService.getString(AppConstants.userDataKey);
-      if (userDataStr != null) {
-        final userData = jsonDecode(userDataStr);
-        return userData['pesertaMagang']?['id']?.toString() ??
-            userData['idPesertaMagang']?.toString();
+  Future<void> _checkForgotClockOut() async {
+    final attendanceProvider =
+        Provider.of<AttendanceProvider>(context, listen: false);
+    final now = DateTime.now();
+
+    final parts = _workEndTime.split(':');
+    final endHour = int.parse(parts[0]);
+    final endMinute = int.parse(parts[1]);
+
+    final workEndDateTime =
+        DateTime(now.year, now.month, now.day, endHour, endMinute);
+
+    if (now.isAfter(workEndDateTime.add(const Duration(minutes: 30))) &&
+        attendanceProvider.isClockedIn &&
+        !attendanceProvider.isClockedOut) {
+      final dateKey = '${now.year}-${now.month}-${now.day}';
+      final storageKey = 'notif_forgot_out_$dateKey';
+
+      final hasNotified = await StorageService.getBool(storageKey) ?? false;
+
+      if (!hasNotified) {
+        await NotificationService().showUrgentNotification(
+          id: 999,
+          title: 'Lupa Absen Pulang? 😱',
+          body:
+              'Halo! Sepertinya kamu belum melakukan Clock Out. Segera absen sebelum sistem reset.',
+        );
+        HapticUtil.error(); // [HAPTIC] Notifikasi Penting
+        await StorageService.setBool(storageKey, true);
       }
-    } catch (_) {}
-    return null;
+    }
   }
 
   Future<void> _checkStatusUpdatesBackground() async {
     try {
       String? pesertaId = await _getPesertaId();
-      if (pesertaId == null && mounted) {
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        await authProvider.refreshProfile();
-        pesertaId = await _getPesertaId();
-      }
-
       if (pesertaId == null) return;
 
       final status = await LeaveService.getTodayLeaveStatus(pesertaId);
@@ -143,75 +148,44 @@ class _HomeScreenState extends State<HomeScreen> {
           final hasSeen = await StorageService.getBool(storageKey) ?? false;
 
           if (!hasSeen) {
-            final title = status == 'SAKIT'
-                ? 'Izin Sakit Disetujui'
-                : 'Permohonan Izin Disetujui';
+            String title = 'Status Izin Diperbarui';
+            String body = 'Pengajuan izin Anda telah disetujui.';
+
+            if (status == 'SAKIT') {
+              title = 'Izin Sakit Disetujui ✅';
+              body = 'Semoga lekas sembuh! Istirahat yang cukup ya.';
+            } else if (status == 'IZIN') {
+              title = 'Izin Disetujui ✅';
+              body = 'Pengajuan izin Anda telah disetujui oleh pembimbing.';
+            }
+
             await NotificationService().showNotification(
               id: 200,
               title: title,
-              body: 'Pengajuan $status Anda telah disetujui.',
+              body: body,
             );
+            HapticUtil.medium(); // [HAPTIC] Notifikasi masuk
+
             await StorageService.setBool(storageKey, true);
           }
         }
-      }
-
-      if (status == null) {
-        await _checkRejectedLeave(pesertaId);
       }
     } catch (e) {
       if (kDebugMode) print("Error check status: $e");
     }
   }
 
-  void _stopRealtimeChecking() {
-    if (mounted && !_stopRealtimeCheck) {
-      setState(() {
-        _stopRealtimeCheck = true;
-      });
-    }
-  }
-
-  Future<void> _checkRejectedLeave(String pesertaId) async {
+  Future<String?> _getPesertaId() async {
     try {
-      final response = await LeaveService.getLeaves(
-          pesertaMagangId: pesertaId, status: 'DITOLAK');
-      if (response.success && response.data != null) {
-        final now = DateTime.now();
-        final today = DateTime(now.year, now.month, now.day);
-        final dateKey = '${now.year}-${now.month}-${now.day}';
-
-        for (var leave in response.data!) {
-          DateTime? tglMulai;
-          try {
-            tglMulai = DateTime.parse(leave['tanggalMulai']);
-          } catch (_) {}
-
-          if (tglMulai != null) {
-            final tglIzin =
-                DateTime(tglMulai.year, tglMulai.month, tglMulai.day);
-            if (tglIzin.isAtSameMomentAs(today)) {
-              final leaveId = leave['id'].toString();
-              final storageKey = 'notif_seen_${dateKey}_REJECTED_$leaveId';
-              final hasSeen = await StorageService.getBool(storageKey) ?? false;
-
-              if (!hasSeen) {
-                await NotificationService().showNotification(
-                  id: 201,
-                  title: 'Pengajuan Izin Ditolak',
-                  body: 'Maaf, pengajuan izin Anda ditolak.',
-                );
-                await StorageService.setBool(storageKey, true);
-                _stopRealtimeChecking();
-              } else {
-                _stopRealtimeChecking();
-              }
-              break;
-            }
-          }
-        }
+      final userDataStr =
+          await StorageService.getString(AppConstants.userDataKey);
+      if (userDataStr != null) {
+        final userData = jsonDecode(userDataStr);
+        return userData['pesertaMagang']?['id']?.toString() ??
+            userData['idPesertaMagang']?.toString();
       }
     } catch (_) {}
+    return null;
   }
 
   Future<void> _loadSettings() async {
@@ -312,6 +286,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _handleClockOut(BuildContext context) async {
     if (!_canClockOut) {
+      HapticUtil.error(); // [HAPTIC] Warning (Belum Waktunya)
       GlobalSnackBar.show('Belum waktunya absen pulang (Jadwal: $_workEndTime)',
           isWarning: true);
       return;
@@ -319,6 +294,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!mounted) return;
 
+    HapticUtil.medium(); // [HAPTIC] Konfirmasi Dialog
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => CustomDialog(
@@ -386,6 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         Navigator.pop(context);
         if (attendanceResponse.success) {
+          HapticUtil.success(); // [HAPTIC] Sukses Pulang
           final attendanceProvider =
               Provider.of<AttendanceProvider>(context, listen: false);
           final time = IndonesianTime.formatTime(IndonesianTime.now);
@@ -394,6 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
           GlobalSnackBar.show('Absen pulang berhasil dilakukan',
               isSuccess: true);
         } else {
+          HapticUtil.error(); // [HAPTIC] Error
           GlobalSnackBar.show(attendanceResponse.message, isError: true);
         }
       }
@@ -406,12 +384,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _showAlreadyClockedInNotification() {
-    GlobalSnackBar.show('Anda sudah melakukan absen masuk hari ini.',
-        isWarning: true);
-  }
-
   void _handleRequestLeave() {
+    HapticUtil.light(); // [HAPTIC] Buka Form Izin
     showDialog(
       context: context,
       builder: (context) => LeaveFormDialog(
@@ -448,23 +422,12 @@ class _HomeScreenState extends State<HomeScreen> {
             if (mounted) {
               Navigator.pop(context);
               if (response.success) {
+                HapticUtil.success(); // [HAPTIC] Sukses Pengajuan
                 await _initialDataLoad();
-                setState(() {
-                  _stopRealtimeCheck = false;
-                });
-                if (_realtimeTimer != null && !_realtimeTimer!.isActive) {
-                  _realtimeTimer =
-                      Timer.periodic(const Duration(seconds: 3), (timer) {
-                    if (!_stopRealtimeCheck && mounted) {
-                      _checkStatusUpdatesBackground();
-                    } else {
-                      timer.cancel();
-                    }
-                  });
-                }
                 GlobalSnackBar.show('Pengajuan berhasil dikirim.',
                     isSuccess: true);
               } else {
+                HapticUtil.error(); // [HAPTIC] Gagal
                 GlobalSnackBar.show(response.message, isError: true);
               }
             }
@@ -482,12 +445,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
     final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppThemes.darkBackground : AppThemes.backgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: CustomAppBar(
         title: 'Home',
         showBackButton: false,
@@ -497,11 +459,10 @@ class _HomeScreenState extends State<HomeScreen> {
               Icons.notifications_outlined,
               color: !_stopRealtimeCheck
                   ? AppThemes.successColor
-                  : (isDark
-                      ? AppThemes.darkTextPrimary
-                      : AppThemes.onSurfaceColor),
+                  : colorScheme.onSurface,
             ),
             onPressed: () {
+              HapticUtil.light();
               final status = !_stopRealtimeCheck ? "Aktif" : "Selesai/Nonaktif";
               GlobalSnackBar.show('Monitoring Real-time: $status',
                   title: 'Info', isInfo: true);
@@ -530,8 +491,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         workEndTime: _workEndTime,
                         leaveStatus: _todayLeaveStatus,
                         onClockIn: () async {
+                          HapticUtil.medium(); // [HAPTIC] Tap Absen Masuk
                           if (attendanceProvider.isClockedIn) {
-                            _showAlreadyClockedInNotification();
+                            GlobalSnackBar.show(
+                                'Anda sudah melakukan absen masuk hari ini.',
+                                isWarning: true);
                             return;
                           }
                           final result = await Navigator.pushNamed(
@@ -542,6 +506,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           _handleAttendanceResult(context, result);
                         },
                         onClockOut: () async {
+                          HapticUtil.medium(); // [HAPTIC] Tap Absen Pulang
                           await _handleClockOut(context);
                         },
                         onRequestLeave: _handleRequestLeave,
@@ -559,9 +524,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: isDark
-                              ? AppThemes.darkTextPrimary
-                              : AppThemes.onSurfaceColor,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -596,8 +559,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: FloatingBottomNav(
                     currentRoute: RouteNames.home,
                     onQRScanTap: () {
+                      HapticUtil.light(); // [HAPTIC] Tap Menu QR
                       if (attendanceProvider.isClockedIn) {
-                        _showAlreadyClockedInNotification();
+                        GlobalSnackBar.show(
+                            'Anda sudah melakukan absen masuk hari ini.',
+                            isWarning: true);
                         return;
                       }
                       NavigationHelper.navigateWithoutAnimation(

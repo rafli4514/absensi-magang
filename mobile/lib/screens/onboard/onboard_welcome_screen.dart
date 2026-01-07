@@ -9,6 +9,7 @@ class OnboardWelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
     final size = MediaQuery.of(context).size;
@@ -17,8 +18,8 @@ class OnboardWelcomeScreen extends StatelessWidget {
     final double maxImageWidth = 400.0;
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppThemes.darkBackground : AppThemes.backgroundColor,
+      // FIX: Gunakan background dari tema, bukan variabel statis
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
@@ -53,19 +54,12 @@ class OnboardWelcomeScreen extends StatelessWidget {
                                 gradient: LinearGradient(
                                   begin: Alignment.bottomLeft,
                                   end: Alignment.topRight,
-                                  colors: isDark
-                                      ? [
-                                          AppThemes.primaryColor
-                                              .withOpacity(0.4),
-                                          AppThemes.primaryDark
-                                              .withOpacity(0.15),
-                                        ]
-                                      : [
-                                          AppThemes.primaryLight
-                                              .withOpacity(0.5),
-                                          AppThemes.primaryColor
-                                              .withOpacity(0.15),
-                                        ],
+                                  // FIX: Gunakan warna dari colorScheme dengan opacity
+                                  colors: [
+                                    colorScheme.primary
+                                        .withOpacity(isDark ? 0.4 : 0.2),
+                                    colorScheme.primary.withOpacity(0.15),
+                                  ],
                                 ),
                                 shape: BoxShape.circle,
                               ),
@@ -92,6 +86,7 @@ class OnboardWelcomeScreen extends StatelessWidget {
                             children: [
                               Icon(
                                 Icons.rocket_launch,
+                                // FIX: Gunakan primaryColor dari AppThemes atau colorScheme.primary
                                 color: AppThemes.primaryColor,
                                 size: 28,
                               ),
@@ -102,9 +97,8 @@ class OnboardWelcomeScreen extends StatelessWidget {
                                   style:
                                       theme.textTheme.headlineMedium?.copyWith(
                                     fontWeight: FontWeight.w800,
-                                    color: isDark
-                                        ? AppThemes.darkTextPrimary
-                                        : AppThemes.onSurfaceColor,
+                                    // FIX: Gunakan onSurface untuk teks utama
+                                    color: colorScheme.onSurface,
                                     letterSpacing: -0.5,
                                     fontSize: 24,
                                   ),
@@ -117,9 +111,8 @@ class OnboardWelcomeScreen extends StatelessWidget {
                           Text(
                             'Absensi jadi lebih seru dan praktis! Pantau aktivitas magang, catat progres, dan raih prestasi terbaikmu.', // Translate
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: isDark
-                                  ? AppThemes.darkTextSecondary
-                                  : AppThemes.hintColor,
+                              // FIX: Gunakan onSurfaceVariant untuk teks sekunder
+                              color: colorScheme.onSurfaceVariant,
                               height: 1.5,
                               fontSize: 14,
                               letterSpacing: 0.2,
@@ -177,13 +170,10 @@ class OnboardWelcomeScreen extends StatelessWidget {
                                 );
                               },
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: isDark
-                                    ? AppThemes.darkAccentBlue
-                                    : AppThemes.primaryColor,
+                                // FIX: Gunakan primary color untuk outline
+                                foregroundColor: AppThemes.primaryColor,
                                 side: BorderSide(
-                                  color: isDark
-                                      ? AppThemes.darkAccentBlue
-                                      : AppThemes.primaryColor,
+                                  color: AppThemes.primaryColor,
                                   width: 2,
                                 ),
                                 shape: RoundedRectangleBorder(
@@ -202,9 +192,8 @@ class OnboardWelcomeScreen extends StatelessWidget {
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
                                       letterSpacing: 0.3,
-                                      color: isDark
-                                          ? AppThemes.darkAccentBlue
-                                          : AppThemes.primaryColor,
+                                      // FIX: Gunakan primary color
+                                      color: AppThemes.primaryColor,
                                     ),
                                   ),
                                 ],
@@ -218,14 +207,11 @@ class OnboardWelcomeScreen extends StatelessWidget {
                               vertical: 12,
                             ),
                             decoration: BoxDecoration(
-                              color: isDark
-                                  ? AppThemes.darkAccentBlue.withOpacity(0.1)
-                                  : AppThemes.primaryColor.withOpacity(0.08),
+                              // FIX: Gunakan primary color dengan opacity
+                              color: AppThemes.primaryColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: isDark
-                                    ? AppThemes.darkAccentBlue.withOpacity(0.3)
-                                    : AppThemes.primaryColor.withOpacity(0.3),
+                                color: AppThemes.primaryColor.withOpacity(0.3),
                                 width: 1,
                               ),
                             ),
@@ -234,9 +220,8 @@ class OnboardWelcomeScreen extends StatelessWidget {
                               children: [
                                 Icon(
                                   Icons.people,
-                                  color: isDark
-                                      ? AppThemes.darkAccentBlue
-                                      : AppThemes.primaryColor,
+                                  // FIX: Gunakan primary color
+                                  color: AppThemes.primaryColor,
                                   size: 16,
                                 ),
                                 const SizedBox(width: 8),
@@ -244,9 +229,8 @@ class OnboardWelcomeScreen extends StatelessWidget {
                                   child: Text(
                                     'Gabung dengan komunitas magang terbaik', // Translate
                                     style: theme.textTheme.bodySmall?.copyWith(
-                                      color: isDark
-                                          ? AppThemes.darkTextSecondary
-                                          : AppThemes.hintColor,
+                                      // FIX: Gunakan onSurfaceVariant
+                                      color: colorScheme.onSurfaceVariant,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
                                     ),

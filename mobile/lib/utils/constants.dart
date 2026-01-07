@@ -1,10 +1,7 @@
 class AppConstants {
   static const String appName = 'MyInternPlus';
 
-  // Base URL
-  // static const String baseUrl = 'http://10.140.254.115:3000/api'; // Android Emulator
-  // static const String baseUrl = 'http://localhost:3000/api'; // iOS Simulator
-  // static const String baseUrl = 'http://192.168.1.35:3000/api'; // Physical Device
+  // Base URL Dinamis (Diisi oleh AppConfigService)
   static late String baseUrl;
 
   // Storage Keys
@@ -26,8 +23,7 @@ class AppConstants {
   // Settings & QR Endpoints
   static const String settingsEndpoint = '/settings';
   static const String qrEndpoint = '/qr';
-  static const String attendanceEndpoint =
-      '/absensi'; // Updated to match backend route
+  static const String attendanceEndpoint = '/absensi';
   static const String activitiesEndpoint = '/logbook';
 
   // Splash Screen

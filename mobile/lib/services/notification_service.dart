@@ -1,6 +1,10 @@
+import 'dart:ui'; // Diperlukan untuk Color jika AppThemes belum meloadnya
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+
+import '../themes/app_themes.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -10,13 +14,17 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
 
+  bool _isInitialized = false;
+
   Future<void> initialize() async {
+    if (_isInitialized) return;
+
     tz.initializeTimeZones();
 
+    // Pastikan icon 'ic_notification' atau '@mipmap/ic_launcher' ada
     const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@drawable/ic_notification');
+        AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    // Setup iOS
     const DarwinInitializationSettings iosSettings =
         DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -31,11 +39,12 @@ class NotificationService {
 
     await _notifications.initialize(settings);
 
-    // [TAMBAHAN] Request permission untuk Android
+    // Request permission (Android 13+)
     await _requestAndroidPermission();
+
+    _isInitialized = true;
   }
 
-  // Tambahkan method ini
   Future<void> _requestAndroidPermission() async {
     final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
         _notifications.resolvePlatformSpecificImplementation<
@@ -46,89 +55,69 @@ class NotificationService {
     }
   }
 
-  // Menampilkan notifikasi instan
+  // --- 1. NOTIFIKASI STANDARD ---
   Future<void> showNotification({
     required int id,
     required String title,
     required String body,
     String? payload,
   }) async {
-    const AndroidNotificationDetails androidDetails =
+    // Menggunakan warna Primary dari AppThemes
+    final color = AppThemes.primaryColor;
+
+    final AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
-      'attendance_channel',
-      'Attendance Notifications',
-      channelDescription: 'Notifications for attendance updates',
-      importance: Importance.high,
+      'status_channel',
+      'Status Updates',
+      channelDescription: 'Notifikasi perubahan status izin/logbook',
+      importance: Importance.max,
       priority: Priority.high,
+      ticker: 'ticker',
+      color: color, // Warna dari tema
+      styleInformation: const BigTextStyleInformation(''),
     );
 
-    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
-
-    const NotificationDetails details = NotificationDetails(
+    final NotificationDetails details = NotificationDetails(
       android: androidDetails,
-      iOS: iosDetails,
+      iOS: const DarwinNotificationDetails(),
     );
 
     await _notifications.show(id, title, body, details, payload: payload);
   }
 
-  // Menjadwalkan notifikasi
-  Future<void> scheduleNotification({
+  // --- 2. NOTIFIKASI ALERT (URGENT / LUPA ABSEN) ---
+  Future<void> showUrgentNotification({
     required int id,
     required String title,
     required String body,
-    required DateTime scheduledTime,
-    String? payload,
   }) async {
-    try {
-      // 3. Konversi waktu
-      final tz.TZDateTime tzScheduledTime = tz.TZDateTime.from(
-        scheduledTime,
-        tz.local,
-      );
+    // Menggunakan warna Error dari AppThemes
+    final Color alertColor = AppThemes.errorColor;
 
-      const AndroidNotificationDetails androidDetails =
-          AndroidNotificationDetails(
-        'reminder_channel',
-        'Reminder Notifications',
-        channelDescription: 'Scheduled reminder notifications',
-        importance: Importance.high,
-        priority: Priority.high,
-      );
+    final AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'urgent_channel',
+      'Urgent Alerts',
+      channelDescription: 'Peringatan penting seperti lupa absen',
+      importance: Importance.max,
+      priority: Priority.max,
+      color: alertColor, // Warna merah dari tema
+      enableVibration: true,
+      playSound: true,
+    );
 
-      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
-
-      const NotificationDetails details = NotificationDetails(
+    await _notifications.show(
+      id,
+      title,
+      body,
+      NotificationDetails(
         android: androidDetails,
-        iOS: iosDetails,
-      );
-
-      // 4. Panggil zonedSchedule
-      await _notifications.zonedSchedule(
-        id,
-        title,
-        body,
-        tzScheduledTime,
-        details,
-        payload: payload,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.time,
-      );
-    } catch (e) {
-      print('Error scheduling notification: $e');
-    }
+        iOS: const DarwinNotificationDetails(),
+      ),
+    );
   }
 
-  // Batalkan notifikasi spesifik
-  Future<void> cancelNotification(int id) async {
-    await _notifications.cancel(id);
-  }
-
-  Future<void> cancelAllNotifications() async {
-    await _notifications.cancelAll();
-  }
-
-  // Jadwal Harian
+  // --- 3. SCHEDULE REMINDERS (JADWAL HARIAN) ---
   Future<void> scheduleDailyReminders() async {
     try {
       final now = DateTime.now();
@@ -139,29 +128,66 @@ class NotificationService {
         clockInTime = clockInTime.add(const Duration(days: 1));
       }
 
-      await scheduleNotification(
-        id: 1,
-        title: 'Clock In Reminder',
-        body: 'Jangan lupa absen masuk!',
+      await _schedule(
+        id: 101,
+        title: 'Waktunya Absen Masuk! ☀️',
+        body: 'Jangan lupa scan QR Code sebelum jam 08:00 ya.',
         scheduledTime: clockInTime,
       );
 
-      // Jadwal Sore (16:45)
-      var clockOutTime = DateTime(now.year, now.month, now.day, 16, 45);
+      // Jadwal Sore (16:50)
+      var clockOutTime = DateTime(now.year, now.month, now.day, 16, 50);
       if (clockOutTime.isBefore(now)) {
         clockOutTime = clockOutTime.add(const Duration(days: 1));
       }
 
-      await scheduleNotification(
-        id: 2,
-        title: 'Clock Out Reminder',
-        body: 'Waktunya absen pulang sebentar lagi!',
+      await _schedule(
+        id: 102,
+        title: 'Sudah Waktunya Pulang! 🏠',
+        body:
+            'Kerja bagus hari ini! Jangan lupa absen pulang sebelum meninggalkan kantor.',
         scheduledTime: clockOutTime,
       );
 
-      print("✅ Daily reminders scheduled");
+      // print("✅ Daily reminders scheduled");
     } catch (e) {
-      print("❌ Failed to schedule daily reminders: $e");
+      // print("❌ Failed to schedule daily reminders: $e");
     }
+  }
+
+  // Helper Private untuk Schedule
+  Future<void> _schedule({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledTime,
+  }) async {
+    final tz.TZDateTime tzScheduledTime = tz.TZDateTime.from(
+      scheduledTime,
+      tz.local,
+    );
+
+    await _notifications.zonedSchedule(
+      id,
+      title,
+      body,
+      tzScheduledTime,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'reminder_channel',
+          'Daily Reminders',
+          channelDescription: 'Pengingat harian rutin',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  Future<void> cancelAll() async {
+    await _notifications.cancelAll();
   }
 }

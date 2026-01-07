@@ -15,7 +15,7 @@ class OnboardIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -28,9 +28,7 @@ class OnboardIndicator extends StatelessWidget {
           decoration: BoxDecoration(
             color: currentPage == index
                 ? AppThemes.primaryColor
-                : (isDark
-                      ? AppThemes.darkOutline
-                      : AppThemes.hintColor.withOpacity(0.3)),
+                : colorScheme.outline.withOpacity(0.3),
             borderRadius: BorderRadius.circular(4),
           ),
         );

@@ -31,6 +31,15 @@ interface AppSettings {
     sessionTimeout: number;
     allowedIps: string[];
   };
+  onboard: {
+    pages: {
+      id: string;
+      title: string;
+      description: string;
+      imageUrl: string;
+      order: number;
+    }[];
+  };
 }
 
 // Default settings
@@ -60,6 +69,31 @@ const DEFAULT_SETTINGS: AppSettings = {
     ipWhitelist: false,
     sessionTimeout: 60,
     allowedIps: []
+  },
+  onboard: {
+    pages: [
+      {
+        id: '1',
+        title: 'Selamat Datang di MyInternPlus',
+        description: 'Kelola absensi dan aktivitas magangmu dengan mudah, efisien, dan terorganisir dalam satu aplikasi.',
+        imageUrl: 'assets/images/onboard1.png',
+        order: 1
+      },
+      {
+        id: '2',
+        title: 'Absensi Mudah & Cepat',
+        description: 'Cukup scan QR Code atau gunakan lokasi untuk melakukan Clock In dan Clock Out dalam hitungan detik.',
+        imageUrl: 'assets/images/onboard2.png',
+        order: 2
+      },
+      {
+        id: '3',
+        title: 'Pantau Progresmu',
+        description: 'Lihat riwayat kehadiran, catatan aktivitas, dan performa magangmu secara real-time.',
+        imageUrl: 'assets/images/onboard3.png',
+        order: 3
+      }
+    ]
   }
 };
 
@@ -67,7 +101,7 @@ export const getSettings = async (req: Request, res: Response) => {
   try {
     // Get all settings from database
     const settingsRecords = await prisma.settings.findMany();
-    
+
     if (settingsRecords.length === 0) {
       // If no settings exist, return default settings
       return sendSuccess(res, 'Default settings loaded', DEFAULT_SETTINGS);
@@ -75,18 +109,18 @@ export const getSettings = async (req: Request, res: Response) => {
 
     // Convert settings records to settings object
     const settings: any = { ...DEFAULT_SETTINGS };
-    
+
     settingsRecords.forEach(record => {
       const keys = record.key.split('.');
       let current = settings;
-      
+
       for (let i = 0; i < keys.length - 1; i++) {
         if (!current[keys[i]]) {
           current[keys[i]] = {};
         }
         current = current[keys[i]];
       }
-      
+
       current[keys[keys.length - 1]] = record.value;
     });
 
@@ -151,7 +185,7 @@ export const updateSettings = async (req: Request, res: Response) => {
       if (settingsData.security.sessionTimeout && (settingsData.security.sessionTimeout < 5 || settingsData.security.sessionTimeout > 480)) {
         validationErrors.push('Session timeout must be between 5 and 480 minutes');
       }
-      
+
       // Validate IP addresses
       if (settingsData.security.allowedIps) {
         const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
@@ -169,13 +203,13 @@ export const updateSettings = async (req: Request, res: Response) => {
 
     // Flatten settings object to key-value pairs
     const settingsToUpdate: Array<{ key: string; value: any; category: string }> = [];
-    
+
     const flattenSettings = (obj: any, prefix: string = '', category: string = '') => {
       for (const key in obj) {
         if (obj.hasOwnProperty(key)) {
           const fullKey = prefix ? `${prefix}.${key}` : key;
           const currentCategory = category || key;
-          
+
           if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
             flattenSettings(obj[key], fullKey, currentCategory);
           } else {
@@ -213,18 +247,18 @@ export const updateSettings = async (req: Request, res: Response) => {
     // Get updated settings
     const updatedSettingsRecords = await prisma.settings.findMany();
     const updatedSettings: any = { ...DEFAULT_SETTINGS };
-    
+
     updatedSettingsRecords.forEach(record => {
       const keys = record.key.split('.');
       let current = updatedSettings;
-      
+
       for (let i = 0; i < keys.length - 1; i++) {
         if (!current[keys[i]]) {
           current[keys[i]] = {};
         }
         current = current[keys[i]];
       }
-      
+
       current[keys[keys.length - 1]] = record.value;
     });
 
@@ -238,14 +272,14 @@ export const updateSettings = async (req: Request, res: Response) => {
 export const generateQRCode = async (req: Request, res: Response) => {
   try {
     const { type = 'masuk' } = req.query; // Get attendance type from query
-    
+
     // Get QR settings
     const qrSettings = await prisma.settings.findFirst({
       where: { key: 'qr.validityPeriod' }
     });
 
     const validityPeriod = qrSettings?.value as number || 5; // default 5 minutes
-    
+
     // Generate attendance QR data with consistent format
     const now = new Date();
     const qrData = JSON.stringify({
@@ -268,7 +302,7 @@ export const generateQRCode = async (req: Request, res: Response) => {
 
     // Extract base64 part (remove data:image/png;base64, prefix)
     const base64QR = qrCodeDataURL.split(',')[1];
-    
+
     // Calculate expiration time
     const expiresAt = new Date(now.getTime() + (validityPeriod * 60 * 1000));
 
@@ -381,14 +415,14 @@ export const getSettingsByCategory = async (req: Request, res: Response) => {
     settingsRecords.forEach(record => {
       const keys = record.key.split('.');
       let current = settings;
-      
+
       for (let i = 0; i < keys.length - 1; i++) {
         if (!current[keys[i]]) {
           current[keys[i]] = {};
         }
         current = current[keys[i]];
       }
-      
+
       current[keys[keys.length - 1]] = record.value;
     });
 
@@ -417,7 +451,7 @@ export const getLocationSettings = async (req: Request, res: Response) => {
 
     // Build location settings object
     const locationSettings: any = { ...DEFAULT_SETTINGS.location };
-    
+
     settingsRecords.forEach(record => {
       const keys = record.key.split('.');
       // keys will be ['location', 'officeAddress'] for example
@@ -436,19 +470,19 @@ export const getLocationSettings = async (req: Request, res: Response) => {
 export const exportSettings = async (req: Request, res: Response) => {
   try {
     const settingsRecords = await prisma.settings.findMany();
-    
+
     const settings: any = { ...DEFAULT_SETTINGS };
     settingsRecords.forEach(record => {
       const keys = record.key.split('.');
       let current = settings;
-      
+
       for (let i = 0; i < keys.length - 1; i++) {
         if (!current[keys[i]]) {
           current[keys[i]] = {};
         }
         current = current[keys[i]];
       }
-      
+
       current[keys[keys.length - 1]] = record.value;
     });
 
@@ -474,13 +508,13 @@ export const importSettings = async (req: Request, res: Response) => {
 
     // Flatten and import new settings
     const settingsToImport: Array<{ key: string; value: any; category: string }> = [];
-    
+
     const flattenSettings = (obj: any, prefix: string = '', category: string = '') => {
       for (const key in obj) {
         if (obj.hasOwnProperty(key)) {
           const fullKey = prefix ? `${prefix}.${key}` : key;
           const currentCategory = category || key;
-          
+
           if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
             flattenSettings(obj[key], fullKey, currentCategory);
           } else {

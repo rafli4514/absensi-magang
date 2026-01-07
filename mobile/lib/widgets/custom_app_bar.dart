@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../themes/app_themes.dart';
-
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
@@ -23,42 +21,30 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return AppBar(
-      // title: Text(
-      //   title,
-      //   style: theme.textTheme.titleLarge?.copyWith(
-      //     fontWeight: FontWeight.w700,
-      //     color: isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
-      //   ),
-      // ),
-      // Jika Anda menggunakan Logo sebagai title, gunakan ini:
-      title: Image.asset('assets/images/InternLogoExpand.png', height: 40),
-
+      // Menggunakan aset logo jika judul kosong, atau teks judul
+      title: title.isEmpty
+          ? Image.asset('assets/images/InternLogoExpand.png', height: 40)
+          : Text(title,
+              style: TextStyle(
+                  color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
       leading: showBackButton
           ? IconButton(
-              icon: Icon(
-                Icons.arrow_back_rounded,
-                color: isDark
-                    ? AppThemes.darkTextPrimary
-                    : AppThemes.onSurfaceColor,
-              ),
+              icon:
+                  Icon(Icons.arrow_back_rounded, color: colorScheme.onSurface),
               onPressed: () => Navigator.of(context).pop(),
             )
           : null,
       actions: actions,
-      elevation: elevation ?? (isDark ? 0 : 0.5),
-      backgroundColor: backgroundColor ??
-          (isDark ? AppThemes.darkSurfaceVariant : AppThemes.surfaceColor),
-      surfaceTintColor:
-          isDark ? AppThemes.darkSurfaceVariant : AppThemes.surfaceColor,
+      elevation: elevation ?? 0,
+      backgroundColor: backgroundColor ?? colorScheme.surface,
       centerTitle: true,
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
         child: Container(
-          color: isDark ? AppThemes.darkOutline : Colors.grey.withOpacity(0.2),
+          color: colorScheme.outline.withOpacity(0.2),
           height: 1,
         ),
       ),

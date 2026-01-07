@@ -8,8 +8,8 @@ class ModernStatusCard extends StatelessWidget {
   final IconData icon;
   final String status;
   final bool isCompleted;
-  final bool isDark;
 
+  // Hapus isDark dari constructor
   const ModernStatusCard({
     super.key,
     required this.title,
@@ -17,25 +17,36 @@ class ModernStatusCard extends StatelessWidget {
     required this.icon,
     required this.status,
     required this.isCompleted,
-    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isLight = Theme.of(context).brightness == Brightness.light;
+
     final activeColor =
         isCompleted ? AppThemes.successColor : AppThemes.warningColor;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
+        color: colorScheme.surfaceContainer, // Otomatis Putih/Abu Gelap
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isCompleted
-              ? activeColor.withOpacity(isDark ? 0.3 : 0.5)
-              : (isDark ? AppThemes.darkOutline : Colors.grey.shade200),
+              ? activeColor.withOpacity(0.5)
+              : colorScheme.outline.withOpacity(0.3),
           width: 1.5,
         ),
+        boxShadow: isLight
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                )
+              ]
+            : [],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,7 +77,7 @@ class ModernStatusCard extends StatelessWidget {
             title,
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
+              color: colorScheme.onSurfaceVariant, // Teks sekunder
             ),
           ),
           const SizedBox(height: 4),
@@ -75,8 +86,7 @@ class ModernStatusCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color:
-                  isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
+              color: colorScheme.onSurface, // Teks utama
             ),
           ),
         ],

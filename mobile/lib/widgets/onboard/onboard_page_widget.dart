@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../models/onboard_model.dart';
-import '../../../themes/app_themes.dart';
+import '../../models/onboard_model.dart'; // Pastikan model ini ada
 
 class OnboardPageWidget extends StatelessWidget {
   final OnboardPage page;
@@ -10,107 +9,44 @@ class OnboardPageWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    // Ambil ukuran layar
-    final size = MediaQuery.of(context).size;
-
-    // Tentukan ukuran gambar dinamis (misal: 40% dari tinggi layar, max 350px)
-    final double imageHeight = size.height * 0.40;
-    final double maxImageSize = 350.0;
-    final double finalSize =
-        imageHeight > maxImageSize ? maxImageSize : imageHeight;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 24.0), // Padding kanan kiri diperbesar
+      padding: const EdgeInsets.all(24.0),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center, // Center vertikal
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Logo Kecil di atas
-          Container(
-            margin: const EdgeInsets.only(bottom: 20),
+          // Gambar
+          Expanded(
+            flex: 3,
             child: Image.asset(
-              'assets/images/InternLogoExpand.png',
-              width: 60,
-              height: 60,
+              page.imageUrl,
               fit: BoxFit.contain,
             ),
           ),
-
-          // Mascot dengan Background Bulat (RESPONSIVE)
-          SizedBox(
-            height: finalSize, // Tinggi dinamis
-            width: finalSize, // Lebar dinamis (kotak)
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Background Bulat
-                Container(
-                  width: finalSize * 0.9, // 90% dari container
-                  height: finalSize * 0.9,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: isDark
-                          ? [
-                              AppThemes.primaryColor.withOpacity(0.3),
-                              AppThemes.primaryDark.withOpacity(0.1),
-                            ]
-                          : [
-                              AppThemes.primaryLight.withOpacity(0.4),
-                              AppThemes.primaryColor.withOpacity(0.1),
-                            ],
-                    ),
-                    borderRadius:
-                        BorderRadius.circular(finalSize), // Bulat sempurna
-                  ),
-                ),
-                // Mascot Image
-                Transform.translate(
-                  offset: Offset(0, -finalSize * 0.05), // Naik dikit (5%)
-                  child: Image.asset(
-                    page.imageUrl,
-                    width: finalSize,
-                    height: finalSize,
-                    fit: BoxFit.contain,
-                    errorBuilder: (ctx, _, __) => Icon(
-                        Icons.image_not_supported,
-                        size: finalSize * 0.5,
-                        color: AppThemes.hintColor),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          SizedBox(height: size.height * 0.05), // Jarak dinamis (5% layar)
-
-          // Text Content (Flexible agar tidak overflow)
+          const SizedBox(height: 40),
+          // Judul
           Text(
             page.title,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              fontSize: 22, // Ukuran font tetap atau bisa pakai auto_size_text
-              color:
-                  isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
-              letterSpacing: -0.3,
-            ),
             textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
           ),
           const SizedBox(height: 16),
+          // Deskripsi
           Text(
             page.description,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: isDark ? AppThemes.darkTextTertiary : AppThemes.hintColor,
-              fontSize: 14,
-              height: 1.5,
-              letterSpacing: 0.2,
-            ),
             textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: colorScheme.onSurfaceVariant,
+              height: 1.5,
+            ),
           ),
+          const Spacer(flex: 1),
         ],
       ),
     );

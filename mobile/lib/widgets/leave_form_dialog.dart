@@ -50,9 +50,14 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
       lastDate: DateTime(2030),
       initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
       builder: (context, child) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final theme = Theme.of(context);
         return Theme(
-          data: isDark ? AppThemes.darkTheme : AppThemes.lightTheme,
+          data: theme.copyWith(
+            colorScheme: theme.colorScheme.copyWith(
+              primary: AppThemes.primaryColor,
+              onPrimary: Colors.white,
+            ),
+          ),
           child: child!,
         );
       },
@@ -69,10 +74,13 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Dialog(
-      backgroundColor: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
+      // FIX: Gunakan surfaceContainer untuk background dialog
+      backgroundColor: colorScheme.surfaceContainer,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -88,9 +96,8 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? AppThemes.darkTextPrimary
-                        : AppThemes.onSurfaceColor,
+                    // FIX: Gunakan onSurface untuk warna teks utama
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -100,27 +107,33 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
                     style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? AppThemes.darkTextSecondary
-                            : AppThemes.hintColor)),
+                        // FIX: Gunakan onSurfaceVariant untuk teks sekunder
+                        color: colorScheme.onSurfaceVariant)),
                 const SizedBox(height: 8),
+
                 DropdownButtonFormField<ActivityType>(
                   value: _selectedType,
-                  dropdownColor:
-                      isDark ? AppThemes.darkSurfaceElevated : Colors.white,
+                  // FIX: Gunakan surfaceContainerHigh untuk background dropdown
+                  dropdownColor: colorScheme.surfaceContainer,
                   decoration: InputDecoration(
+                    // Border handled by InputDecorator theme usually, but explicit here:
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8)),
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 12),
+                    fillColor: isDark
+                        ? colorScheme.surfaceContainerHigh
+                        : Colors.white,
+                    filled: true,
                   ),
+                  icon: const Icon(Icons.arrow_drop_down,
+                      color: AppThemes.primaryColor),
                   items: [
-                    _buildDropdownItem(ActivityType.izin),
-                    _buildDropdownItem(ActivityType.sakit),
-                    _buildDropdownItem(ActivityType.cuti),
-                    _buildDropdownItem(ActivityType.pulangCepat),
-                    // Alpha dihapus karena otomatis sistem
-                    _buildDropdownItem(ActivityType.other),
+                    _buildDropdownItem(ActivityType.izin, colorScheme),
+                    _buildDropdownItem(ActivityType.sakit, colorScheme),
+                    _buildDropdownItem(ActivityType.cuti, colorScheme),
+                    _buildDropdownItem(ActivityType.pulangCepat, colorScheme),
+                    _buildDropdownItem(ActivityType.other, colorScheme),
                   ],
                   onChanged: (val) {
                     if (val != null) setState(() => _selectedType = val);
@@ -154,15 +167,14 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
                       onPressed: () => Navigator.pop(context),
                       child: Text('Batal',
                           style: TextStyle(
-                              color: isDark
-                                  ? AppThemes.darkTextSecondary
-                                  : AppThemes.hintColor)),
+                              // FIX: Gunakan onSurfaceVariant
+                              color: colorScheme.onSurfaceVariant)),
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
-                          // Mengirim value string (misal "PULANG_CEPAT") ke parent
+                          // Mengirim value string ke parent
                           widget.onSubmit(_selectedType.value,
                               _alasanController.text, _startDate, _endDate);
                           Navigator.pop(context);
@@ -186,10 +198,14 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
     );
   }
 
-  DropdownMenuItem<ActivityType> _buildDropdownItem(ActivityType type) {
+  DropdownMenuItem<ActivityType> _buildDropdownItem(
+      ActivityType type, ColorScheme colorScheme) {
     return DropdownMenuItem(
       value: type,
-      child: Text(type.displayName),
+      child: Text(
+        type.displayName,
+        style: TextStyle(color: colorScheme.onSurface),
+      ),
     );
   }
 }

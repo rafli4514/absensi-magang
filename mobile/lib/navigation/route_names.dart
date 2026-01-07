@@ -9,9 +9,11 @@ class RouteNames {
   // Role Routes
   static const String home = '/home'; // Peserta
   static const String mentorHome = '/mentor-home'; // Pembimbing
-  static const String adminHome = '/admin-home'; // Admin Dashboard (BARU)
-  static const String adminInterns = '/admin-interns'; // Manage Peserta (BARU)
-  static const String adminQR = '/admin-qr'; // Generate QR (BARU)
+  static const String adminHome = '/admin-home'; // Admin Dashboard
+  static const String adminInterns = '/admin-interns'; // Manage Peserta
+  static const String adminUsers = '/admin-users'; // [BARU] Manage Users
+  static const String addUser = '/add-user'; // [BARU] Add User Form
+  static const String adminQR = '/admin-qr'; // Generate QR
 
   static const String profile = '/profile';
   static const String editProfile = '/edit-profile';

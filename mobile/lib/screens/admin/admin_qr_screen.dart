@@ -1,11 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:gal/gal.dart'; // Pastikan import ini yang dipakai
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../services/settings_service.dart';
 import '../../themes/app_themes.dart';
@@ -21,198 +18,279 @@ class AdminQrScreen extends StatefulWidget {
 }
 
 class _AdminQrScreenState extends State<AdminQrScreen> {
+  // State Variables
+  Uint8List? _qrImageBytes;
+  DateTime? _expiresAt;
   bool _isLoading = false;
-  Uint8List? _qrCodeBytes;
+  String? _errorMessage;
 
-  Future<void> _generateQR() async {
-    setState(() => _isLoading = true);
+  // Timer untuk hitung mundur
+  Timer? _refreshTimer;
+  Timer? _countdownTimer;
+  String _timeLeftString = "00:00";
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchQrCode();
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  // --- LOGIC: FETCH QR (KHUSUS MASUK) ---
+  Future<void> _fetchQrCode() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
     try {
+      // Hardcode tipe ke 'masuk' sesuai permintaan
       final response = await SettingsService.generateQRCode(type: 'masuk');
 
-      if (response.success && response.data != null) {
-        final base64String = response.data!['qrCode'];
+      if (mounted) {
+        if (response.success && response.data != null) {
+          final data = response.data!;
+
+          // 1. Decode Base64 Image dari Backend
+          final base64String = data['qrCode'] as String;
+          final imageBytes = base64Decode(base64String);
+
+          // 2. Parse Expiry Time
+          final expiresAtStr = data['expiresAt'] as String;
+          final expiresAt = DateTime.parse(expiresAtStr);
+
+          setState(() {
+            _qrImageBytes = imageBytes;
+            _expiresAt = expiresAt;
+            _isLoading = false;
+          });
+
+          // 3. Setup Auto Refresh & Countdown
+          _setupTimers(expiresAt);
+        } else {
+          setState(() {
+            _errorMessage = response.message;
+            _isLoading = false;
+          });
+          GlobalSnackBar.show(response.message, isError: true);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         setState(() {
-          _qrCodeBytes = base64Decode(base64String);
+          _errorMessage = "Gagal terhubung ke server: $e";
           _isLoading = false;
         });
-        GlobalSnackBar.show('QR Code Masuk berhasil dibuat', isSuccess: true);
-      } else {
-        GlobalSnackBar.show(response.message, isError: true);
-        setState(() => _isLoading = false);
       }
-    } catch (e) {
-      GlobalSnackBar.show('Gagal generate QR: $e', isError: true);
-      setState(() => _isLoading = false);
     }
   }
 
-  // --- LOGIC: SIMPAN KE GALERI (MENGGUNAKAN GAL) ---
-  Future<void> _saveToGallery() async {
-    if (_qrCodeBytes == null) return;
+  void _setupTimers(DateTime expiresAt) {
+    _refreshTimer?.cancel();
+    _countdownTimer?.cancel();
 
-    try {
-      // Gal otomatis menangani permission dan saving
-      await Gal.putImageBytes(
-        _qrCodeBytes!,
-        name: "QR_Absen_Masuk_${DateTime.now().millisecondsSinceEpoch}",
-      );
+    // Timer Countdown UI (Update setiap detik)
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
 
-      GlobalSnackBar.show('QR Code tersimpan di Galeri', isSuccess: true);
-    } on GalException catch (e) {
-      // Handle jika user menolak izin atau error lain
-      if (e.type == GalExceptionType.accessDenied) {
-        GlobalSnackBar.show('Izin penyimpanan ditolak', isWarning: true);
+      final now = DateTime.now();
+      final difference = expiresAt.difference(now);
+
+      if (difference.isNegative) {
+        setState(() => _timeLeftString = "Kadaluarsa");
+        timer.cancel();
+        // Trigger auto refresh jika kadaluarsa
+        _fetchQrCode();
       } else {
-        GlobalSnackBar.show('Gagal menyimpan: $e', isError: true);
+        final minutes = difference.inMinutes.toString().padLeft(2, '0');
+        final seconds = (difference.inSeconds % 60).toString().padLeft(2, '0');
+        setState(() => _timeLeftString = "$minutes:$seconds");
       }
-    } catch (e) {
-      GlobalSnackBar.show('Error saving: $e', isError: true);
-    }
-  }
-
-  // --- LOGIC: SHARE KE WA / SALIN ---
-  Future<void> _shareQrCode() async {
-    if (_qrCodeBytes == null) return;
-
-    try {
-      final tempDir = await getTemporaryDirectory();
-      final file = await File('${tempDir.path}/qr_code.png').create();
-      await file.writeAsBytes(_qrCodeBytes!);
-
-      // Share file gambar
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'QR Code Absen Masuk - Scan Segera!',
-      );
-    } catch (e) {
-      GlobalSnackBar.show('Gagal membagikan gambar: $e', isError: true);
-    }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor:
-      isDark ? AppThemes.darkBackground : AppThemes.backgroundColor,
-      appBar: CustomAppBar(title: 'QR Code Absen Masuk', showBackButton: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
+      appBar: CustomAppBar(
+        title: 'QR Code Absensi',
+        showBackButton: true,
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // --- 1. QR CODE DISPLAY CARD ---
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Background Card Putih
+                  Container(
+                    width: 320,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color:
+                          Colors.white, // QR selalu di atas putih agar kontras
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppThemes.primaryColor.withOpacity(0.2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        )
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // Header QR
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.login_rounded, // Icon Masuk
+                              color: AppThemes.primaryColor,
+                              size: 28,
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'SCAN ABSEN MASUK',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: AppThemes.primaryColor,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
 
-            // 1. Area QR Code
-            Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppThemes.primaryColor, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppThemes.primaryColor.withOpacity(0.2),
-                    blurRadius: 20,
-                    spreadRadius: 2,
+                        // Area Gambar QR
+                        SizedBox(
+                          height: 240,
+                          width: 240,
+                          child: _isLoading
+                              ? const Center(child: LoadingIndicator())
+                              : _errorMessage != null
+                                  ? Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.error_outline,
+                                              color: Colors.grey, size: 40),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Gagal memuat QR',
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600]),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          TextButton(
+                                            onPressed: _fetchQrCode,
+                                            child: const Text('Coba Lagi'),
+                                          )
+                                        ],
+                                      ),
+                                    )
+                                  : _qrImageBytes != null
+                                      ? Image.memory(
+                                          _qrImageBytes!,
+                                          fit: BoxFit.contain,
+                                          gaplessPlayback: true,
+                                        )
+                                      : const SizedBox(),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Footer (Valid Until)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.timer_outlined,
+                                  size: 18, color: Colors.grey[700]),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Valid: $_timeLeftString',
+                                style: TextStyle(
+                                    color: Colors.grey[800],
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    fontFamily: 'monospace'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-              child: _isLoading
-                  ? const Center(
-                  child: LoadingIndicator(message: 'Membuat QR...'))
-                  : _qrCodeBytes != null
-                  ? ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: Image.memory(
-                  _qrCodeBytes!,
-                  fit: BoxFit.contain,
+
+              const SizedBox(height: 40),
+
+              // --- 2. INSTRUKSI ---
+              Text(
+                'Tunjukkan QR ini kepada peserta magang.\nKode akan diperbarui otomatis setiap 5 menit.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 14,
+                  height: 1.5,
                 ),
-              )
-                  : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.qr_code_2_rounded,
-                    size: 64,
-                    color: Colors.grey.shade300,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Tekan tombol buat baru',
-                    style: TextStyle(color: Colors.grey.shade500),
-                  ),
-                ],
               ),
-            ),
-            const SizedBox(height: 30),
 
-            // 2. Tombol Aksi (Hanya muncul jika QR sudah ada)
-            if (_qrCodeBytes != null && !_isLoading) ...[
-              Row(
-                children: [
-                  // Tombol Download
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _saveToGallery,
-                      icon: const Icon(Icons.download_rounded),
-                      label: const Text('Simpan'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        side: BorderSide(color: AppThemes.primaryColor),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
+              const SizedBox(height: 32),
+
+              // --- 3. TOMBOL REFRESH MANUAL ---
+              SizedBox(
+                width: 200,
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _fetchQrCode,
+                  icon: _isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.refresh_rounded),
+                  label: Text(_isLoading ? 'Memuat...' : 'Perbarui Sekarang'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppThemes.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    elevation: 4,
+                    shadowColor: AppThemes.primaryColor.withOpacity(0.4),
                   ),
-                  const SizedBox(width: 12),
-                  // Tombol Share / WA
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _shareQrCode,
-                      icon: const Icon(Icons.share_rounded, size: 18),
-                      label: const Text('Share / WA'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF25D366), // Warna WA
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(height: 16),
             ],
-
-            // 3. Tombol Generate Utama
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton.icon(
-                onPressed: _isLoading ? null : _generateQR,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Buat QR Code Baru'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppThemes.primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'QR Code ini hanya berlaku selama 5 menit untuk keamanan.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: AppThemes.hintColor),
-            ),
-          ],
+          ),
         ),
       ),
     );

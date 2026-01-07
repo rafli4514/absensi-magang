@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
-import '../../providers/theme_provider.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/ui_utils.dart';
 import '../../utils/validators.dart';
@@ -30,7 +29,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (_formKey.currentState!.validate()) {
       if (_newPasswordController.text != _confirmPasswordController.text) {
         GlobalSnackBar.show(
-          'Kata sandi baru dan konfirmasi tidak cocok', // Translate
+          'Kata sandi baru dan konfirmasi tidak cocok',
           isWarning: true,
         );
         return;
@@ -45,13 +44,13 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
       if (success) {
         GlobalSnackBar.show(
-          'Kata sandi berhasil diubah!', // Translate
+          'Kata sandi berhasil diubah!',
           isSuccess: true,
         );
         Navigator.pop(context);
       } else {
         GlobalSnackBar.show(
-          authProvider.error ?? 'Gagal mengubah kata sandi', // Translate
+          authProvider.error ?? 'Gagal mengubah kata sandi',
           isError: true,
         );
       }
@@ -60,10 +59,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   String? _validateConfirmPassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Harap konfirmasi kata sandi baru'; // Translate
+      return 'Harap konfirmasi kata sandi baru';
     }
     if (value != _newPasswordController.text) {
-      return 'Kata sandi tidak cocok'; // Translate
+      return 'Kata sandi tidak cocok';
     }
     return null;
   }
@@ -76,8 +75,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     super.dispose();
   }
 
-  Widget _buildRequirementItem(String text, bool isDarkMode) {
+  Widget _buildRequirementItem(String text) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -93,7 +94,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               text,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color:
-                    isDarkMode ? AppThemes.darkTextSecondary : theme.hintColor,
+                    colorScheme.onSurfaceVariant, // Menggunakan warna dari tema
               ),
             ),
           ),
@@ -105,13 +106,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final colorScheme = theme.colorScheme;
     final authProvider = Provider.of<AuthProvider>(context);
-    final isDarkMode = themeProvider.isDarkMode;
+
+    // Gunakan warna primary dari tema
+    final primaryColor = AppThemes.primaryColor;
 
     return Scaffold(
-      appBar: CustomAppBar(
-          title: 'Ganti Kata Sandi', showBackButton: true), // Translate
+      appBar: CustomAppBar(title: 'Ganti Kata Sandi', showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -122,16 +124,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: (isDarkMode
-                          ? AppThemes.darkAccentBlue
-                          : AppThemes.primaryColor)
-                      .withOpacity(0.1),
+                  color: primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: (isDarkMode
-                            ? AppThemes.darkAccentBlue
-                            : AppThemes.primaryColor)
-                        .withOpacity(0.2),
+                    color: primaryColor.withOpacity(0.2),
                   ),
                 ),
                 child: Row(
@@ -139,9 +135,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isDarkMode
-                            ? AppThemes.darkAccentBlue
-                            : AppThemes.primaryColor,
+                        color: primaryColor,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.lock_rounded,
@@ -153,21 +147,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Keamanan Kata Sandi', // Translate
+                            'Keamanan Kata Sandi',
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: isDarkMode
-                                  ? AppThemes.darkTextPrimary
-                                  : theme.colorScheme.onSurface,
+                              color: colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Buat kata sandi yang kuat dan aman', // Translate
+                            'Buat kata sandi yang kuat dan aman',
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: isDarkMode
-                                  ? AppThemes.darkTextSecondary
-                                  : theme.hintColor,
+                              color: colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -179,8 +169,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               const SizedBox(height: 24),
               CustomTextField(
                 controller: _currentPasswordController,
-                label: 'Kata Sandi Saat Ini', // Translate
-                hint: 'Masukkan kata sandi lama', // Translate
+                label: 'Kata Sandi Saat Ini',
+                hint: 'Masukkan kata sandi lama',
                 icon: Icons.lock_rounded,
                 isPassword: true,
                 validator: (value) =>
@@ -189,8 +179,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               const SizedBox(height: 16),
               CustomTextField(
                 controller: _newPasswordController,
-                label: 'Kata Sandi Baru', // Translate
-                hint: 'Masukkan kata sandi baru', // Translate
+                label: 'Kata Sandi Baru',
+                hint: 'Masukkan kata sandi baru',
                 icon: Icons.lock_outline_rounded,
                 isPassword: true,
                 validator: Validators.validatePassword,
@@ -198,8 +188,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               const SizedBox(height: 16),
               CustomTextField(
                 controller: _confirmPasswordController,
-                label: 'Konfirmasi Kata Sandi', // Translate
-                hint: 'Ulangi kata sandi baru', // Translate
+                label: 'Konfirmasi Kata Sandi',
+                hint: 'Ulangi kata sandi baru',
                 icon: Icons.lock_reset_outlined,
                 isPassword: true,
                 validator: _validateConfirmPassword,
@@ -219,16 +209,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     : ElevatedButton(
                         onPressed: _changePassword,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isDarkMode
-                              ? AppThemes.darkAccentBlue
-                              : AppThemes.primaryColor,
+                          backgroundColor: primaryColor,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
                           elevation: 2,
                         ),
                         child: Text(
-                          'Ubah Kata Sandi', // Translate
+                          'Ubah Kata Sandi',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -240,8 +228,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color:
-                      isDarkMode ? AppThemes.darkSurface : AppThemes.infoLight,
+                  // Gunakan surfaceContainer untuk background adaptif
+                  color: colorScheme.surfaceContainer,
                   borderRadius: BorderRadius.circular(16),
                   border:
                       Border.all(color: AppThemes.infoColor.withOpacity(0.2)),
@@ -255,22 +243,18 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                             color: AppThemes.infoColor, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          'Syarat Kata Sandi', // Translate
+                          'Syarat Kata Sandi',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: isDarkMode
-                                ? AppThemes.darkTextPrimary
-                                : theme.colorScheme.onSurface,
+                            color: colorScheme.onSurface,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    _buildRequirementItem('Minimal 8 karakter', isDarkMode),
-                    _buildRequirementItem(
-                        'Kombinasi huruf dan angka', isDarkMode), // Translate
-                    _buildRequirementItem(
-                        'Tidak mudah ditebak', isDarkMode), // Translate
+                    _buildRequirementItem('Minimal 8 karakter'),
+                    _buildRequirementItem('Kombinasi huruf dan angka'),
+                    _buildRequirementItem('Tidak mudah ditebak'),
                   ],
                 ),
               ),

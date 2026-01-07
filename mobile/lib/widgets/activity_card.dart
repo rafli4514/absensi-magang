@@ -7,30 +7,19 @@ import '../../../themes/app_themes.dart';
 
 class ActivityCard extends StatelessWidget {
   final Activity activity;
-  final bool isDark;
 
-  const ActivityCard({super.key, required this.activity, required this.isDark});
+  const ActivityCard({super.key, required this.activity});
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final statusColor = _getStatusColor(activity.status);
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppThemes.darkSurfaceElevated : AppThemes.surfaceColor,
+        color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? AppThemes.darkOutline : Colors.transparent,
-          width: 1,
-        ),
-        boxShadow: [
-          if (!isDark)
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-        ],
+        border: Border.all(color: colorScheme.outline.withOpacity(0.5)),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
@@ -68,9 +57,7 @@ class ActivityCard extends StatelessWidget {
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
-                                color: isDark
-                                    ? AppThemes.darkTextPrimary
-                                    : AppThemes.onSurfaceColor,
+                                color: colorScheme.onSurface,
                               ),
                             ),
                             if (activity.status == ActivityStatus.pending)
@@ -91,33 +78,23 @@ class ActivityCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark
-                                ? AppThemes.darkTextSecondary
-                                : AppThemes.hintColor,
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            Icon(
-                              Icons.calendar_today_outlined,
-                              size: 12,
-                              color: isDark
-                                  ? AppThemes.darkTextTertiary
-                                  : AppThemes.hintColor,
-                            ),
+                            Icon(Icons.calendar_today_outlined,
+                                size: 12, color: colorScheme.onSurfaceVariant),
                             const SizedBox(width: 4),
                             Text(
                               activity.tanggal,
                               style: TextStyle(
                                 fontSize: 11,
-                                color: isDark
-                                    ? AppThemes.darkTextTertiary
-                                    : AppThemes.hintColor,
+                                color: colorScheme.onSurfaceVariant,
                               ),
                             ),
                             const Spacer(),
-                            // PERBAIKAN DI SINI: Menggunakan displayName (Bahasa Indo)
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
@@ -131,8 +108,7 @@ class ActivityCard extends StatelessWidget {
                                 ),
                               ),
                               child: Text(
-                                activity
-                                    .status.displayName, // Gunakan displayName
+                                activity.status.displayName,
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
@@ -168,20 +144,7 @@ class ActivityCard extends StatelessWidget {
     }
   }
 
-  Color _getTypeColor(ActivityType type) {
-    switch (type) {
-      case ActivityType.meeting:
-        return AppThemes.infoColor;
-      case ActivityType.deadline:
-        return AppThemes.errorColor;
-      case ActivityType.presentation:
-        return AppThemes.successColor;
-      case ActivityType.training:
-        return AppThemes.warningColor;
-      default:
-        return AppThemes.primaryColor;
-    }
-  }
+  Color _getTypeColor(ActivityType type) => type.color;
 
   IconData _getTypeIcon(ActivityType type) {
     switch (type) {

@@ -15,6 +15,7 @@ import '../../services/permission_service.dart';
 import '../../services/storage_service.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/constants.dart';
+import '../../utils/haptic_util.dart'; // [IMPORT HAPTIC]
 import '../../utils/indonesian_time.dart';
 import '../../utils/ui_utils.dart';
 import '../../widgets/custom_dialog.dart';
@@ -159,6 +160,7 @@ class _QrScanScreenState extends State<QrScanScreen>
   Future<void> _getCurrentLocation() async {
     final hasPermission = await PermissionService.requestLocationPermission();
     if (!hasPermission) {
+      HapticUtil.error(); // [HAPTIC] Error Permission
       _showPermissionDialog('Izin Lokasi Diperlukan',
           'Harap berikan akses lokasi untuk melakukan presensi.');
       return;
@@ -173,6 +175,7 @@ class _QrScanScreenState extends State<QrScanScreen>
     if (_currentLocation != null) {
       setState(() => _locationStatus = 'Lokasi Terdeteksi');
     } else {
+      HapticUtil.error(); // [HAPTIC] Gagal deteksi lokasi
       setState(() => _locationStatus = 'Gagal mendeteksi lokasi');
     }
     if (mounted) setState(() => _isLocationLoading = false);
@@ -184,6 +187,7 @@ class _QrScanScreenState extends State<QrScanScreen>
   }
 
   void _showTimeErrorDialog() {
+    HapticUtil.error(); // [HAPTIC] Error Waktu
     final currentTime = IndonesianTime.formatTime(IndonesianTime.now);
     showDialog(
       context: context,
@@ -199,6 +203,7 @@ class _QrScanScreenState extends State<QrScanScreen>
   }
 
   void _showLocationErrorDialog(String message) {
+    HapticUtil.error(); // [HAPTIC] Error Lokasi
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -221,11 +226,13 @@ class _QrScanScreenState extends State<QrScanScreen>
   }
 
   void _showErrorNotification(String message) {
+    HapticUtil.error(); // [HAPTIC] Error Umum
     GlobalSnackBar.show(message, title: 'Gagal Presensi', isError: true);
     if (mounted) setState(() => _isProcessing = false);
   }
 
   void _showPermissionDialog(String title, String message) {
+    HapticUtil.error(); // [HAPTIC] Error Permission
     cameraController.stop();
     showDialog(
       context: context,
@@ -351,6 +358,7 @@ class _QrScanScreenState extends State<QrScanScreen>
       );
 
       if (attendanceResponse.success) {
+        HapticUtil.success(); // [HAPTIC] SUKSES ABSEN!
         final resultType = 'CLOCK_IN';
         final result = {
           'time': IndonesianTime.formatTime(IndonesianTime.now),
@@ -400,6 +408,7 @@ class _QrScanScreenState extends State<QrScanScreen>
 
   void _toggleFlash() {
     if (_isProcessing) return;
+    HapticUtil.light(); // [HAPTIC] Tombol Senter
     setState(() => _isFlashOn = !_isFlashOn);
     cameraController.toggleTorch();
   }
@@ -410,6 +419,7 @@ class _QrScanScreenState extends State<QrScanScreen>
     if (barcodes.isNotEmpty) {
       final barcode = barcodes.first;
       if (barcode.rawValue != null && barcode.rawValue!.isNotEmpty) {
+        HapticUtil.medium(); // [HAPTIC] QR TERDETEKSI (Feedback Fisik)
         setState(() {
           _isScanning = false;
         });
@@ -421,12 +431,14 @@ class _QrScanScreenState extends State<QrScanScreen>
 
   void _handleBackButton() {
     if (_hasPopped) return;
+    HapticUtil.light(); // [HAPTIC] Back Button
     _safePop(null);
   }
 
   Future<void> _pickImageFromGallery() async {
     try {
       if (_isProcessing || _hasPopped) return;
+      HapticUtil.light(); // [HAPTIC] Tombol Galeri
       cameraController.stop();
       final hasPermission = await PermissionService.requestGalleryPermission();
       if (!hasPermission) {

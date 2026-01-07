@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../models/onboard_model.dart';
 import '../../navigation/route_names.dart';
-import '../../themes/app_themes.dart';
 import '../../widgets/onboard/onboard_button.dart';
 import '../../widgets/onboard/onboard_indicator.dart';
 import '../../widgets/onboard/onboard_page_widget.dart';
@@ -63,14 +62,17 @@ class _OnboardScreenState extends State<OnboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // FIX: Gunakan Theme Context untuk warna
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppThemes.darkBackground : AppThemes.backgroundColor,
+      // FIX: Gunakan scaffoldBackgroundColor dari theme
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
+            // Tombol Skip di pojok kanan atas
             if (_currentPage < _pages.length - 1)
               Align(
                 alignment: Alignment.topRight,
@@ -79,11 +81,10 @@ class _OnboardScreenState extends State<OnboardScreen> {
                   child: TextButton(
                     onPressed: _onSkip,
                     child: Text(
-                      'Lewati', // Translate
+                      'Lewati',
                       style: TextStyle(
-                        color: isDark
-                            ? AppThemes.darkTextSecondary
-                            : AppThemes.hintColor,
+                        // FIX: Gunakan warna onSurfaceVariant (abu-abu/sekunder)
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -91,6 +92,8 @@ class _OnboardScreenState extends State<OnboardScreen> {
               )
             else
               const SizedBox(height: 64),
+
+            // PageView Konten
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -105,11 +108,16 @@ class _OnboardScreenState extends State<OnboardScreen> {
                 },
               ),
             ),
+
+            // Indikator Halaman (Titik-titik)
             OnboardIndicator(
               currentPage: _currentPage,
               pageCount: _pages.length,
             ),
+
             const SizedBox(height: 24),
+
+            // Tombol Navigasi Bawah
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: OnboardButton(

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
-import '../providers/theme_provider.dart';
 import '../themes/app_themes.dart';
 import '../utils/indonesian_time.dart';
 
@@ -16,6 +15,7 @@ class WelcomeHeaderWidget extends StatefulWidget {
 }
 
 class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
+  // ... Logic state sama ...
   late StreamSubscription<DateTime> _timeSubscription;
   String _currentGreeting = '';
   String _currentTime = '';
@@ -28,29 +28,24 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
   void initState() {
     super.initState();
     _updateDisplay();
-
-    // Update setiap menit (hemat baterai dibanding detik)
     _timeSubscription = IndonesianTime.nowStream.listen((_) {
-      if (mounted) {
-        _updateDisplay();
-      }
+      if (mounted) _updateDisplay();
     });
   }
 
   void _updateDisplay() {
+    // ... Logic update display sama ...
     setState(() {
       final now = IndonesianTime.now;
       final hour = now.hour;
-
       _currentGreeting = IndonesianTime.getGreeting();
       _currentTime = IndonesianTime.formatTime(now);
       _currentDay = IndonesianTime.getDayName(now.weekday);
       _currentDate =
           '${now.day} ${IndonesianTime.getMonthName(now.month)} ${now.year}';
 
-      // Hitung progress hari kerja (08:00 - 17:00 = 9 jam)
       if (hour >= 8 && hour <= 17) {
-        final totalMinutes = 9 * 60; // 540 menit
+        final totalMinutes = 9 * 60;
         final currentMinutes = (hour - 8) * 60 + now.minute;
         _progress = currentMinutes / totalMinutes;
       } else if (hour < 8) {
@@ -59,20 +54,18 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
         _progress = 1.0;
       }
 
-      // Tentukan status kerja
-      if (hour < 8) {
+      if (hour < 8)
         _workStatus = 'Belum mulai kerja';
-      } else if (hour >= 8 && hour < 12) {
+      else if (hour >= 8 && hour < 12)
         _workStatus = 'Waktu kerja pagi';
-      } else if (hour >= 12 && hour < 13) {
+      else if (hour >= 12 && hour < 13)
         _workStatus = 'Istirahat siang';
-      } else if (hour >= 13 && hour < 17) {
+      else if (hour >= 13 && hour < 17)
         _workStatus = 'Waktu kerja siang';
-      } else if (hour >= 17 && hour < 18) {
+      else if (hour >= 17 && hour < 18)
         _workStatus = 'Waktu pulang';
-      } else {
+      else
         _workStatus = 'Waktu istirahat';
-      }
     });
   }
 
@@ -89,27 +82,6 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
     return Icons.bedtime_outlined;
   }
 
-  Color _getTimeColor(int hour, bool isDark) {
-    if (hour >= 5 && hour < 12) {
-      return isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor;
-    }
-    if (hour >= 12 && hour < 15) {
-      return isDark ? AppThemes.darkAccentCyan : AppThemes.primaryLight;
-    }
-    if (hour >= 15 && hour < 18) {
-      return isDark
-          ? AppThemes.darkAccentCyan.withOpacity(0.8)
-          : AppThemes.primaryDark;
-    }
-    return isDark
-        ? AppThemes.darkAccentBlue.withOpacity(0.7)
-        : AppThemes.secondaryColor;
-  }
-
-  Color _getProgressColor(bool isDark) {
-    return isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor;
-  }
-
   IconData _getWorkStatusIcon(String status) {
     final s = status.toLowerCase();
     if (s.contains('kerja')) return Icons.work_outline;
@@ -121,43 +93,30 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final user = authProvider.user;
-    final isDark = themeProvider.isDarkMode;
+    final colorScheme = Theme.of(context).colorScheme;
     final hour = DateTime.now().hour;
-    final timeColor = _getTimeColor(hour, isDark);
-    final progressColor = _getProgressColor(isDark);
 
-    // FIX: Definisikan userDepartment secara manual karena getter 'department' tidak ada di model User saat ini
+    // Gunakan warna tema otomatis
+    final timeColor = AppThemes.primaryColor;
+    final progressColor = AppThemes.primaryColor;
     final userDepartment = user?.divisi ?? user?.instansi;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       decoration: BoxDecoration(
-        color: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
+        color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppThemes.darkOutline : Colors.grey.withOpacity(0.1),
-        ),
-        boxShadow: [
-          if (!isDark)
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-        ],
+        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Greeting & Time
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Kolom Kiri: Greeting + Nama
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,11 +129,8 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
                             color: timeColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Icon(
-                            _getTimeIcon(hour),
-                            size: 16,
-                            color: timeColor,
-                          ),
+                          child: Icon(_getTimeIcon(hour),
+                              size: 16, color: timeColor),
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -182,9 +138,7 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: isDark
-                                ? AppThemes.darkTextSecondary
-                                : AppThemes.hintColor,
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -195,130 +149,87 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: isDark
-                            ? AppThemes.darkTextPrimary
-                            : AppThemes.onSurfaceColor,
+                        color: colorScheme.onSurface,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (user?.displayRole != null) ...[
-                      const SizedBox(height: 4),
+                    if (user?.displayRole != null)
                       Text(
                         user!.displayRole,
                         style: TextStyle(
-                          fontSize: 13,
-                          color: isDark
-                              ? AppThemes.darkTextTertiary
-                              : AppThemes.neutralColor,
-                        ),
+                            fontSize: 13, color: colorScheme.onSurfaceVariant),
                       ),
-                    ],
                   ],
                 ),
               ),
-
-              // Kolom Kanan: Jam Digital & Hari
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? AppThemes.darkSurfaceElevated
-                      : AppThemes.primaryColor.withOpacity(0.1),
+                  color: AppThemes.primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border:
-                      isDark ? Border.all(color: AppThemes.darkOutline) : null,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
                       _currentTime,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: isDark
-                            ? AppThemes.darkAccentBlue
-                            : AppThemes.primaryColor,
+                        color: AppThemes.primaryColor,
                       ),
                     ),
                     Text(
                       _currentDay,
                       style: TextStyle(
-                        fontSize: 11,
-                        color: isDark
-                            ? AppThemes.darkTextSecondary
-                            : AppThemes.hintColor,
-                      ),
+                          fontSize: 11, color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-          Divider(
-            color: isDark ? AppThemes.darkOutline : Colors.grey.shade200,
-          ),
+          Divider(color: colorScheme.outline.withOpacity(0.2)),
           const SizedBox(height: 12),
-
-          // Date Display
           Row(
             children: [
-              Icon(
-                Icons.calendar_today_rounded,
-                size: 16,
-                color:
-                    isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
-              ),
+              Icon(Icons.calendar_today_rounded,
+                  size: 16, color: colorScheme.onSurfaceVariant),
               const SizedBox(width: 8),
               Text(
                 _currentDate,
                 style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: isDark
-                      ? AppThemes.darkTextSecondary
-                      : AppThemes.onSurfaceColor,
-                ),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: colorScheme.onSurface),
               ),
             ],
           ),
-
-          // Work Progress Bar
           if (_progress > 0 && _progress < 1) ...[
             const SizedBox(height: 16),
             Row(
               children: [
-                Icon(
-                  _getWorkStatusIcon(_workStatus),
-                  size: 14,
-                  color: isDark
-                      ? AppThemes.darkTextTertiary
-                      : AppThemes.neutralColor,
-                ),
+                Icon(_getWorkStatusIcon(_workStatus),
+                    size: 14, color: colorScheme.onSurfaceVariant),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     _workStatus,
                     style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: isDark
-                          ? AppThemes.darkTextTertiary
-                          : AppThemes.neutralColor,
-                    ),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: colorScheme.onSurfaceVariant),
                   ),
                 ),
                 Text(
                   '${(_progress * 100).toInt()}%',
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: progressColor,
-                  ),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: progressColor),
                 ),
               ],
             ),
@@ -327,8 +238,7 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: _progress,
-                backgroundColor:
-                    isDark ? AppThemes.darkOutline : Colors.grey.shade200,
+                backgroundColor: colorScheme.surfaceContainerHigh,
                 valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                 minHeight: 6,
               ),
@@ -337,90 +247,19 @@ class _WelcomeHeaderWidgetState extends State<WelcomeHeaderWidget> {
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(
-                  _getWorkStatusIcon(_workStatus),
-                  size: 14,
-                  color: isDark
-                      ? AppThemes.darkTextTertiary
-                      : AppThemes.neutralColor,
-                ),
+                Icon(_getWorkStatusIcon(_workStatus),
+                    size: 14, color: colorScheme.onSurfaceVariant),
                 const SizedBox(width: 6),
                 Text(
                   _workStatus,
                   style: TextStyle(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: isDark
-                        ? AppThemes.darkTextTertiary
-                        : AppThemes.neutralColor,
-                  ),
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
           ],
-
-          // Quick Stats (Department & Location Badges)
-          if (userDepartment != null && userDepartment.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _buildBadge(
-                    icon: Icons.business_center_outlined,
-                    label: userDepartment,
-                    isDark: isDark,
-                  ),
-                  _buildBadge(
-                    icon: Icons.location_on_outlined,
-                    label: 'On-site',
-                    isDark: isDark,
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBadge({
-    required IconData icon,
-    required String label,
-    required bool isDark,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppThemes.darkSurfaceElevated
-            : Colors.grey.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? AppThemes.darkOutline : Colors.grey.withOpacity(0.2),
-          width: 0.5,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 12,
-            color: isDark ? AppThemes.darkTextTertiary : AppThemes.neutralColor,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: isDark
-                  ? AppThemes.darkTextSecondary
-                  : AppThemes.onSurfaceColor,
-            ),
-          ),
         ],
       ),
     );

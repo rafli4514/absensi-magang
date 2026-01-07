@@ -8,7 +8,6 @@ class AttendanceCard extends StatelessWidget {
   final VoidCallback onRequestLeave;
   final bool isClockedIn;
   final bool isClockedOut;
-
   final bool canClockOut;
   final String workEndTime;
   final String? leaveStatus;
@@ -27,7 +26,10 @@ class AttendanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // SYSTEM HOOKS (Otomatis deteksi mode)
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
 
     final isOnLeave = leaveStatus != null && leaveStatus!.isNotEmpty;
     final isSakit = leaveStatus?.toUpperCase() == 'SAKIT';
@@ -36,15 +38,11 @@ class AttendanceCard extends StatelessWidget {
     final statusIcon = isSakit
         ? Icons.medical_services_outlined
         : Icons.assignment_ind_outlined;
-
-    // Judul Status
     final statusTitle =
         isSakit ? 'Izin Sakit Disetujui' : 'Permohonan Izin Disetujui';
-
-    // Pesan Ucapan
     final statusMessage = isSakit
-        ? 'Semoga lekas sembuh! Istirahat yang cukup agar bisa kembali beraktivitas.'
-        : 'Semoga urusan Anda hari ini berjalan lancar. Hati-hati di jalan!';
+        ? 'Semoga lekas sembuh! Istirahat yang cukup.'
+        : 'Hati-hati di jalan dan semoga urusan lancar!';
 
     final showClockIn = !isClockedIn && !isOnLeave;
     final showClockOut = isClockedIn && !isClockedOut && !isOnLeave;
@@ -52,73 +50,62 @@ class AttendanceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
+        // BACKGROUND: Putih di Light, Abu Gelap di Dark
+        color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppThemes.darkOutline : Colors.grey.withOpacity(0.1),
-        ),
-        boxShadow: [
-          if (!isDark)
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-        ],
+        // BORDER: Abu tipis di Light, Abu lebih gelap di Dark
+        border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
+        // SHADOW: Hanya muncul di Light Mode
+        boxShadow: isLight
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Aksi Cepat',
-            style: TextStyle(
-              fontSize: 16,
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color:
-                  isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
+              color: colorScheme.onSurface, // Teks judul
             ),
           ),
           const SizedBox(height: 16),
 
-          // --- TAMPILAN STATUS IZIN / SAKIT ---
+          // --- STATUS CUTI/SAKIT ---
           if (isOnLeave)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                // HAPUS background color agar tidak abu-abu/keruh
-                color: Colors.transparent,
+                color: statusColor
+                    .withOpacity(0.1), // Transparan sesuai warna status
                 borderRadius: BorderRadius.circular(12),
-                // Tetap gunakan border agar status terlihat jelas
                 border: Border.all(color: statusColor.withOpacity(0.5)),
               ),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Icon tanpa background circle putih agar lebih clean
                   Icon(statusIcon, color: statusColor, size: 32),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          statusTitle,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          statusMessage,
-                          style: TextStyle(
-                            color: isDark ? Colors.grey[300] : Colors.black87,
-                            fontSize: 13,
-                            height: 1.4,
-                          ),
-                        ),
+                        Text(statusTitle,
+                            style: TextStyle(
+                                color: statusColor,
+                                fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        Text(statusMessage,
+                            style: TextStyle(
+                                color: colorScheme.onSurfaceVariant,
+                                fontSize: 12)),
                       ],
                     ),
                   ),
@@ -126,7 +113,7 @@ class AttendanceCard extends StatelessWidget {
               ),
             )
 
-          // --- TAMPILAN TOMBOL ABSEN NORMAL ---
+          // --- TOMBOL ABSEN ---
           else
             Row(
               children: [
@@ -137,13 +124,8 @@ class AttendanceCard extends StatelessWidget {
                       icon: const Icon(Icons.login_rounded),
                       label: const Text('Absen Masuk'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isDark
-                            ? AppThemes.darkAccentBlue
-                            : AppThemes.primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
                       ),
                     ),
                   ),
@@ -158,39 +140,17 @@ class AttendanceCard extends StatelessWidget {
                           ? 'Absen Pulang'
                           : 'Plg Jam $workEndTime'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            canClockOut ? AppThemes.warningColor : Colors.grey,
-                        disabledBackgroundColor: isDark
-                            ? Colors.grey.shade800
-                            : Colors.grey.shade300,
-                        disabledForegroundColor: Colors.grey.shade600,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
+                        backgroundColor: canClockOut
+                            ? AppThemes.warningColor
+                            : colorScheme.surfaceContainerHigh,
+                        foregroundColor: canClockOut
+                            ? Colors.white
+                            : colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
                 if (!showClockIn && !showClockOut)
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppThemes.successColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppThemes.successColor),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Absensi Hari Ini Selesai',
-                          style: TextStyle(
-                            color: AppThemes.successColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                  Expanded(child: _buildDoneState(colorScheme)),
               ],
             ),
 
@@ -203,22 +163,33 @@ class AttendanceCard extends StatelessWidget {
                 icon: const Icon(Icons.assignment_late_outlined, size: 18),
                 label: const Text('Pengajuan Izin / Sakit'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: isDark
-                      ? AppThemes.darkTextSecondary
-                      : AppThemes.hintColor,
-                  side: BorderSide(
-                    color:
-                        isDark ? AppThemes.darkOutline : Colors.grey.shade300,
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  foregroundColor: colorScheme.onSurfaceVariant,
+                  side: BorderSide(color: colorScheme.outline),
                 ),
               ),
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildDoneState(ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: AppThemes.successColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppThemes.successColor),
+      ),
+      child: const Center(
+        child: Text(
+          'Absensi Hari Ini Selesai',
+          style: TextStyle(
+            color: AppThemes.successColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }

@@ -89,10 +89,8 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
       lastDate: DateTime(2030),
       builder: (context, child) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
-        return Theme(
-          data: isDark ? AppThemes.darkTheme : AppThemes.lightTheme,
-          child: child!,
-        );
+        // Gunakan tema default aplikasi
+        return child!;
       },
     );
     if (picked != null) {
@@ -120,10 +118,10 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     }
   }
 
-  void _showImageSourceDialog(BuildContext context, bool isDark) {
+  void _showImageSourceDialog(BuildContext context, ColorScheme colorScheme) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
+      backgroundColor: colorScheme.surfaceContainer,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -131,15 +129,10 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
         child: Wrap(
           children: [
             ListTile(
-              leading: Icon(Icons.camera_alt_rounded,
-                  color: isDark
-                      ? AppThemes.darkTextPrimary
-                      : AppThemes.onSurfaceColor),
+              leading:
+                  Icon(Icons.camera_alt_rounded, color: colorScheme.onSurface),
               title: Text('Ambil Foto',
-                  style: TextStyle(
-                      color: isDark
-                          ? AppThemes.darkTextPrimary
-                          : AppThemes.onSurfaceColor)),
+                  style: TextStyle(color: colorScheme.onSurface)),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickImage(ImageSource.camera);
@@ -147,14 +140,9 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
             ),
             ListTile(
               leading: Icon(Icons.photo_library_rounded,
-                  color: isDark
-                      ? AppThemes.darkTextPrimary
-                      : AppThemes.onSurfaceColor),
+                  color: colorScheme.onSurface),
               title: Text('Pilih dari Galeri',
-                  style: TextStyle(
-                      color: isDark
-                          ? AppThemes.darkTextPrimary
-                          : AppThemes.onSurfaceColor)),
+                  style: TextStyle(color: colorScheme.onSurface)),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickImage(ImageSource.gallery);
@@ -168,14 +156,16 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Dialog(
-      backgroundColor: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
+      backgroundColor: colorScheme.surfaceContainer,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: isDark ? AppThemes.darkOutline : Colors.transparent,
+          color: colorScheme.outline.withOpacity(0.5),
         ),
       ),
       child: Padding(
@@ -196,9 +186,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? AppThemes.darkTextPrimary
-                          : AppThemes.onSurfaceColor,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -241,26 +229,20 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? AppThemes.darkTextPrimary
-                          : AppThemes.onSurfaceColor,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
                   GestureDetector(
-                    onTap: () => _showImageSourceDialog(context, isDark),
+                    onTap: () => _showImageSourceDialog(context, colorScheme),
                     child: Container(
                       height: 150,
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? AppThemes.darkSurfaceElevated
-                            : Colors.grey.shade50,
+                        color: colorScheme.surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isDark
-                              ? AppThemes.darkOutline
-                              : Colors.grey.shade300,
+                          color: colorScheme.outline.withOpacity(0.5),
                           style: BorderStyle.solid,
                         ),
                       ),
@@ -288,8 +270,11 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                         color: Colors.red,
                                         shape: BoxShape.circle,
                                       ),
-                                      child: const Icon(Icons.close,
-                                          color: Colors.white, size: 16),
+                                      child: const Icon(
+                                        Icons.close,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -309,9 +294,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                   'Tap untuk ambil foto',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: isDark
-                                        ? AppThemes.darkTextSecondary
-                                        : AppThemes.hintColor,
+                                    color: colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               ],
@@ -320,7 +303,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 4. Dropdown Type & Status (Sama seperti sebelumnya)
+                  // 4. Dropdown Type & Status
                   Row(
                     children: [
                       Expanded(
@@ -330,7 +313,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                           items: ActivityType.values,
                           onChanged: (val) =>
                               setState(() => _selectedType = val!),
-                          isDark: isDark,
+                          colorScheme: colorScheme,
                           itemLabel: (e) =>
                               e.toString().split('.').last.toUpperCase(),
                         ),
@@ -343,7 +326,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                           items: ActivityStatus.values,
                           onChanged: (val) =>
                               setState(() => _selectedStatus = val!),
-                          isDark: isDark,
+                          colorScheme: colorScheme,
                           itemLabel: (e) =>
                               e.toString().split('.').last.toUpperCase(),
                         ),
@@ -360,9 +343,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                       TextButton(
                         onPressed: () => Navigator.pop(context),
                         style: TextButton.styleFrom(
-                          foregroundColor: isDark
-                              ? AppThemes.darkTextSecondary
-                              : AppThemes.hintColor,
+                          foregroundColor: colorScheme.onSurfaceVariant,
                         ),
                         child: const Text('Batal'),
                       ),
@@ -405,15 +386,16 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     );
   }
 
-  // Helper _buildDropdown sama seperti sebelumnya...
   Widget _buildDropdown<T>({
     required String label,
     required T value,
     required List<T> items,
     required Function(T?) onChanged,
-    required bool isDark,
+    required ColorScheme colorScheme,
     required String Function(T) itemLabel,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -422,8 +404,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color:
-                isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
+            color: colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -432,7 +413,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
           decoration: BoxDecoration(
             color: isDark ? Colors.transparent : Colors.white,
             border: Border.all(
-              color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
+              color: colorScheme.outline.withOpacity(0.5),
               width: 1.5,
             ),
             borderRadius: BorderRadius.circular(10),
@@ -441,9 +422,8 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
             child: DropdownButton<T>(
               value: value,
               isExpanded: true,
-              dropdownColor:
-                  isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
-              icon: Icon(
+              dropdownColor: colorScheme.surfaceContainer,
+              icon: const Icon(
                 Icons.arrow_drop_down_rounded,
                 color: AppThemes.primaryColor,
               ),
@@ -453,10 +433,8 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                   child: Text(
                     itemLabel(e),
                     style: TextStyle(
-                      fontSize: 12, // Font sedikit lebih kecil agar muat
-                      color: isDark
-                          ? AppThemes.darkTextPrimary
-                          : AppThemes.onSurfaceColor,
+                      fontSize: 12,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                 );

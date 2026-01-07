@@ -19,6 +19,7 @@ class OnboardButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
     return Row(
@@ -28,14 +29,14 @@ class OnboardButton extends StatelessWidget {
           TextButton(
             onPressed: onSkip,
             style: TextButton.styleFrom(
-              foregroundColor:
-                  isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
+              // FIX: Gunakan onSurfaceVariant pengganti darkTextSecondary/hintColor
+              foregroundColor: colorScheme.onSurfaceVariant,
             ),
             child: Text(
-              'Lewati', // Translate
+              'Lewati',
               style: TextStyle(
-                color:
-                    isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
+                // FIX: Gunakan onSurfaceVariant
+                color: colorScheme.onSurfaceVariant,
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
@@ -58,9 +59,7 @@ class OnboardButton extends StatelessWidget {
               shadowColor: Colors.black.withOpacity(isDark ? 0.4 : 0.2),
             ),
             child: Text(
-              currentPage == pageCount - 1
-                  ? 'Mulai Sekarang'
-                  : 'Lanjut', // Translate
+              currentPage == pageCount - 1 ? 'Mulai Sekarang' : 'Lanjut',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),

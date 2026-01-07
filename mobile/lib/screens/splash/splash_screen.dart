@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../navigation/route_names.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/onboard_provider.dart';
-import '../../themes/app_themes.dart';
 import '../../utils/constants.dart';
 import '../../widgets/loading_indicator.dart';
 
@@ -42,9 +41,12 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initializeApp() async {
+    // Simulasi delay splash screen
     await Future.delayed(
       const Duration(milliseconds: AppConstants.splashDelay),
     );
+
+    if (!mounted) return;
 
     final onboardProvider = Provider.of<OnboardProvider>(
       context,
@@ -52,18 +54,20 @@ class _SplashScreenState extends State<SplashScreen> {
     );
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    // Check if user has seen onboarding
+    // [FIX] Tunggu load data ondbarding selesai
+    await onboardProvider.init();
+
+    // Cek apakah user sudah melihat onboarding
     if (!onboardProvider.onboardCompleted) {
       Navigator.pushReplacementNamed(context, RouteNames.onboard);
       return;
     }
 
-    // Check if user is authenticated
-    // Check if user is authenticated
+    // Cek status autentikasi user
     final isAuthenticated = await authProvider.checkAuthentication();
 
     if (isAuthenticated) {
-      // LOGIKA REDIRECT
+      // LOGIKA REDIRECT BERDASARKAN ROLE
       if (authProvider.isAdmin) {
         Navigator.pushReplacementNamed(context, RouteNames.adminHome);
       } else if (authProvider.isMentor) {
@@ -79,11 +83,12 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    // Menggunakan warna onSurfaceVariant agar adaptif terhadap tema (gelap/terang)
+    final textColor = theme.colorScheme.onSurfaceVariant;
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppThemes.darkBackground : AppThemes.surfaceColor,
+      // Menggunakan background scaffold dari tema
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Stack(
           children: [
@@ -101,7 +106,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                   const SizedBox(height: 32),
                   // Menggunakan LoadingIndicator
-                  LoadingIndicator(message: 'Memuat...'),
+                  const LoadingIndicator(message: 'Memuat...'),
                 ],
               ),
             ),
@@ -118,7 +123,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     Text(
                       appVersion,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: isDark ? Colors.white70 : Colors.black54,
+                        color: textColor.withOpacity(0.7),
                         fontSize: 12,
                       ),
                     ),
@@ -129,7 +134,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   Text(
                     '© 2024 Aro Fakhrur Riziq. All rights reserved.',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: isDark ? Colors.white60 : Colors.black45,
+                      color: textColor.withOpacity(0.5),
                       fontSize: 10,
                     ),
                     textAlign: TextAlign.center,

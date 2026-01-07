@@ -56,6 +56,9 @@ class ProfileScreen extends StatelessWidget {
     final isDarkMode = themeProvider.isDarkMode;
     final user = authProvider.user;
 
+    // FIX: Ambil ColorScheme dari Theme context
+    final colorScheme = Theme.of(context).colorScheme;
+
     // Logic Extract Data menggunakan pattern matching (Dart 3.0+)
     final (:displayDivisi, :displayInstansi, :mentorName, :isStudent) =
         ProfileLogic.extractUserData(user, authProvider);
@@ -72,6 +75,8 @@ class ProfileScreen extends StatelessWidget {
     ) = ProfileLogic.parseUserDates(user);
 
     return Scaffold(
+      // FIX: Gunakan background dari tema
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: CustomAppBar(title: 'Profil', showBackButton: false),
       // --- FIX: Gunakan Stack agar navigasi bar tetap di bawah ---
       body: Stack(
@@ -118,9 +123,8 @@ class ProfileScreen extends StatelessWidget {
                       title: 'Edit Profil',
                       trailing: Icon(
                         Icons.chevron_right_rounded,
-                        color: isDarkMode
-                            ? AppThemes.darkTextSecondary
-                            : AppThemes.hintColor,
+                        // FIX: Gunakan onSurfaceVariant (abu-abu)
+                        color: colorScheme.onSurfaceVariant,
                       ),
                       onTap: () async {
                         await Navigator.pushNamed(
@@ -142,9 +146,8 @@ class ProfileScreen extends StatelessWidget {
                             value ? ThemeMode.dark : ThemeMode.light,
                           );
                         },
-                        activeColor: isDarkMode
-                            ? AppThemes.darkAccentBlue
-                            : AppThemes.primaryColor,
+                        // FIX: Gunakan primaryColor
+                        activeColor: AppThemes.primaryColor,
                       ),
                       isDarkMode: isDarkMode,
                     ),
@@ -154,9 +157,8 @@ class ProfileScreen extends StatelessWidget {
                       title: 'Ganti Kata Sandi',
                       trailing: Icon(
                         Icons.chevron_right_rounded,
-                        color: isDarkMode
-                            ? AppThemes.darkTextSecondary
-                            : AppThemes.hintColor,
+                        // FIX: Gunakan onSurfaceVariant
+                        color: colorScheme.onSurfaceVariant,
                       ),
                       onTap: () {
                         Navigator.pushNamed(

@@ -11,17 +11,18 @@ class MentorBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 30),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        color: isDark ? AppThemes.darkSurfaceVariant : AppThemes.surfaceColor,
+        color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -30,30 +31,29 @@ class MentorBottomNav extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildNavItem(
-              context,
-              Icons.dashboard_rounded,
-              Icons.dashboard_outlined,
-              RouteNames.mentorHome,
-              'Dashboard',
-              isDark),
+          _buildNavItem(context, Icons.dashboard_rounded,
+              Icons.dashboard_outlined, RouteNames.mentorHome, 'Dashboard'),
           _buildNavItem(
               context,
               Icons.fact_check_rounded,
               Icons.fact_check_outlined,
               RouteNames.mentorValidation,
-              'Validasi',
-              isDark),
+              'Validasi'),
           _buildNavItem(context, Icons.person_rounded, Icons.person_outline,
-              RouteNames.profile, 'Profil', isDark),
+              RouteNames.profile, 'Profil'),
         ],
       ),
     );
   }
 
   Widget _buildNavItem(BuildContext context, IconData activeIcon, IconData icon,
-      String route, String label, bool isDark) {
+      String route, String label) {
     final isActive = currentRoute == route;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final color =
+        isActive ? AppThemes.primaryColor : colorScheme.onSurfaceVariant;
+
     return GestureDetector(
       onTap: () {
         if (!isActive)
@@ -62,24 +62,14 @@ class MentorBottomNav extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            isActive ? activeIcon : icon,
-            color: isActive
-                ? (isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor)
-                : (isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor),
-            size: 24,
-          ),
+          Icon(isActive ? activeIcon : icon, color: color, size: 24),
           const SizedBox(height: 2),
           Text(
             label,
             style: TextStyle(
               fontSize: 10,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-              color: isActive
-                  ? (isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor)
-                  : (isDark
-                      ? AppThemes.darkTextSecondary
-                      : AppThemes.hintColor),
+              color: color,
             ),
           ),
         ],

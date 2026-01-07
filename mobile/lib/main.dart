@@ -1,16 +1,16 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Tambahkan ini
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
+// Import Provider & Router
 import 'navigation/app_router.dart';
 import 'navigation/route_names.dart';
 import 'providers/attendance_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/onboard_provider.dart';
 import 'providers/theme_provider.dart';
-import 'services/app_config_service.dart';
+// [PENTING] Import Service & Utils
+import 'services/app_config_service.dart'; // <--- JANGAN LUPA INI
 import 'services/notification_service.dart';
 import 'themes/app_themes.dart';
 import 'utils/constants.dart';
@@ -18,20 +18,38 @@ import 'utils/global_context.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inisialisasi format tanggal Indonesia
   await initializeDateFormatting('id_ID', null);
 
-  // Set status bar transparan agar UI lebih clean
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-  ));
-
+  // Inisialisasi Notifikasi
   try {
-    AppConstants.baseUrl = await AppConfigService.initBaseUrl();
     final notificationService = NotificationService();
     await notificationService.initialize();
     await notificationService.scheduleDailyReminders();
   } catch (e) {
-    debugPrint('❌ Initialization Failed: $e');
+    debugPrint('❌ Failed to initialize notifications: $e');
+  }
+
+  // [PENTING] Inisialisasi URL
+  try {
+    AppConstants.baseUrl = await AppConfigService.initBaseUrl();
+    debugPrint('🌐 Configured Base URL: ${AppConstants.baseUrl}');
+  } catch (e) {
+    // Fallback darurat (Ganti IP sesuai kebutuhan)
+    AppConstants.baseUrl = 'http://192.168.1.8:3000/api';
+    debugPrint(
+        '⚠️ Error initBaseUrl: $e. Using fallback: ${AppConstants.baseUrl}');
+  }
+
+  try {
+    final notificationService = NotificationService();
+    await notificationService.initialize();
+
+    // Jadwalkan pengingat absen rutin
+    await notificationService.scheduleDailyReminders();
+  } catch (e) {
+    debugPrint('❌ Failed to initialize notifications: $e');
   }
 
   runApp(const MyApp());
@@ -51,18 +69,6 @@ class MyApp extends StatelessWidget {
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
-          // --- FIX UTAMA: Tahan render sampai tema siap ---
-          if (themeProvider.isLoading) {
-            return const MaterialApp(
-              debugShowCheckedModeBanner: false,
-              home: Scaffold(
-                backgroundColor: Colors.white, // Atau warna netral
-                body: Center(
-                    child: SizedBox()), // Layar kosong saat loading detik awal
-              ),
-            );
-          }
-
           return MaterialApp(
             title: 'MyInternPlus',
             theme: AppThemes.lightTheme,

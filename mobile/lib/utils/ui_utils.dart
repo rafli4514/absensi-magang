@@ -2,41 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../models/enum/activity_type.dart'; // Pastikan import ini ada
+import '../models/enum/activity_type.dart';
 import '../themes/app_themes.dart';
-import '../widgets/custom_dialog.dart';
 import 'global_context.dart';
 import 'haptic_util.dart';
 
-// --- HELPER FUNCTIONS (Diletakkan di tingkat atas) ---
+Color getActivityColor(ActivityType type) => type.color;
 
-Color getActivityColor(ActivityType type) {
-  return type.color;
-}
-
-Color getActivityTextColor(ActivityType type) {
-  switch (type) {
-    case ActivityType.sakit:
-    case ActivityType.alpha:
-    case ActivityType.deadline:
-      return Colors.red.shade900;
-    case ActivityType.izin:
-    case ActivityType.meeting:
-      return Colors.blue.shade900;
-    case ActivityType.cuti:
-      return Colors.purple.shade900;
-    case ActivityType.pulangCepat:
-    case ActivityType.training:
-      return Colors.orange.shade900;
-    case ActivityType.presentation:
-      return Colors.green.shade900;
-    default:
-      return Colors.grey.shade900;
-  }
-}
-
-// --- CLASSES ---
-
+// --- GLOBAL SNACKBAR ---
 class GlobalSnackBar {
   static OverlayEntry? _overlayEntry;
   static Timer? _closeTimer;
@@ -51,38 +24,25 @@ class GlobalSnackBar {
     IconData? icon,
   }) {
     _removeCurrentOverlay();
-
     final context = GlobalContext.navigatorKey.currentContext;
-    final isDark =
-        context != null && Theme.of(context).brightness == Brightness.dark;
+    if (context == null) return;
 
-    Color strokeColor = AppThemes.infoColor;
-    Color iconBgColor =
-        isDark ? AppThemes.infoColor.withOpacity(0.15) : AppThemes.infoLight;
+    Color typeColor = AppThemes.infoColor;
     IconData defaultIcon = Icons.info_outline_rounded;
     String defaultTitle = 'Informasi';
 
     if (isSuccess) {
-      strokeColor = AppThemes.successColor;
-      iconBgColor = isDark
-          ? AppThemes.successColor.withOpacity(0.15)
-          : AppThemes.successLight;
+      typeColor = AppThemes.successColor;
       defaultIcon = Icons.check_circle_outline_rounded;
       defaultTitle = 'Sukses';
       HapticUtil.success();
     } else if (isError) {
-      strokeColor = AppThemes.errorColor;
-      iconBgColor = isDark
-          ? AppThemes.errorColor.withOpacity(0.15)
-          : AppThemes.errorLight;
+      typeColor = AppThemes.errorColor;
       defaultIcon = Icons.error_outline_rounded;
       defaultTitle = 'Gagal';
       HapticUtil.error();
     } else if (isWarning) {
-      strokeColor = AppThemes.warningColor;
-      iconBgColor = isDark
-          ? AppThemes.warningColor.withOpacity(0.15)
-          : AppThemes.warningLight;
+      typeColor = AppThemes.warningColor;
       defaultIcon = Icons.warning_amber_rounded;
       defaultTitle = 'Peringatan';
       HapticUtil.medium();
@@ -99,14 +59,12 @@ class GlobalSnackBar {
         title: title ?? defaultTitle,
         message: message,
         icon: finalIcon,
-        strokeColor: strokeColor,
-        iconBackgroundColor: iconBgColor,
+        color: typeColor,
         onDismiss: _removeCurrentOverlay,
       ),
     );
 
     navigatorState.overlay?.insert(_overlayEntry!);
-
     _closeTimer = Timer(Duration(milliseconds: isError ? 4000 : 3000), () {
       _removeCurrentOverlay();
     });
@@ -124,16 +82,14 @@ class _TopSnackBarWidget extends StatefulWidget {
   final String title;
   final String message;
   final IconData icon;
-  final Color strokeColor;
-  final Color iconBackgroundColor;
+  final Color color;
   final VoidCallback onDismiss;
 
   const _TopSnackBarWidget({
     required this.title,
     required this.message,
     required this.icon,
-    required this.strokeColor,
-    required this.iconBackgroundColor,
+    required this.color,
     required this.onDismiss,
   });
 
@@ -150,17 +106,11 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
+        duration: const Duration(milliseconds: 500), vsync: this);
     _offsetAnimation = Tween<Offset>(
-      begin: const Offset(0.0, -1.0),
-      end: const Offset(0.0, 0.0),
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.elasticOut,
-    ));
-
+            begin: const Offset(0.0, -1.0), end: const Offset(0.0, 0.0))
+        .animate(
+            CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
     _controller.forward();
   }
 
@@ -172,15 +122,9 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final backgroundColor =
-        isDark ? AppThemes.darkSurfaceElevated : Colors.white;
-    final titleColor =
-        isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor;
-    final messageColor =
-        isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor;
-    final borderColor = isDark ? AppThemes.darkOutline : Colors.transparent;
+    // Menggunakan Theme Context untuk background
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Positioned(
       top: MediaQuery.of(context).padding.top + 10,
@@ -193,14 +137,14 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: backgroundColor,
+              // ADAPTIF: Putih di Light, Abu Gelap di Dark
+              color: colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: borderColor, width: 0.5),
+              border: Border.all(
+                  color: colorScheme.outline.withOpacity(0.5), width: 0.5),
               boxShadow: [
                 BoxShadow(
-                  color: isDark
-                      ? Colors.black.withOpacity(0.3)
-                      : widget.strokeColor.withOpacity(0.2),
+                  color: Colors.black.withOpacity(0.1),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -212,14 +156,10 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: widget.iconBackgroundColor,
+                    color: widget.color.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    widget.icon,
-                    color: widget.strokeColor,
-                    size: 24,
-                  ),
+                  child: Icon(widget.icon, color: widget.color, size: 24),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -227,25 +167,19 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        widget.title,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: titleColor,
-                        ),
-                      ),
+                      Text(widget.title,
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface)),
                       const SizedBox(height: 4),
-                      Text(
-                        widget.message,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: messageColor,
-                          height: 1.4,
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      Text(widget.message,
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: colorScheme.onSurfaceVariant,
+                              height: 1.4),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis),
                     ],
                   ),
                 ),
@@ -253,12 +187,8 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
                   onTap: widget.onDismiss,
                   child: Padding(
                     padding: const EdgeInsets.only(left: 8, top: 2),
-                    child: Icon(
-                      Icons.close,
-                      color:
-                          isDark ? AppThemes.darkTextTertiary : Colors.black45,
-                      size: 20,
-                    ),
+                    child: Icon(Icons.close,
+                        color: colorScheme.onSurfaceVariant, size: 20),
                   ),
                 ),
               ],
@@ -267,113 +197,5 @@ class _TopSnackBarWidgetState extends State<_TopSnackBarWidget>
         ),
       ),
     );
-  }
-}
-
-class AppDialog {
-  static void show(
-    BuildContext? context, {
-    required String title,
-    required String content,
-    String? primaryText,
-    String? secondaryText,
-    VoidCallback? onPrimary,
-    VoidCallback? onSecondary,
-    bool isError = false,
-    bool dismissible = true,
-  }) {
-    if (isError) HapticUtil.error();
-
-    if (context != null) {
-      showDialog(
-        context: context,
-        barrierDismissible: dismissible,
-        builder: (context) => CustomDialog(
-          title: title,
-          content: content,
-          primaryButtonText: primaryText ?? 'OK',
-          secondaryButtonText: secondaryText,
-          onPrimaryButtonPressed: onPrimary,
-          onSecondaryButtonPressed: onSecondary,
-          primaryButtonColor:
-              isError ? AppThemes.errorColor : AppThemes.primaryColor,
-        ),
-      );
-      return;
-    }
-
-    final navigator = GlobalContext.navigatorKey.currentState;
-    if (navigator == null) return;
-
-    navigator.push(
-      DialogRoute(
-        context: navigator.context,
-        barrierDismissible: dismissible,
-        builder: (context) => CustomDialog(
-          title: title,
-          content: content,
-          primaryButtonText: primaryText ?? 'OK',
-          secondaryButtonText: secondaryText,
-          onPrimaryButtonPressed: onPrimary,
-          onSecondaryButtonPressed: onSecondary,
-          primaryButtonColor:
-              isError ? AppThemes.errorColor : AppThemes.primaryColor,
-        ),
-      ),
-    );
-  }
-}
-
-class AppToast {
-  static void show(String message) {
-    final overlayState = GlobalContext.navigatorKey.currentState?.overlay;
-    if (overlayState == null) return;
-
-    HapticUtil.light();
-
-    final overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        bottom: 100,
-        left: 20,
-        right: 20,
-        child: Material(
-          color: Colors.transparent,
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.85),
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Text(
-                message,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    overlayState.insert(overlayEntry);
-
-    Future.delayed(const Duration(seconds: 2), () {
-      try {
-        overlayEntry.remove();
-      } catch (e) {
-        // Ignore
-      }
-    });
   }
 }

@@ -8,6 +8,7 @@ import '../../models/enum/activity_status.dart';
 import '../../models/enum/activity_type.dart';
 import '../../models/logbook.dart';
 import '../../themes/app_themes.dart';
+import 'custom_text_field.dart';
 
 class LogBookFormDialog extends StatefulWidget {
   final LogBook? existingLog;
@@ -18,7 +19,7 @@ class LogBookFormDialog extends StatefulWidget {
     String? durasi,
     ActivityType? type,
     ActivityStatus? status,
-    File? foto, // Parameter baru untuk foto
+    File? foto,
   ) onSave;
 
   const LogBookFormDialog({super.key, this.existingLog, required this.onSave});
@@ -35,23 +36,18 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
   late DateTime _selectedDate;
   ActivityType? _selectedType;
   ActivityStatus? _selectedStatus;
-
-  // Variabel untuk foto
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    _kegiatanController = TextEditingController(
-      text: widget.existingLog?.kegiatan ?? '',
-    );
-    _deskripsiController = TextEditingController(
-      text: widget.existingLog?.deskripsi ?? '',
-    );
-    _durasiController = TextEditingController(
-      text: widget.existingLog?.durasi ?? '',
-    );
+    _kegiatanController =
+        TextEditingController(text: widget.existingLog?.kegiatan ?? '');
+    _deskripsiController =
+        TextEditingController(text: widget.existingLog?.deskripsi ?? '');
+    _durasiController =
+        TextEditingController(text: widget.existingLog?.durasi ?? '');
 
     if (widget.existingLog != null && widget.existingLog!.tanggal.isNotEmpty) {
       try {
@@ -62,7 +58,6 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
     } else {
       _selectedDate = DateTime.now();
     }
-
     _selectedType = widget.existingLog?.type ?? ActivityType.other;
     _selectedStatus = widget.existingLog?.status ?? ActivityStatus.pending;
   }
@@ -75,19 +70,12 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
     super.dispose();
   }
 
-  // Fungsi ambil foto
   Future<void> _pickImage(ImageSource source) async {
     try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: source,
-        imageQuality: 80, // Kompresi ringan
-        maxWidth: 1024,
-      );
-
+      final XFile? pickedFile =
+          await _picker.pickImage(source: source, imageQuality: 80);
       if (pickedFile != null) {
-        setState(() {
-          _selectedImage = File(pickedFile.path);
-        });
+        setState(() => _selectedImage = File(pickedFile.path));
       }
     } catch (e) {
       debugPrint("Error picking image: $e");
@@ -96,15 +84,13 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Dialog(
-      backgroundColor: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
+      backgroundColor: colorScheme.surfaceContainer,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isDark ? AppThemes.darkOutline : Colors.transparent,
-        ),
+        side: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -117,260 +103,119 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
               children: [
                 Text(
                   widget.existingLog != null
-                      ? 'Edit Log Book' // Translate
-                      : 'Tambah Log Book', // Translate
+                      ? 'Edit Log Book'
+                      : 'Tambah Log Book',
                   style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? AppThemes.darkTextPrimary
-                        : AppThemes.onSurfaceColor,
-                  ),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface),
                 ),
                 const SizedBox(height: 24),
-
-                // Tanggal Picker
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                // Date Picker
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _selectedDate,
+                      firstDate: DateTime(2023),
+                      lastDate: DateTime(2030),
+                    );
+                    if (picked != null) setState(() => _selectedDate = picked);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: colorScheme.outline.withOpacity(0.5)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(DateFormat('yyyy-MM-dd').format(_selectedDate),
+                            style: TextStyle(color: colorScheme.onSurface)),
+                        Icon(Icons.calendar_today,
+                            size: 20, color: AppThemes.primaryColor),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  controller: _kegiatanController,
+                  label: 'Kegiatan',
+                  hint: 'Kegiatan harian',
+                  icon: Icons.event_note,
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  controller: _deskripsiController,
+                  label: 'Deskripsi',
+                  hint: 'Deskripsi kegiatan',
+                  icon: Icons.description,
+                  maxLines: 4,
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  controller: _durasiController,
+                  label: 'Durasi',
+                  hint: 'Contoh: 2 Jam',
+                  icon: Icons.access_time,
+                ),
+                const SizedBox(height: 16),
+                // Image Picker UI
+                Row(
                   children: [
-                    Text(
-                      'Tanggal', // Translate
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? AppThemes.darkTextSecondary
-                            : AppThemes.hintColor,
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _pickImage(ImageSource.camera),
+                        icon: const Icon(Icons.camera_alt),
+                        label: const Text('Kamera'),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _selectedDate,
-                          firstDate: DateTime(2023),
-                          lastDate: DateTime(2030),
-                        );
-                        if (picked != null) {
-                          setState(() => _selectedDate = picked);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppThemes.darkSurfaceElevated
-                              : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: isDark
-                                ? AppThemes.darkOutline
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              DateFormat('yyyy-MM-dd').format(_selectedDate),
-                              style: TextStyle(
-                                color: isDark
-                                    ? AppThemes.darkTextPrimary
-                                    : AppThemes.onSurfaceColor,
-                              ),
-                            ),
-                            Icon(
-                              Icons.calendar_today,
-                              size: 20,
-                              color: AppThemes.primaryColor,
-                            ),
-                          ],
-                        ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _pickImage(ImageSource.gallery),
+                        icon: const Icon(Icons.photo),
+                        label: const Text('Galeri'),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                _StyledTextField(
-                  label: 'Kegiatan', // Translate
-                  icon: Icons.event_note,
-                  isDark: isDark,
-                  controller: _kegiatanController,
-                ),
-                const SizedBox(height: 16),
-                _StyledTextField(
-                  label: 'Deskripsi', // Translate
-                  icon: Icons.description,
-                  isDark: isDark,
-                  maxLines: 4,
-                  controller: _deskripsiController,
-                ),
-                const SizedBox(height: 16),
-                _StyledTextField(
-                  label: 'Durasi (opsional, contoh: 2 jam)', // Translate
-                  icon: Icons.access_time,
-                  isDark: isDark,
-                  controller: _durasiController,
-                ),
-                const SizedBox(height: 16),
-
-                // --- BAGIAN UPLOAD FOTO ---
-                Text(
-                  'Dokumentasi (Opsional)',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? AppThemes.darkTextSecondary
-                        : AppThemes.hintColor,
-                  ),
-                ),
-                const SizedBox(height: 8),
                 if (_selectedImage != null)
-                  Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          _selectedImage!,
-                          height: 150,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedImage = null;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _pickImage(ImageSource.camera),
-                          icon: const Icon(Icons.camera_alt_rounded),
-                          label: const Text('Kamera'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            foregroundColor: AppThemes.primaryColor,
-                            side:
-                                const BorderSide(color: AppThemes.primaryColor),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _pickImage(ImageSource.gallery),
-                          icon: const Icon(Icons.photo_library_rounded),
-                          label: const Text('Galeri'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            foregroundColor: AppThemes.primaryColor,
-                            side:
-                                const BorderSide(color: AppThemes.primaryColor),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                        'Foto dipilih: ${_selectedImage!.path.split('/').last}',
+                        style: TextStyle(
+                            fontSize: 12, color: colorScheme.onSurfaceVariant)),
                   ),
-
-                const SizedBox(height: 16),
-
-                // Type Dropdown
-                _buildDropdown<ActivityType>(
-                  label: 'Tipe Aktivitas', // Translate
-                  value: _selectedType,
-                  items: ActivityType.values,
-                  onChanged: (val) => setState(() => _selectedType = val),
-                  isDark: isDark,
-                  itemLabel: (e) => e.displayName,
-                ),
-                const SizedBox(height: 16),
-                // Status Dropdown
-                _buildDropdown<ActivityStatus>(
-                  label: 'Status', // Translate
-                  value: _selectedStatus,
-                  items: ActivityStatus.values,
-                  onChanged: (val) => setState(() => _selectedStatus = val),
-                  isDark: isDark,
-                  itemLabel: (e) => e.displayName,
-                ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        'Batal', // Translate
-                        style: TextStyle(
-                          color: isDark
-                              ? AppThemes.darkTextSecondary
-                              : AppThemes.hintColor,
-                        ),
-                      ),
+                      child: const Text('Batal'),
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
-                          if (_kegiatanController.text.isNotEmpty &&
-                              _deskripsiController.text.isNotEmpty) {
-                            widget.onSave(
-                              DateFormat('yyyy-MM-dd').format(_selectedDate),
-                              _kegiatanController.text,
-                              _deskripsiController.text,
-                              _durasiController.text.isNotEmpty
-                                  ? _durasiController.text
-                                  : null,
-                              _selectedType,
-                              _selectedStatus,
-                              _selectedImage, // Kirim foto ke callback
-                            );
-                            Navigator.pop(context);
-                          }
+                          widget.onSave(
+                            DateFormat('yyyy-MM-dd').format(_selectedDate),
+                            _kegiatanController.text,
+                            _deskripsiController.text,
+                            _durasiController.text,
+                            _selectedType,
+                            _selectedStatus,
+                            _selectedImage,
+                          );
                         }
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppThemes.primaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                      ),
-                      child: const Text('Simpan'), // Translate
+                      child: const Text('Simpan'),
                     ),
                   ],
                 ),
@@ -379,124 +224,6 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildDropdown<T>({
-    required String label,
-    required T? value,
-    required List<T> items,
-    required Function(T?) onChanged,
-    required bool isDark,
-    required String Function(T) itemLabel,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: isDark ? AppThemes.darkSurfaceElevated : Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
-            ),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<T>(
-              value: value,
-              isExpanded: true,
-              dropdownColor:
-                  isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
-              items: items.map((e) {
-                return DropdownMenuItem<T>(
-                  value: e,
-                  child: Text(
-                    itemLabel(e),
-                    style: TextStyle(
-                      color: isDark
-                          ? AppThemes.darkTextPrimary
-                          : AppThemes.onSurfaceColor,
-                    ),
-                  ),
-                );
-              }).toList(),
-              onChanged: onChanged,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StyledTextField extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool isDark;
-  final int maxLines;
-  final TextEditingController? controller;
-
-  const _StyledTextField({
-    required this.label,
-    required this.icon,
-    required this.isDark,
-    this.maxLines = 1,
-    this.controller,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppThemes.darkSurfaceElevated : Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isDark ? AppThemes.darkOutline : Colors.grey.shade300,
-            ),
-          ),
-          child: TextField(
-            controller: controller,
-            maxLines: maxLines,
-            style: TextStyle(
-              color:
-                  isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
-            ),
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(12),
-              prefixIcon: Icon(icon, size: 20, color: AppThemes.hintColor),
-              hintText: 'Masukkan $label', // Translate
-              hintStyle: TextStyle(
-                color: isDark
-                    ? AppThemes.darkTextTertiary
-                    : AppThemes.hintColor.withOpacity(0.5),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -9,11 +9,17 @@ class OnboardProvider with ChangeNotifier {
   bool get onboardCompleted => _onboardCompleted;
 
   OnboardProvider() {
-    _loadOnboardStatus();
+    // Constructor tidak boleh async, jadi default false dulu.
+    // Pemanggil (Splash Screen) WAJIB panggil init() agar state sinkron.
+  }
+
+  Future<void> init() async {
+    await _loadOnboardStatus();
   }
 
   Future<void> _loadOnboardStatus() async {
-    _onboardCompleted = (await StorageService.getBool(AppConstants.onboardSeenKey)) ?? false;
+    _onboardCompleted =
+        (await StorageService.getBool(AppConstants.onboardSeenKey)) ?? false;
     notifyListeners();
   }
 

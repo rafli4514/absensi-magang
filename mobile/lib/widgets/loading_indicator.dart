@@ -33,7 +33,7 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Center(
       child: Column(
@@ -45,7 +45,7 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(3, (index) {
-                  return _buildDot(index, isDark);
+                  return _buildDot(index, colorScheme);
                 }),
               );
             },
@@ -55,8 +55,7 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
             Text(
               widget.message!,
               style: TextStyle(
-                color:
-                    isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
+                color: colorScheme.onSurfaceVariant,
                 fontSize: 12,
               ),
             ),
@@ -66,7 +65,7 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
     );
   }
 
-  Widget _buildDot(int index, bool isDark) {
+  Widget _buildDot(int index, ColorScheme colorScheme) {
     final double animationValue = _controller.value;
     final double offset = (animationValue * 2 * pi + (index * 2 * pi / 3));
     final double scale = 0.5 + (sin(offset) + 1) / 4;
@@ -79,7 +78,7 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
           width: 10,
           height: 10,
           decoration: BoxDecoration(
-            color: isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor,
+            color: AppThemes.primaryColor,
             shape: BoxShape.circle,
           ),
         ),

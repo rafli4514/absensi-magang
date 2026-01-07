@@ -19,13 +19,25 @@ const startServer = async () => {
     await prisma.$connect();
     console.log('✅ Database connected successfully');
 
-    // Start server
-    const server = app.listen(config.port, () => {
-      console.log(`🚀 Server is running on http://localhost:${config.port}`);
+    // Start server binding to 0.0.0.0 (Allow external access)
+    const server = app.listen(Number(config.port), '0.0.0.0', () => {
+      console.log(`🚀 Server is running on http://0.0.0.0:${config.port}`);
       console.log(`📊 Health check: http://localhost:${config.port}/api/health`);
-      console.log(`📚 API Documentation: http://localhost:${config.port}/api`);
       console.log(`🌍 Environment: ${config.nodeEnv}`);
-      console.log(`🗄️ Database: Prisma + PostgreSQL`);
+
+      // Tampilkan IP Address lokal komputer untuk memudahkan copy-paste ke Flutter
+      const { networkInterfaces } = require('os');
+      const nets = networkInterfaces();
+      console.log('\n📡 --- AVAILABLE NETWORK INTERFACES (Use one of these in Flutter) ---');
+      for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+          // Skip internal (non-IPv4) and non-internet addresses
+          if (net.family === 'IPv4' && !net.internal) {
+            console.log(`👉 http://${net.address}:${config.port}/api`);
+          }
+        }
+      }
+      console.log('------------------------------------------------------------------\n');
     });
 
     return server;

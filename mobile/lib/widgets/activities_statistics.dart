@@ -2,235 +2,350 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../../themes/app_themes.dart';
+import '../../models/attendance.dart';
 import '../../models/logbook.dart';
+import '../../themes/app_themes.dart';
 
 class ActivitiesStatistics extends StatelessWidget {
   final bool isMobile;
   final List<LogBook> logbooks;
+  final List<Attendance> attendanceList;
+  final DateTime currentWeekStart;
+  final DateTime currentWeekEnd;
 
   const ActivitiesStatistics({
     super.key,
     required this.isMobile,
-    this.logbooks = const [],
+    required this.logbooks,
+    required this.attendanceList,
+    required this.currentWeekStart,
+    required this.currentWeekEnd,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final dailyChart = _ChartCard(
-      title: 'Distribusi Aktivitas',
-      isDark: isDark,
-      height: 250,
-      child: _buildPieChart(isDark),
-    );
-
-    final weeklyChart = _ChartCard(
-      title: 'Performa Mingguan',
-      isDark: isDark,
-      height: 250,
-      child: _buildLineChart(isDark),
-    );
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
-      children: [dailyChart, const SizedBox(height: 16), weeklyChart],
+      children: [
+        // CHART 1: PIE CHART KOMPOSISI MINGGUAN (Tetap, karena request line chart yang diubah)
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colorScheme.outline.withOpacity(0.5)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Statistik Minggu Ini',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${DateFormat('d MMM').format(currentWeekStart)} - ${DateFormat('d MMM yyyy').format(currentWeekEnd)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                height: 200,
+                child: _buildAttendancePieChart(colorScheme),
+              ),
+              const SizedBox(height: 16),
+              _buildPieChartLegend(colorScheme),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // CHART 2: LINE CHART KEHADIRAN BULANAN (YANG DIPERBAIKI)
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colorScheme.outline.withOpacity(0.5)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Performa Bulanan', // Judul Diperbaiki
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Total Hadir per Bulan', // Subjudul Diperbaiki
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                height: 200,
+                child: _buildAttendanceLineChart(colorScheme), // Fungsi Baru
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildPieChart(bool isDark) {
-    if (logbooks.isEmpty) {
-      return _buildEmptyState(isDark);
+  // --- PIE CHART LOGIC (MINGGUAN) ---
+  Widget _buildAttendancePieChart(ColorScheme colorScheme) {
+    // Filter data minggu ini
+    final weeklyAttendance = attendanceList.where((att) {
+      final date = att.timestamp;
+      return date
+              .isAfter(currentWeekStart.subtract(const Duration(seconds: 1))) &&
+          date.isBefore(currentWeekEnd.add(const Duration(seconds: 1)));
+    }).toList();
+
+    // Hitung status
+    int hadir = 0;
+    int sakit = 0;
+    int izin = 0;
+    int alpha = 0;
+
+    for (var att in weeklyAttendance) {
+      final status = att.status.toUpperCase();
+      if (['VALID', 'TERLAMBAT', 'HADIR'].contains(status))
+        hadir++;
+      else if (status == 'SAKIT')
+        sakit++;
+      else if (status == 'IZIN')
+        izin++;
+      else
+        alpha++; // Alpha, Invalid, dll
     }
 
-    final typeDistribution = <String, int>{};
-    for (final logbook in logbooks) {
-      String category = 'Lainnya'; // Default value
-
-      if (logbook.type != null) {
-        category = logbook.type!.displayName;
-      } else if (logbook.status != null) {
-        category = logbook.status!.displayName;
-      }
-
-      typeDistribution[category] = (typeDistribution[category] ?? 0) + 1;
+    final total = hadir + sakit + izin + alpha;
+    if (total == 0) {
+      return Center(
+        child: Text(
+          'Belum ada data minggu ini',
+          style: TextStyle(color: colorScheme.onSurfaceVariant),
+        ),
+      );
     }
-
-    if (typeDistribution.isEmpty) {
-      return _buildEmptyState(isDark);
-    }
-
-    final pieChartData = typeDistribution.entries.toList();
-    final totalWithType = typeDistribution.values.fold(0, (a, b) => a + b);
-
-    if (totalWithType == 0) return _buildEmptyState(isDark);
-
-    final colors = [
-      AppThemes.primaryColor,
-      AppThemes.successColor,
-      AppThemes.warningColor,
-      AppThemes.errorColor,
-      Colors.purple,
-      Colors.orange,
-      Colors.teal,
-      Colors.pink,
-    ];
 
     return PieChart(
       PieChartData(
-        sections: pieChartData.asMap().entries.map((entry) {
-          final index = entry.key;
-          final entryData = entry.value;
-          final percentage = (entryData.value / totalWithType * 100);
-          return PieChartSectionData(
-            value: entryData.value.toDouble(),
-            title: '${entryData.key}\n${percentage.toStringAsFixed(0)}%',
-            color: colors[index % colors.length],
-            radius: 60,
-            titleStyle: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          );
-        }).toList(),
         sectionsSpace: 2,
         centerSpaceRadius: 40,
+        sections: [
+          if (hadir > 0)
+            PieChartSectionData(
+              color: AppThemes.successColor,
+              value: hadir.toDouble(),
+              title: '${(hadir / total * 100).round()}%',
+              radius: 50,
+              titleStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
+            ),
+          if (sakit > 0)
+            PieChartSectionData(
+              color: AppThemes.infoColor,
+              value: sakit.toDouble(),
+              title: '${(sakit / total * 100).round()}%',
+              radius: 50,
+              titleStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
+            ),
+          if (izin > 0)
+            PieChartSectionData(
+              color: AppThemes.warningColor,
+              value: izin.toDouble(),
+              title: '${(izin / total * 100).round()}%',
+              radius: 50,
+              titleStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
+            ),
+          if (alpha > 0)
+            PieChartSectionData(
+              color: AppThemes.errorColor,
+              value: alpha.toDouble(),
+              title: '${(alpha / total * 100).round()}%',
+              radius: 50,
+              titleStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _buildLineChart(bool isDark) {
-    if (logbooks.isEmpty) {
-      return _buildEmptyState(isDark);
+  Widget _buildPieChartLegend(ColorScheme colorScheme) {
+    return Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: [
+        _buildLegendItem('Hadir', AppThemes.successColor, colorScheme),
+        _buildLegendItem('Sakit', AppThemes.infoColor, colorScheme),
+        _buildLegendItem('Izin', AppThemes.warningColor, colorScheme),
+        _buildLegendItem('Alpha', AppThemes.errorColor, colorScheme),
+      ],
+    );
+  }
+
+  Widget _buildLegendItem(String label, Color color, ColorScheme colorScheme) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- LINE CHART LOGIC (BULANAN - KEHADIRAN) ---
+  Widget _buildAttendanceLineChart(ColorScheme colorScheme) {
+    if (attendanceList.isEmpty) {
+      return Center(
+        child: Text(
+          'Belum ada riwayat kehadiran',
+          style: TextStyle(color: colorScheme.onSurfaceVariant),
+        ),
+      );
     }
 
-    DateTime? minDate;
-    DateTime? maxDate;
-
-    for (final logbook in logbooks) {
-      try {
-        final logDate = DateTime.parse(logbook.tanggal);
-        if (minDate == null || logDate.isBefore(minDate)) minDate = logDate;
-        if (maxDate == null || logDate.isAfter(maxDate)) maxDate = logDate;
-      } catch (e) {
-        // Skip invalid
-      }
-    }
-
-    if (minDate == null || maxDate == null) {
-      return _buildEmptyState(isDark);
-    }
-
+    // 1. Inisialisasi Map 6 Bulan Terakhir
     final now = DateTime.now();
-    final weeklyData = <String, int>{};
-    final weekRanges = <String, List<DateTime>>{};
+    final Map<int, int> monthlyPresence = {}; // Key: Month Index (1-12)
 
-    for (int i = 7; i >= 0; i--) {
-      final weekDate = now.subtract(Duration(days: i * 7));
-      final daysFromMonday = weekDate.weekday - 1;
-      final weekStart = DateTime(weekDate.year, weekDate.month, weekDate.day)
-          .subtract(Duration(days: daysFromMonday));
-      final weekEnd = weekStart.add(const Duration(days: 6));
-
-      final weekKey =
-          '${DateFormat('dd MMM').format(weekStart)} - ${DateFormat('dd MMM').format(weekEnd)}';
-      weeklyData[weekKey] = 0;
-      weekRanges[weekKey] = [weekStart, weekEnd];
+    // Set default 0 untuk 6 bulan ke belakang
+    for (int i = 5; i >= 0; i--) {
+      // Logic mundur bulan: jika month - i <= 0, handle tahun lalu (simple logic: DateTime handle otomatis)
+      final d = DateTime(now.year, now.month - i, 1);
+      monthlyPresence[d.month] = 0;
     }
 
-    for (final logbook in logbooks) {
+    // 2. Hitung Data Real dari attendanceList
+    // Kita filter hanya yang VALID/HADIR/TERLAMBAT
+    for (var att in attendanceList) {
       try {
-        final logDate = DateTime.parse(logbook.tanggal);
-        final logDateOnly = DateTime(logDate.year, logDate.month, logDate.day);
+        final date = att.timestamp;
+        // Cek apakah masuk range 6 bulan terakhir
+        // Batas bawah: Tanggal 1 pada 5 bulan lalu
+        final cutoffDate = DateTime(now.year, now.month - 5, 1);
 
-        for (final entry in weekRanges.entries) {
-          final weekStart = entry.value[0];
-          final weekEnd = entry.value[1];
-
-          if (logDateOnly
-                  .isAfter(weekStart.subtract(const Duration(seconds: 1))) &&
-              logDateOnly.isBefore(weekEnd.add(const Duration(days: 1)))) {
-            weeklyData[entry.key] = (weeklyData[entry.key] ?? 0) + 1;
-            break;
+        if (date.isAfter(cutoffDate.subtract(const Duration(days: 1)))) {
+          final status = att.status.toUpperCase();
+          if (['VALID', 'TERLAMBAT', 'HADIR'].contains(status)) {
+            // Tambahkan counter di bulan tersebut
+            // Pastikan bulan ada di map inisialisasi (agar tidak menghitung bulan depan/jauh lampau)
+            if (monthlyPresence.containsKey(date.month)) {
+              monthlyPresence[date.month] =
+                  (monthlyPresence[date.month] ?? 0) + 1;
+            }
           }
         }
-      } catch (e) {
-        // Skip
-      }
+      } catch (_) {}
     }
 
-    final weeklyEntries = weeklyData.entries.toList();
-    weeklyEntries.sort((a, b) {
-      final aStart = weekRanges[a.key]?[0] ?? DateTime.now();
-      final bStart = weekRanges[b.key]?[0] ?? DateTime.now();
-      return aStart.compareTo(bStart);
-    });
+    // 3. Konversi ke FlSpot untuk Chart
+    final spots = <FlSpot>[];
+    // Urutkan key agar grafik urut waktu
+    // Kita harus urutkan berdasarkan urutan 6 bulan terakhir, bukan index bulan kalender 1-12
+    // Contoh: [Nov, Dec, Jan, Feb, Mar, Apr] -> urutannya harus dijaga
 
-    final hasData = weeklyEntries.any((entry) => entry.value > 0);
+    final List<String> bottomTitles = [];
+    int xIndex = 0;
 
-    if (!hasData || weeklyEntries.isEmpty) {
-      return _buildEmptyState(isDark);
+    for (int i = 5; i >= 0; i--) {
+      final d = DateTime(now.year, now.month - i, 1);
+      final monthKey = d.month;
+
+      // Label Bawah (Jan, Feb, ...)
+      bottomTitles.add(DateFormat('MMM').format(d));
+
+      // Nilai Y (Jumlah Hadir)
+      final count = monthlyPresence[monthKey] ?? 0;
+      spots.add(FlSpot(xIndex.toDouble(), count.toDouble()));
+
+      xIndex++;
     }
 
-    final maxValue =
-        weeklyEntries.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+    // Cari nilai Max Y untuk padding atas
+    double maxY = 0;
+    for (var spot in spots) {
+      if (spot.y > maxY) maxY = spot.y;
+    }
+    // Tambah padding, minimal 5 (biar ga gepeng kalau 0 semua)
+    maxY = (maxY < 5) ? 5 : maxY + 2;
 
+    // 4. Build Chart Widget
     return LineChart(
       LineChartData(
         gridData: FlGridData(
           show: true,
-          drawVerticalLine: true,
-          verticalInterval: 1,
-          horizontalInterval:
-              maxValue > 5 ? (maxValue / 5).ceil().toDouble() : 1,
-          getDrawingHorizontalLine: (value) => FlLine(
-            color: isDark
-                ? AppThemes.darkOutline.withOpacity(0.2)
-                : Colors.grey.withOpacity(0.2),
-            strokeWidth: 1,
-          ),
-          getDrawingVerticalLine: (value) => FlLine(
-            color: isDark
-                ? AppThemes.darkOutline.withOpacity(0.1)
-                : Colors.grey.withOpacity(0.1),
-            strokeWidth: 1,
-          ),
+          drawVerticalLine: false,
+          horizontalInterval: 5, // Garis bantu tiap kelipatan 5 hari
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: colorScheme.outline.withOpacity(0.2),
+              strokeWidth: 1,
+            );
+          },
         ),
         titlesData: FlTitlesData(
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 30,
-              getTitlesWidget: (value, meta) => Text(
-                value.toInt().toString(),
-                style: TextStyle(
-                  fontSize: 10,
-                  color: isDark
-                      ? AppThemes.darkTextSecondary
-                      : AppThemes.hintColor,
-                ),
-              ),
-            ),
-          ),
+          show: true,
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 30,
+              interval: 1,
               getTitlesWidget: (value, meta) {
-                if (value.toInt() < weeklyEntries.length &&
-                    value.toInt() >= 0) {
-                  final label = weeklyEntries[value.toInt()].key;
-                  final firstDate = label.split(' - ').first;
+                final index = value.toInt();
+                if (index >= 0 && index < bottomTitles.length) {
                   return Padding(
-                    padding: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.only(top: 8.0),
                     child: Text(
-                      firstDate,
+                      bottomTitles[index],
                       style: TextStyle(
-                        fontSize: 9,
-                        color: isDark
-                            ? AppThemes.darkTextSecondary
-                            : AppThemes.hintColor,
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   );
@@ -239,119 +354,43 @@ class ActivitiesStatistics extends StatelessWidget {
               },
             ),
           ),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        ),
-        borderData: FlBorderData(
-          show: true,
-          border: Border.all(
-            color: isDark
-                ? AppThemes.darkOutline.withOpacity(0.3)
-                : Colors.grey.withOpacity(0.3),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              interval: 5, // Interval angka di kiri (0, 5, 10, 15...)
+              reservedSize: 28,
+              getTitlesWidget: (value, meta) {
+                if (value % 1 != 0)
+                  return const SizedBox(); // Hanya tampilkan integer
+                return Text(
+                  value.toInt().toString(),
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 10,
+                  ),
+                );
+              },
+            ),
           ),
         ),
+        borderData: FlBorderData(show: false),
         minX: 0,
-        maxX: weeklyEntries.isNotEmpty
-            ? (weeklyEntries.length - 1).toDouble()
-            : 1,
+        maxX: (bottomTitles.length - 1).toDouble(),
         minY: 0,
-        maxY: maxValue > 0 ? maxValue.toDouble() + 1 : 1,
+        maxY: maxY,
         lineBarsData: [
           LineChartBarData(
-            spots: weeklyEntries.asMap().entries.map((entry) {
-              return FlSpot(entry.key.toDouble(), entry.value.value.toDouble());
-            }).toList(),
+            spots: spots,
             isCurved: true,
             color: AppThemes.primaryColor,
             barWidth: 3,
             isStrokeCapRound: true,
-            dotData: const FlDotData(show: true),
+            dotData: FlDotData(show: true),
             belowBarData: BarAreaData(
               show: true,
               color: AppThemes.primaryColor.withOpacity(0.1),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(bool isDark) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.bar_chart_rounded,
-            size: 48,
-            color: isDark
-                ? AppThemes.darkTextSecondary.withOpacity(0.5)
-                : AppThemes.hintColor.withOpacity(0.5),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Belum ada data tersedia',
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ChartCard extends StatelessWidget {
-  final String title;
-  final Widget child;
-  final bool isDark;
-  final double height;
-
-  const _ChartCard({
-    required this.title,
-    required this.child,
-    required this.isDark,
-    required this.height,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppThemes.darkOutline : Colors.grey.shade200,
-        ),
-        boxShadow: [
-          if (!isDark)
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-              color:
-                  isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
-            ),
-          ),
-          const Divider(height: 24),
-          Expanded(child: child),
         ],
       ),
     );

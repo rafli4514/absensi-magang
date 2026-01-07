@@ -14,18 +14,15 @@ class CustomErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Tidak perlu isDark lagi, pakai color constant langsung atau Theme
+    // Untuk error, kita pakai warna merah konsisten
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppThemes.errorColor.withOpacity(0.1)
-            : AppThemes.errorLight,
+        color: AppThemes.errorColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: AppThemes.errorColor.withOpacity(0.3),
-        ),
+        border: Border.all(color: AppThemes.errorColor.withOpacity(0.3)),
       ),
       child: Row(
         children: [
@@ -35,8 +32,8 @@ class CustomErrorWidget extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: TextStyle(
-                color: isDark ? AppThemes.errorColor : AppThemes.errorDark,
+              style: const TextStyle(
+                color: AppThemes.errorColor,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),

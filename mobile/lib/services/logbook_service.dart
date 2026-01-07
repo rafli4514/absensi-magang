@@ -10,13 +10,21 @@ class LogbookService {
 
   static Future<ApiResponse<List<LogBook>>> getAllLogbook({
     int page = 1,
-    int limit = 10,
+    int limit = 10, // Limit per request
     String? pesertaMagangId,
     String? tanggal,
+    // Parameter Baru
+    String? startDate,
+    String? endDate,
   }) async {
     String query = '?page=$page&limit=$limit';
+
     if (pesertaMagangId != null) query += '&pesertaMagangId=$pesertaMagangId';
     if (tanggal != null) query += '&tanggal=$tanggal';
+
+    // Tambahkan ke Query String
+    if (startDate != null) query += '&startDate=$startDate';
+    if (endDate != null) query += '&endDate=$endDate';
 
     return await _apiService.get(
       '${AppConstants.activitiesEndpoint}$query',

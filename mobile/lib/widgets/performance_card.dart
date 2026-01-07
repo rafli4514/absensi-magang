@@ -14,20 +14,16 @@ class PerformanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     // Handle empty state
     if (totalDays == 0) {
       return Card(
-        elevation: isDark ? 4 : 2,
-        color: isDark ? AppThemes.darkSurface : theme.cardTheme.color,
-        shadowColor: Colors.black.withOpacity(isDark ? 0.4 : 0.1),
+        elevation: 0,
+        color: colorScheme.surfaceContainer,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: isDark
-              ? const BorderSide(color: AppThemes.darkOutline, width: 0.5)
-              : BorderSide.none,
+          side: BorderSide(color: colorScheme.outline.withOpacity(0.5)),
         ),
         child: Container(
           padding: const EdgeInsets.all(20),
@@ -37,45 +33,30 @@ class PerformanceCard extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    'Performa Bulanan', // Translate
+                    'Performa Bulanan',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: isDark
-                          ? AppThemes.darkTextPrimary
-                          : AppThemes.onSurfaceColor,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Icon(
-                    Icons.trending_up_rounded,
-                    size: 20,
-                    color: isDark
-                        ? AppThemes.darkAccentBlue
-                        : AppThemes.primaryColor,
-                  ),
+                  Icon(Icons.trending_up_rounded,
+                      size: 20, color: AppThemes.primaryColor),
                 ],
               ),
               const SizedBox(height: 20),
               Center(
                 child: Column(
                   children: [
-                    Icon(
-                      Icons.bar_chart_outlined,
-                      size: 48,
-                      color: isDark
-                          ? AppThemes.darkTextSecondary.withOpacity(0.5)
-                          : AppThemes.hintColor.withOpacity(0.5),
-                    ),
+                    Icon(Icons.bar_chart_outlined,
+                        size: 48,
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.5)),
                     const SizedBox(height: 12),
                     Text(
-                      'Belum ada data performa', // Translate
+                      'Belum ada data performa',
                       style: TextStyle(
-                        fontSize: 14,
-                        color: isDark
-                            ? AppThemes.darkTextSecondary
-                            : AppThemes.hintColor,
-                      ),
+                          fontSize: 14, color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -87,79 +68,55 @@ class PerformanceCard extends StatelessWidget {
     }
 
     double percentage = (presentDays / totalDays * 100);
-    // Cegah NaN jika totalDays 0 (sudah dihandle di atas, tapi double check)
     if (percentage.isNaN) percentage = 0;
-
     bool targetAchieved = percentage >= 85;
 
     return Card(
-      elevation: isDark ? 4 : 2,
-      color: isDark ? AppThemes.darkSurface : theme.cardTheme.color,
-      shadowColor: Colors.black.withOpacity(isDark ? 0.4 : 0.1),
+      elevation: 0,
+      color: colorScheme.surfaceContainer,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: isDark
-            ? const BorderSide(color: AppThemes.darkOutline, width: 0.5)
-            : BorderSide.none,
+        side: BorderSide(color: colorScheme.outline.withOpacity(0.5)),
       ),
       child: Container(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with title and badge
+            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
                     Text(
-                      'Performa Bulanan', // Translate
+                      'Performa Bulanan',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: isDark
-                            ? AppThemes.darkTextPrimary
-                            : AppThemes.onSurfaceColor,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Icon(
-                      Icons.trending_up_rounded,
-                      size: 20,
-                      color: isDark
-                          ? AppThemes.darkAccentBlue
-                          : AppThemes.primaryColor,
-                    ),
+                    const Icon(Icons.trending_up_rounded,
+                        size: 20, color: AppThemes.primaryColor),
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: (isDark
-                            ? AppThemes.darkAccentBlue
-                            : AppThemes.primaryColor)
-                        .withOpacity(0.1),
+                    color: AppThemes.primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: (isDark
-                              ? AppThemes.darkAccentBlue
-                              : AppThemes.primaryColor)
-                          .withOpacity(0.3),
-                      width: 1,
-                    ),
+                        color: AppThemes.primaryColor.withOpacity(0.3)),
                   ),
                   child: Text(
-                    '${percentage.round()}% Hadir', // Translate
-                    style: TextStyle(
+                    '${percentage.round()}% Hadir',
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? AppThemes.darkAccentBlue
-                          : AppThemes.primaryColor,
+                      color: AppThemes.primaryColor,
                     ),
                   ),
                 ),
@@ -167,7 +124,7 @@ class PerformanceCard extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Main stats section
+            // Main stats
             Row(
               children: [
                 Expanded(
@@ -176,22 +133,15 @@ class PerformanceCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Icon(
-                            Icons.check_circle_rounded,
-                            size: 20,
-                            color: isDark
-                                ? AppThemes.darkAccentBlue
-                                : AppThemes.primaryColor,
-                          ),
+                          const Icon(Icons.check_circle_rounded,
+                              size: 20, color: AppThemes.primaryColor),
                           const SizedBox(width: 8),
                           Text(
-                            '$presentDays hari hadir', // Translate
+                            '$presentDays hari hadir',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: isDark
-                                  ? AppThemes.darkTextPrimary
-                                  : AppThemes.onSurfaceColor,
+                              color: colorScheme.onSurface,
                             ),
                           ),
                         ],
@@ -200,20 +150,17 @@ class PerformanceCard extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(left: 28),
                         child: Text(
-                          '$totalDays total hari kerja', // Translate
+                          '$totalDays total hari kerja',
                           style: TextStyle(
                             fontSize: 14,
-                            color: isDark
-                                ? AppThemes.darkTextSecondary
-                                : AppThemes.hintColor,
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
-                // Circular progress indicator
+                // Circular Progress
                 Stack(
                   alignment: Alignment.center,
                   children: [
@@ -223,24 +170,17 @@ class PerformanceCard extends StatelessWidget {
                       child: CircularProgressIndicator(
                         value: percentage / 100,
                         strokeWidth: 6,
-                        backgroundColor: isDark
-                            ? AppThemes.darkOutline
-                            : AppThemes.hintColor.withOpacity(0.2),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          isDark
-                              ? AppThemes.darkAccentBlue
-                              : AppThemes.primaryColor,
-                        ),
+                        backgroundColor: colorScheme.surfaceContainerHigh,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppThemes.primaryColor),
                       ),
                     ),
                     Text(
                       '${percentage.round()}%',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: isDark
-                            ? AppThemes.darkAccentBlue
-                            : AppThemes.primaryColor,
+                        color: AppThemes.primaryColor,
                       ),
                     ),
                   ],
@@ -249,18 +189,16 @@ class PerformanceCard extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Monthly target progress bar
+            // Target
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Target Bulanan', // Translate
+                  'Target Bulanan',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? AppThemes.darkTextSecondary
-                        : AppThemes.hintColor,
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -268,9 +206,7 @@ class PerformanceCard extends StatelessWidget {
                   height: 8,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? AppThemes.darkOutline
-                        : AppThemes.hintColor.withOpacity(0.2),
+                    color: colorScheme.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Align(
@@ -280,18 +216,8 @@ class PerformanceCard extends StatelessWidget {
                           (MediaQuery.of(context).size.width - 80),
                       height: 8,
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? AppThemes.darkAccentBlue
-                            : AppThemes.primaryColor,
+                        color: AppThemes.primaryColor,
                         borderRadius: BorderRadius.circular(4),
-                        boxShadow: [
-                          if (isDark)
-                            BoxShadow(
-                              color: AppThemes.darkAccentBlue.withOpacity(0.3),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
-                            ),
-                        ],
                       ),
                     ),
                   ),
@@ -303,11 +229,7 @@ class PerformanceCard extends StatelessWidget {
                     Text(
                       'Target: 85%',
                       style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppThemes.darkTextSecondary
-                            : AppThemes.hintColor,
-                      ),
+                          fontSize: 12, color: colorScheme.onSurfaceVariant),
                     ),
                     Row(
                       children: [
@@ -316,21 +238,17 @@ class PerformanceCard extends StatelessWidget {
                           size: 16,
                           color: targetAchieved
                               ? AppThemes.successColor
-                              : (isDark
-                                  ? AppThemes.darkTextTertiary
-                                  : AppThemes.hintColor.withOpacity(0.4)),
+                              : colorScheme.onSurfaceVariant,
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Target Tercapai', // Translate
+                          'Target Tercapai',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: targetAchieved
                                 ? AppThemes.successColor
-                                : (isDark
-                                    ? AppThemes.darkTextSecondary
-                                    : AppThemes.hintColor),
+                                : colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],

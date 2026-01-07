@@ -39,7 +39,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            activities_screen
             signingConfig = signingConfigs.getByName("debug")
         }
     }

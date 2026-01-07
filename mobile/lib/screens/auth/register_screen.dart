@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../navigation/route_names.dart';
 import '../../providers/auth_provider.dart';
 import '../../themes/app_themes.dart';
 import '../../utils/ui_utils.dart';
@@ -20,91 +19,73 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final _mentorController = TextEditingController();
+  // Controllers untuk Data Akun & Pribadi
   final _namaController = TextEditingController();
   final _usernameController = TextEditingController();
-  final _idPesertaMagangController = TextEditingController();
-  final _divisiController = TextEditingController();
-  final _instansiController = TextEditingController();
+  final _emailController = TextEditingController();
   final _nomorHpController = TextEditingController();
-  final _tanggalMulaiController = TextEditingController();
-  final _tanggalSelesaiController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  PasswordStrength _passwordStrength = PasswordStrength.weak;
-  bool _acceptedTerms = false;
-  bool _showUsernameHint = false;
+  // Controllers untuk Data Magang
+  final _idPesertaMagangController = TextEditingController(); // NISN / NIM
+  final _instansiController = TextEditingController();
+  final _mentorController = TextEditingController();
+  final _tanggalMulaiController = TextEditingController();
+  final _tanggalSelesaiController = TextEditingController();
 
-  // --- OPSI DIVISI DENGAN ICON (Updated) ---
-  final List<Map<String, dynamic>> _divisiOptions = [
-    {
-      "label": "Bidang Pemasaran & Penjualan",
-      "icon": Icons.campaign_rounded,
-    },
-    {
-      "label": "Retail SBU",
-      "icon": Icons.storefront_rounded,
-    },
-    {
-      "label": "Pembangunan & Aktivasi",
-      "icon": Icons.construction_rounded,
-    },
-    {
-      "label": "Operasi Pemeliharaan & Aset",
-      "icon": Icons.engineering_rounded,
-    },
-  ];
-
+  // State untuk Divisi
   String? _selectedDivisi;
 
-  int _selectedDuration = 3;
-  final List<int> _durations = [1, 2, 3, 4, 5, 6, 12];
+  // DATA DIVISI TERBARU (Tanpa kata "Bidang")
+  final List<String> _divisiList = [
+    'Pemasaran dan Penjualan',
+    'Retail SBU',
+    'Pembangunan dan Aktivasi',
+    'Operasi Pemeliharaan dan Aset',
+    'Lainnya',
+  ];
+
+  // State untuk Logika Tanggal
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
+  int _selectedDuration = 3; // Default 3 bulan
+  final List<int> _durations = [1, 2, 3, 4, 5, 6, 12];
+
+  bool _isLoading = false;
 
   @override
   void dispose() {
-    _mentorController.dispose();
     _namaController.dispose();
     _usernameController.dispose();
-    _idPesertaMagangController.dispose();
-    _divisiController.dispose();
-    _instansiController.dispose();
+    _emailController.dispose();
     _nomorHpController.dispose();
-    _tanggalMulaiController.dispose();
-    _tanggalSelesaiController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _idPesertaMagangController.dispose();
+    _instansiController.dispose();
+    _mentorController.dispose();
+    _tanggalMulaiController.dispose();
+    _tanggalSelesaiController.dispose();
     super.dispose();
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _passwordController.addListener(() {
-      setState(() {
-        _passwordStrength =
-            Validators.getPasswordStrength(_passwordController.text);
-      });
-    });
-  }
-
-  void _checkPasswordStrength(String password) {
-    setState(() {
-      _passwordStrength = Validators.getPasswordStrength(password);
-    });
-  }
-
+  // --- LOGIC TANGGAL ---
   Future<void> _selectStartDate() async {
+    DateTime initialDate = DateTime.now();
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
       builder: (context, child) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Theme(
-          data: isDark ? AppThemes.darkTheme : AppThemes.lightTheme,
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppThemes.primaryColor,
+              onPrimary: Colors.white,
+              onSurface: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
           child: child!,
         );
       },
@@ -118,622 +99,436 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  void _updateDuration(int duration) {
+    setState(() {
+      _selectedDuration = duration;
+      _calculateEndDate();
+    });
+  }
+
   void _calculateEndDate() {
     if (_tanggalMulaiController.text.isNotEmpty) {
       try {
-        final startDate = _dateFormat.parse(_tanggalMulaiController.text);
+        final startDate = DateTime.parse(_tanggalMulaiController.text);
         final endDate = DateTime(
-            startDate.year, startDate.month + _selectedDuration, startDate.day);
+          startDate.year,
+          startDate.month + _selectedDuration,
+          startDate.day,
+        );
         _tanggalSelesaiController.text = _dateFormat.format(endDate);
       } catch (e) {
-        _tanggalSelesaiController.text = '';
+        debugPrint("Error calculating end date: $e");
       }
     }
   }
 
-  void _updateDuration(int duration) {
-    setState(() => _selectedDuration = duration);
-    _calculateEndDate();
-  }
+  // --- LOGIC REGISTER ---
+  Future<void> _handleRegister() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  Future<void> _register() async {
-    if (!_acceptedTerms) {
-      GlobalSnackBar.show('Harap setujui Syarat & Ketentuan', isWarning: true);
+    if (_passwordController.text != _confirmPasswordController.text) {
+      GlobalSnackBar.show('Kata sandi tidak cocok', isError: true);
       return;
     }
 
-    if (_formKey.currentState!.validate()) {
-      FocusScope.of(context).unfocus();
+    if (_selectedDivisi == null) {
+      GlobalSnackBar.show('Silakan pilih divisi penempatan', isWarning: true);
+      return;
+    }
+
+    if (_tanggalMulaiController.text.isEmpty ||
+        _tanggalSelesaiController.text.isEmpty) {
+      GlobalSnackBar.show('Mohon lengkapi periode magang', isWarning: true);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
       final success = await authProvider.register(
         _usernameController.text.trim(),
-        _passwordController.text.trim(),
+        _passwordController.text,
         nama: _namaController.text.trim(),
         idPesertaMagang: _idPesertaMagangController.text.trim(),
-        divisi: _divisiController.text.trim(),
+        divisi: _selectedDivisi!,
         instansi: _instansiController.text.trim(),
         nomorHp: _nomorHpController.text.trim(),
         tanggalMulai: _tanggalMulaiController.text.trim(),
         tanggalSelesai: _tanggalSelesaiController.text.trim(),
-        role: 'peserta_magang',
         namaMentor: _mentorController.text.trim(),
+        role: 'PESERTA_MAGANG',
       );
 
       if (success && mounted) {
-        Navigator.pushReplacementNamed(context, RouteNames.home);
-      } else if (!success && mounted) {
-        GlobalSnackBar.show(authProvider.error ?? 'Registrasi gagal',
-            isError: true);
-        authProvider.clearError();
+        GlobalSnackBar.show(
+          'Registrasi berhasil! Silakan login.',
+          isSuccess: true,
+        );
+        Navigator.pop(context);
+      } else if (mounted) {
+        GlobalSnackBar.show(
+          authProvider.error ?? 'Gagal registrasi',
+          isError: true,
+        );
       }
+    } catch (e) {
+      if (mounted) GlobalSnackBar.show('Gagal registrasi: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  String? _validateConfirmPassword(String? value) {
-    if (value == null || value.isEmpty) return 'Harap konfirmasi password';
-    if (value != _passwordController.text) return 'Password tidak cocok';
-    return null;
-  }
-
-  Color _getPasswordStrengthColor() {
-    switch (_passwordStrength) {
-      case PasswordStrength.weak:
-        return AppThemes.errorColor;
-      case PasswordStrength.medium:
-        return AppThemes.warningColor;
-      case PasswordStrength.strong:
-        return AppThemes.successColor;
-      case PasswordStrength.veryStrong:
-        return AppThemes.successDark;
-    }
-  }
-
-  String _getPasswordStrengthText() {
-    switch (_passwordStrength) {
-      case PasswordStrength.weak:
-        return 'Lemah';
-      case PasswordStrength.medium:
-        return 'Cukup';
-      case PasswordStrength.strong:
-        return 'Baik';
-      case PasswordStrength.veryStrong:
-        return 'Kuat';
-    }
-  }
-
-  Widget _buildSectionHeader(String title, {String? subtitle}) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 4,
-              height: 18,
-              decoration: BoxDecoration(
-                color: AppThemes.primaryColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                color: isDark
-                    ? AppThemes.darkTextPrimary
-                    : AppThemes.onSurfaceColor,
-              ),
-            ),
-          ],
-        ),
-        if (subtitle != null) ...[
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.only(left: 12),
-            child: Text(
-              subtitle,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontSize: 12,
-                color:
-                    isDark ? AppThemes.darkTextTertiary : AppThemes.hintColor,
-              ),
-            ),
-          ),
-        ],
-        const SizedBox(height: 16),
-      ],
-    );
-  }
-
-  Widget _buildDurationSelection() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Durasi Magang',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-            color:
-                isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
-          ),
-        ),
-        const SizedBox(height: 8),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: _durations.map((duration) {
-              final isSelected = _selectedDuration == duration;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: GestureDetector(
-                  onTap: () => _updateDuration(duration),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppThemes.primaryColor
-                          : (isDark
-                              ? AppThemes.darkSurface
-                              : Colors.transparent),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppThemes.primaryColor
-                            : (isDark
-                                ? AppThemes.darkOutline
-                                : Colors.grey.shade300),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Text(
-                      '$duration Bulan',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: isSelected
-                            ? Colors.white
-                            : (isDark
-                                ? AppThemes.darkTextPrimary
-                                : AppThemes.primaryColor),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: colorScheme.onSurface),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Buat Akun Baru',
+          style: TextStyle(
+              color: colorScheme.onSurface, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+      ),
       body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 10, 24, 40),
+          child: Form(
+            key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Buat Akun Baru',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Lengkapi data diri untuk memulai',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: isDark
-                        ? AppThemes.darkTextSecondary
-                        : AppThemes.hintColor,
-                  ),
-                ),
-                const SizedBox(height: 32),
+                _buildSectionTitle('Informasi Pribadi'),
 
-                _buildSectionHeader('Informasi Pribadi',
-                    subtitle: 'Data diri lengkap Anda'),
-
-                // 1. Nama Lengkap
                 CustomTextField(
                   controller: _namaController,
                   label: 'Nama Lengkap',
-                  hint: 'Nama lengkap sesuai KTP',
+                  hint: 'Sesuai KTP/KTM',
                   icon: Icons.person_rounded,
                   validator: Validators.validateName,
                 ),
                 const SizedBox(height: 16),
 
-                // 2. NIM / NISN
+                CustomTextField(
+                  controller: _emailController,
+                  label: 'Email',
+                  hint: 'email@example.com',
+                  icon: Icons.email_rounded,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 16),
+
+                CustomTextField(
+                  controller: _nomorHpController,
+                  label: 'Nomor HP (WhatsApp)',
+                  hint: '08xxxxxxxxxx',
+                  icon: Icons.phone_rounded,
+                  keyboardType: TextInputType.phone,
+                  validator: Validators.validatePhoneNumber,
+                ),
+
+                const SizedBox(height: 32),
+                _buildSectionTitle('Informasi Magang'),
+
                 CustomTextField(
                   controller: _idPesertaMagangController,
                   label: 'NIM / NISN',
-                  hint: 'Masukkan NIM / NISN',
+                  hint: 'Nomor Induk Mahasiswa/Siswa',
                   icon: Icons.badge_rounded,
-                  keyboardType: TextInputType.number,
-                  validator: (v) => (v?.isEmpty ?? true) ? 'Wajib diisi' : null,
+                  validator: (val) =>
+                      val == null || val.isEmpty ? 'Wajib diisi' : null,
                 ),
                 const SizedBox(height: 16),
 
-                // 3. Username
                 CustomTextField(
-                  controller: _usernameController,
-                  label: 'Username',
-                  hint: 'Username unik',
-                  icon: Icons.alternate_email_rounded,
-                  validator: Validators.validateUsername,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                        _showUsernameHint ? Icons.info : Icons.info_outline,
-                        size: 20,
-                        color: AppThemes.primaryColor),
-                    onPressed: () =>
-                        setState(() => _showUsernameHint = !_showUsernameHint),
-                  ),
+                  controller: _instansiController,
+                  label: 'Asal Instansi / Kampus',
+                  hint: 'Nama Universitas / Sekolah',
+                  icon: Icons.school_rounded,
+                  validator: (val) =>
+                      val == null || val.isEmpty ? 'Wajib diisi' : null,
                 ),
-                if (_showUsernameHint)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8, left: 4),
-                    child: Text(Validators.getUsernameHint(),
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: isDark
-                                ? AppThemes.darkTextTertiary
-                                : AppThemes.hintColor)),
-                  ),
                 const SizedBox(height: 16),
 
-                // 4. Nomor HP
-                CustomTextField(
-                  controller: _nomorHpController,
-                  label: 'Nomor HP',
-                  hint: 'Contoh: 08123456789',
-                  icon: Icons.phone_rounded,
-                  validator: Validators.validatePhoneNumber,
-                  keyboardType: TextInputType.phone,
-                ),
-
-                const SizedBox(height: 24),
-                _buildSectionHeader('Informasi Magang',
-                    subtitle: 'Detail penempatan Anda'),
-
-                // 5. Divisi (DROPDOWN REFINED & ELEGANT)
-                DropdownButtonFormField<String>(
-                  value: _selectedDivisi,
-                  // Ikon panah minimalis
-                  icon: Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: isDark
-                        ? AppThemes.darkTextSecondary
-                        : AppThemes.hintColor,
-                    size: 20,
-                  ),
+                // --- DROPDOWN DIVISI (DIPERBAIKI) ---
+                Text(
+                  'Divisi Penempatan',
                   style: TextStyle(
                     fontSize: 13,
-                    color: isDark
-                        ? AppThemes.darkTextPrimary
-                        : AppThemes.onSurfaceColor,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurfaceVariant,
                   ),
-                  itemHeight: kMinInteractiveDimension, // Standar 48px
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: _selectedDivisi,
                   isExpanded: true,
-                  dropdownColor:
-                      isDark ? AppThemes.darkSurfaceElevated : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  elevation: 4,
-                  // Logic item builder
-                  items: _divisiOptions.map((Map<String, dynamic> item) {
-                    final isSelected = _selectedDivisi == item['label'];
-                    // Warna dinamis untuk selected state
-                    final iconColor = isSelected
-                        ? (isDark
-                            ? AppThemes.darkAccentBlue
-                            : AppThemes.primaryColor)
-                        : (isDark
-                            ? AppThemes.darkTextTertiary
-                            : AppThemes.hintColor);
-                    final textColor = isSelected
-                        ? (isDark
-                            ? AppThemes.darkAccentBlue
-                            : AppThemes.primaryColor)
-                        : (isDark
-                            ? AppThemes.darkTextPrimary
-                            : AppThemes.onSurfaceColor);
-
-                    return DropdownMenuItem<String>(
-                      value: item['label'],
-                      child: Row(
-                        children: [
-                          Icon(
-                            item['icon'],
-                            size: 18,
-                            color: iconColor,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              item['label'],
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: textColor,
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          // Indikator centang jika dipilih
-                          if (isSelected)
-                            Icon(
-                              Icons.check_rounded,
-                              size: 16,
-                              color: iconColor,
-                            ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _selectedDivisi = newValue;
-                      _divisiController.text = newValue ?? '';
-                    });
-                  },
-                  validator: (value) =>
-                      (value == null || value.isEmpty) ? 'Wajib dipilih' : null,
-                  // Dekorasi yang konsisten dengan CustomTextField tapi lebih compact
+                  // FIX: Menambahkan style ini agar ukuran font SAMA dengan CustomTextField (13px)
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w500, // Samakan ketebalan font
+                    fontFamily:
+                        Theme.of(context).textTheme.bodyMedium?.fontFamily,
+                  ),
                   decoration: InputDecoration(
-                    labelText: 'Divisi',
-                    labelStyle: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? AppThemes.darkTextSecondary
-                          : AppThemes.hintColor,
-                    ),
-                    hintText: 'Pilih Divisi Penempatan',
+                    hintText: 'Pilih Divisi',
                     hintStyle: TextStyle(
                       fontSize: 13,
-                      color: isDark
-                          ? AppThemes.darkTextTertiary
-                          : AppThemes.hintColor.withOpacity(0.5),
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.5),
                     ),
                     filled: true,
-                    fillColor: isDark ? AppThemes.darkSurface : Colors.white,
-                    prefixIcon: Icon(Icons.work_outline_rounded,
-                        color: AppThemes.primaryColor, size: 18),
-                    // Border konsisten
+                    fillColor: colorScheme.surfaceContainer,
+                    prefixIcon: const Icon(
+                      Icons.work_rounded,
+                      color: AppThemes.primaryColor,
+                      size: 18,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide(
-                        color: isDark
-                            ? AppThemes.darkOutline
-                            : Colors.grey.shade300,
+                        color: colorScheme.outline.withOpacity(0.3),
                         width: 1.5,
                       ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide(
-                        color: isDark
-                            ? AppThemes.darkOutline
-                            : Colors.grey.shade300,
+                        color: colorScheme.outline.withOpacity(0.3),
                         width: 1.5,
                       ),
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(
-                          color: AppThemes.primaryColor, width: 2),
-                    ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(
-                          color: AppThemes.errorColor, width: 1.5),
-                    ),
-                    // KUNCI: Padding yang pas agar tidak kopong
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 12),
-                    isDense: true,
                   ),
+                  dropdownColor: colorScheme.surfaceContainer,
+                  items: _divisiList.map((String division) {
+                    return DropdownMenuItem<String>(
+                      value: division,
+                      child: Text(
+                        division,
+                        style: TextStyle(
+                          fontSize: 13, // Pastikan dropdown item juga 13px
+                          color: colorScheme.onSurface,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedDivisi = newValue;
+                    });
+                  },
+                  validator: (val) => val == null ? 'Wajib dipilih' : null,
                 ),
+                // ----------------------------------------------
+
                 const SizedBox(height: 16),
 
-                // 6. Instansi
-                CustomTextField(
-                  controller: _instansiController,
-                  label: 'Instansi / Kampus',
-                  hint: 'Asal Universitas/Sekolah',
-                  icon: Icons.school_rounded,
-                  validator: (v) => (v?.isEmpty ?? true) ? 'Wajib diisi' : null,
-                ),
-                const SizedBox(height: 16),
-
-                // --- INPUT NAMA MENTOR (BARU) ---
                 CustomTextField(
                   controller: _mentorController,
-                  label: 'Nama Mentor / Pembimbing',
-                  hint: 'Nama pembimbing lapangan',
+                  label: 'Nama Mentor (Opsional)',
+                  hint: 'Nama Pembimbing Lapangan',
                   icon: Icons.supervisor_account_rounded,
-                  // Opsional: validator jika wajib
-                  // validator: (v) => (v?.isEmpty ?? true) ? 'Wajib diisi' : null,
                 ),
                 const SizedBox(height: 16),
 
-                // 7. Tanggal Mulai
-                CustomTextField(
-                  controller: _tanggalMulaiController,
-                  label: 'Tanggal Mulai',
-                  hint: 'Pilih tanggal',
-                  icon: Icons.calendar_today_rounded,
-                  readOnly: true,
-                  onTap: _selectStartDate,
-                  validator: Validators.validateDate,
-                ),
-                const SizedBox(height: 16),
-
-                // 8. Pilihan Durasi
-                _buildDurationSelection(),
-                const SizedBox(height: 16),
-
-                // 9. Tanggal Selesai (Auto)
-                CustomTextField(
-                  controller: _tanggalSelesaiController,
-                  label: 'Tanggal Selesai',
-                  hint: 'Terisi otomatis',
-                  icon: Icons.event_available_rounded,
-                  readOnly: true,
-                ),
-
-                const SizedBox(height: 24),
-                _buildSectionHeader('Keamanan', subtitle: 'Lindungi akun Anda'),
-
-                // 10. Password
-                CustomTextField(
-                  controller: _passwordController,
-                  label: 'Password',
-                  hint: 'Minimal 8 karakter',
-                  icon: Icons.lock_outline_rounded,
-                  validator: Validators.validatePassword,
-                  isPassword: true,
-                ),
-                // Password Strength indicator
-                if (_passwordController.text.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: LinearProgressIndicator(
-                            value: _passwordStrength.value / 4,
-                            backgroundColor: isDark
-                                ? AppThemes.darkOutline
-                                : Colors.grey.shade300,
-                            color: _getPasswordStrengthColor(),
-                            borderRadius: BorderRadius.circular(2),
-                            minHeight: 4,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _getPasswordStrengthText(),
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: _getPasswordStrengthColor(),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                const SizedBox(height: 16),
-
-                // 11. Konfirmasi Password
-                CustomTextField(
-                  controller: _confirmPasswordController,
-                  label: 'Konfirmasi Password',
-                  hint: 'Ulangi password',
-                  icon: Icons.lock_reset_outlined,
-                  validator: _validateConfirmPassword,
-                  isPassword: true,
-                ),
-
-                const SizedBox(height: 24),
+                // --- PILIH TANGGAL ---
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: Checkbox(
-                        value: _acceptedTerms,
-                        onChanged: (v) =>
-                            setState(() => _acceptedTerms = v ?? false),
-                        activeColor: AppThemes.primaryColor,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4)),
+                    Expanded(
+                      child: CustomTextField(
+                        controller: _tanggalMulaiController,
+                        label: 'Mulai',
+                        hint: 'Tgl Mulai',
+                        icon: Icons.calendar_today_rounded,
+                        readOnly: true,
+                        onTap: _selectStartDate,
+                        validator: (val) =>
+                            val == null || val.isEmpty ? 'Wajib' : null,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        'Saya menyetujui Syarat & Ketentuan serta Kebijakan Privasi yang berlaku.',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: isDark
-                                ? AppThemes.darkTextSecondary
-                                : AppThemes.hintColor),
+                      child: CustomTextField(
+                        controller: _tanggalSelesaiController,
+                        label: 'Selesai',
+                        hint: 'Otomatis',
+                        icon: Icons.event_available_rounded,
+                        readOnly: true,
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
 
-                const SizedBox(height: 24),
+                // Durasi Chips
+                Text(
+                  'Durasi Magang:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _durations.map((d) {
+                      final isSelected = _selectedDuration == d;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text('$d Bulan'),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            if (selected) _updateDuration(d);
+                          },
+                          selectedColor: AppThemes.primaryColor,
+                          backgroundColor: colorScheme.surfaceContainerHigh,
+                          labelStyle: TextStyle(
+                            color: isSelected
+                                ? Colors.white
+                                : colorScheme.onSurface,
+                            fontSize: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              side: BorderSide(
+                                  color: isSelected
+                                      ? Colors.transparent
+                                      : colorScheme.outline.withOpacity(0.3))),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+                _buildSectionTitle('Keamanan Akun'),
+
+                CustomTextField(
+                  controller: _usernameController,
+                  label: 'Username',
+                  hint: 'Buat username unik',
+                  icon: Icons.person_outline_rounded,
+                  validator: Validators.validateUsername,
+                ),
+                const SizedBox(height: 16),
+
+                CustomTextField(
+                  controller: _passwordController,
+                  label: 'Kata Sandi',
+                  hint: 'Minimal 8 karakter',
+                  icon: Icons.lock_outline_rounded,
+                  isPassword: true,
+                  validator: Validators.validatePassword,
+                ),
+                const SizedBox(height: 16),
+
+                CustomTextField(
+                  controller: _confirmPasswordController,
+                  label: 'Konfirmasi Sandi',
+                  hint: 'Ulangi kata sandi',
+                  icon: Icons.lock_reset_rounded,
+                  isPassword: true,
+                  validator: (val) => Validators.validateConfirmPassword(
+                      val, _passwordController.text),
+                ),
+
+                const SizedBox(height: 40),
+
+                // Button Daftar
                 SizedBox(
                   width: double.infinity,
-                  height: 50,
-                  child: authProvider.isLoading
-                      ? const Center(child: LoadingIndicator())
+                  height: 54,
+                  child: _isLoading
+                      ? const LoadingIndicator()
                       : ElevatedButton(
-                          onPressed: _register,
+                          onPressed: _handleRegister,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _acceptedTerms
-                                ? AppThemes.primaryColor
-                                : Colors.grey,
+                            backgroundColor: AppThemes.primaryColor,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 3,
+                            shadowColor:
+                                AppThemes.primaryColor.withOpacity(0.4),
                           ),
-                          child: const Text('Buat Akun',
-                              style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.w600)),
+                          child: const Text(
+                            'Daftar Sekarang',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                 ),
 
                 const SizedBox(height: 24),
+
+                // Login Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text("Sudah punya akun? ",
-                        style: TextStyle(
-                            color: isDark
-                                ? AppThemes.darkTextSecondary
-                                : AppThemes.hintColor)),
+                    Text(
+                      'Sudah punya akun? ',
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                    ),
                     GestureDetector(
-                      onTap: () => Navigator.pushReplacementNamed(
-                          context, RouteNames.login),
-                      child: Text("Masuk",
-                          style: TextStyle(
-                              color: AppThemes.primaryColor,
-                              fontWeight: FontWeight.bold)),
+                      onTap: () => Navigator.pop(context),
+                      child: const Text(
+                        'Masuk',
+                        style: TextStyle(
+                          color: AppThemes.primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppThemes.primaryColor,
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            width: 30,
+            height: 2,
+            color: AppThemes.primaryColor.withOpacity(0.5),
+          ),
+        ],
       ),
     );
   }

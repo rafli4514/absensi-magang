@@ -31,17 +31,17 @@ class AnnouncementCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
     return Card(
-      elevation: isDark ? 4 : 2,
-      color: isDark ? AppThemes.darkSurface : theme.cardTheme.color,
-      shadowColor: Colors.black.withOpacity(isDark ? 0.4 : 0.1),
+      elevation: 0,
+      color: colorScheme.surfaceContainer, // Warna kartu adaptif
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: isDark
-            ? const BorderSide(color: AppThemes.darkOutline, width: 0.5)
-            : BorderSide.none,
+        side: BorderSide(
+          color: colorScheme.outline.withOpacity(0.5), // Border adaptif
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -51,22 +51,18 @@ class AnnouncementCard extends StatelessWidget {
             // Header dengan icon dan judul "Pengumuman"
             Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.campaign_rounded,
                   size: 20,
-                  color: isDark
-                      ? AppThemes.darkAccentBlue
-                      : AppThemes.primaryColor,
+                  color: AppThemes.primaryColor,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Pengumuman Terbaru', // Translate
+                  'Pengumuman Terbaru',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: isDark
-                        ? AppThemes.darkTextPrimary
-                        : AppThemes.onSurfaceColor,
+                    color: colorScheme.onSurface, // Text utama adaptif
                   ),
                 ),
               ],
@@ -84,18 +80,15 @@ class AnnouncementCard extends StatelessWidget {
                       Icon(
                         Icons.notifications_off_outlined,
                         size: 48,
-                        color: isDark
-                            ? AppThemes.darkTextSecondary.withOpacity(0.5)
-                            : AppThemes.hintColor.withOpacity(0.5),
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.5),
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Tidak ada pengumuman', // Translate
+                        'Tidak ada pengumuman',
                         style: TextStyle(
                           fontSize: 14,
-                          color: isDark
-                              ? AppThemes.darkTextSecondary
-                              : AppThemes.hintColor,
+                          color: colorScheme
+                              .onSurfaceVariant, // Text sekunder adaptif
                         ),
                       ),
                     ],
@@ -113,14 +106,11 @@ class AnnouncementCard extends StatelessWidget {
                       item: item,
                       onDownload: onDownload,
                       onViewDetail: onViewDetail,
-                      isDark: isDark,
                     ),
                     if (!isLast) ...[
                       const SizedBox(height: 12),
                       Divider(
-                        color: isDark
-                            ? AppThemes.darkOutline
-                            : AppThemes.hintColor.withOpacity(0.3),
+                        color: colorScheme.outline.withOpacity(0.2),
                         height: 1,
                         thickness: 1,
                       ),
@@ -140,17 +130,17 @@ class _AnnouncementItem extends StatelessWidget {
   final AnnouncementData item;
   final void Function(AnnouncementData item)? onDownload;
   final void Function(AnnouncementData item)? onViewDetail;
-  final bool isDark;
 
   const _AnnouncementItem({
     required this.item,
     this.onDownload,
     this.onViewDetail,
-    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -160,8 +150,7 @@ class _AnnouncementItem extends StatelessWidget {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color:
-                isDark ? AppThemes.darkTextPrimary : AppThemes.onSurfaceColor,
+            color: colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -171,7 +160,7 @@ class _AnnouncementItem extends StatelessWidget {
           item.body,
           style: TextStyle(
             fontSize: 14,
-            color: isDark ? AppThemes.darkTextSecondary : AppThemes.hintColor,
+            color: colorScheme.onSurfaceVariant,
             height: 1.5,
           ),
           maxLines: 3,
@@ -182,9 +171,9 @@ class _AnnouncementItem extends StatelessWidget {
         // Time Ago
         Text(
           item.timeAgo,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
-            color: isDark ? AppThemes.darkAccentBlue : AppThemes.primaryColor,
+            color: AppThemes.primaryColor,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -200,16 +189,12 @@ class _AnnouncementItem extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: () => onDownload?.call(item),
                   icon: const Icon(Icons.download_rounded, size: 16),
-                  label: const Text('Unduh'), // Translate
+                  label: const Text('Unduh'),
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(
-                      color: isDark
-                          ? AppThemes.darkAccentBlue
-                          : AppThemes.primaryColor,
+                    side: const BorderSide(
+                      color: AppThemes.primaryColor,
                     ),
-                    foregroundColor: isDark
-                        ? AppThemes.darkAccentBlue
-                        : AppThemes.primaryColor,
+                    foregroundColor: AppThemes.primaryColor,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 6,
@@ -221,11 +206,9 @@ class _AnnouncementItem extends StatelessWidget {
                 TextButton.icon(
                   onPressed: () => onViewDetail?.call(item),
                   icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                  label: const Text('Selengkapnya'), // Translate
+                  label: const Text('Selengkapnya'),
                   style: TextButton.styleFrom(
-                    foregroundColor: isDark
-                        ? AppThemes.darkAccentBlue
-                        : AppThemes.primaryColor,
+                    foregroundColor: AppThemes.primaryColor,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 6,

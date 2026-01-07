@@ -5,6 +5,7 @@ import '../../themes/app_themes.dart';
 import '../../utils/ui_utils.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_dialog.dart';
+import '../../widgets/custom_text_field.dart';
 import '../../widgets/loading_indicator.dart';
 
 class AdminInternsScreen extends StatefulWidget {
@@ -15,7 +16,9 @@ class AdminInternsScreen extends StatefulWidget {
 }
 
 class _AdminInternsScreenState extends State<AdminInternsScreen> {
-  List<Map<String, dynamic>> _interns = [];
+  final TextEditingController _searchController = TextEditingController();
+  List<Map<String, dynamic>> _allInterns = [];
+  List<Map<String, dynamic>> _filteredInterns = [];
   bool _isLoading = true;
 
   @override
@@ -26,17 +29,40 @@ class _AdminInternsScreenState extends State<AdminInternsScreen> {
 
   Future<void> _loadInterns() async {
     setState(() => _isLoading = true);
-    final response = await InternService.getAllInterns();
-    if (mounted) {
-      if (response.success && response.data != null) {
-        setState(() {
-          _interns = response.data!;
-          _isLoading = false;
-        });
-      } else {
-        GlobalSnackBar.show(response.message, isError: true);
-        setState(() => _isLoading = false);
+    try {
+      final response = await InternService.getAllInterns();
+      if (mounted) {
+        if (response.success && response.data != null) {
+          setState(() {
+            _allInterns = response.data!;
+            _filteredInterns = _allInterns;
+            _isLoading = false;
+          });
+        } else {
+          setState(() => _isLoading = false);
+          GlobalSnackBar.show(response.message, isError: true);
+        }
       }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        GlobalSnackBar.show('Gagal memuat data: $e', isError: true);
+      }
+    }
+  }
+
+  void _filterInterns(String query) {
+    if (query.isEmpty) {
+      setState(() => _filteredInterns = _allInterns);
+    } else {
+      setState(() {
+        _filteredInterns = _allInterns.where((intern) {
+          final name = (intern['nama'] ?? '').toString().toLowerCase();
+          final instansi = (intern['instansi'] ?? '').toString().toLowerCase();
+          final search = query.toLowerCase();
+          return name.contains(search) || instansi.contains(search);
+        }).toList();
+      });
     }
   }
 
@@ -44,166 +70,168 @@ class _AdminInternsScreenState extends State<AdminInternsScreen> {
     showDialog(
       context: context,
       builder: (context) => CustomDialog(
-        title: 'Hapus Peserta?',
+        title: 'Hapus Peserta',
         content:
-            'Anda yakin ingin menghapus data $name? Data yang dihapus tidak bisa dikembalikan.',
+            'Yakin ingin menghapus $name? Data yang dihapus tidak dapat dikembalikan.',
         primaryButtonText: 'Hapus',
         primaryButtonColor: AppThemes.errorColor,
-        secondaryButtonText: 'Batal',
         onPrimaryButtonPressed: () async {
-          Navigator.pop(context); // Tutup dialog konfirmasi
-
-          // Tampilkan loading sederhana
-          showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) => const Center(child: CircularProgressIndicator()));
-
-          final success = await InternService.deleteIntern(id);
-
-          if (context.mounted) {
-            Navigator.pop(context); // Tutup dialog loading
-            if (success) {
-              GlobalSnackBar.show('Peserta berhasil dihapus', isSuccess: true);
-              _loadInterns(); // Refresh list
-            } else {
-              GlobalSnackBar.show('Gagal menghapus peserta', isError: true);
-            }
-          }
+          Navigator.pop(context);
+          await _deleteIntern(id);
         },
+        secondaryButtonText: 'Batal',
       ),
     );
+  }
+
+  Future<void> _deleteIntern(String id) async {
+    // Tampilkan loading overlay
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final success = await InternService.deleteIntern(id);
+
+    if (mounted) {
+      Navigator.pop(context); // Tutup loading
+      if (success) {
+        GlobalSnackBar.show('Peserta berhasil dihapus', isSuccess: true);
+        _loadInterns(); // Refresh list
+      } else {
+        GlobalSnackBar.show('Gagal menghapus peserta', isError: true);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppThemes.darkBackground : AppThemes.backgroundColor,
-      appBar: CustomAppBar(title: 'Kelola Peserta', showBackButton: true),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          GlobalSnackBar.show('Fitur tambah peserta via Admin segera hadir',
-              isInfo: true);
-        },
-        backgroundColor: AppThemes.primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
+      appBar: CustomAppBar(
+        title: 'Data Peserta Magang',
+        showBackButton: true,
       ),
-      body: _isLoading
-          ? const Center(child: LoadingIndicator(message: "Memuat Peserta..."))
-          : _interns.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.people_outline,
-                          size: 48,
-                          color: AppThemes.hintColor.withOpacity(0.5)),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Belum ada data peserta',
-                        style: TextStyle(
-                          color: isDark
-                              ? AppThemes.darkTextSecondary
-                              : AppThemes.hintColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _interns.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final intern = _interns[index];
-                    return _buildInternCard(intern, isDark);
-                  },
-                ),
-    );
-  }
-
-  Widget _buildInternCard(Map<String, dynamic> intern, bool isDark) {
-    // Tentukan status color
-    final status = intern['status']?.toString().toUpperCase() ?? 'NONAKTIF';
-    final isActive = status == 'AKTIF';
-    final nama = intern['nama'] ?? 'Tanpa Nama';
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppThemes.darkSurface : AppThemes.surfaceColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? AppThemes.darkOutline : Colors.grey.withOpacity(0.1),
-        ),
-      ),
-      child: Row(
+      body: Column(
         children: [
-          CircleAvatar(
-            backgroundColor: AppThemes.primaryColor.withOpacity(0.1),
-            child: Text(
-              nama.isNotEmpty ? nama[0].toUpperCase() : 'U',
-              style: const TextStyle(
-                color: AppThemes.primaryColor,
-                fontWeight: FontWeight.bold,
-              ),
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: CustomTextField(
+              controller: _searchController,
+              label: 'Cari Peserta',
+              hint: 'Nama atau Instansi',
+              icon: Icons.search_rounded,
+              onChanged: _filterInterns,
             ),
           ),
-          const SizedBox(width: 16),
+
+          // Content
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  nama,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: isDark
-                        ? AppThemes.darkTextPrimary
-                        : AppThemes.onSurfaceColor,
-                  ),
-                ),
-                Text(
-                  intern['divisi'] ?? '-',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark
-                        ? AppThemes.darkTextSecondary
-                        : AppThemes.hintColor,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: (isActive
-                            ? AppThemes.successColor
-                            : AppThemes.errorColor)
-                        .withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    status,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: isActive
-                          ? AppThemes.successColor
-                          : AppThemes.errorColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppThemes.errorColor),
-            onPressed: () => _confirmDelete(intern['id'], nama),
+            child: _isLoading
+                ? const Center(child: LoadingIndicator())
+                : _filteredInterns.isEmpty
+                    ? Center(
+                        child: Text(
+                          'Tidak ada data peserta',
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: _filteredInterns.length,
+                        itemBuilder: (context, index) {
+                          final intern = _filteredInterns[index];
+                          final id = intern['id']?.toString() ?? '';
+                          final name = intern['nama'] ?? 'Tanpa Nama';
+                          final instansi = intern['instansi'] ?? '-';
+                          final divisi = intern['divisi'] ?? '-';
+
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            color: colorScheme.surfaceContainer,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: colorScheme.outline.withOpacity(0.5),
+                              ),
+                            ),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.all(12),
+                              leading: CircleAvatar(
+                                backgroundColor:
+                                    AppThemes.primaryColor.withOpacity(0.1),
+                                child: Text(
+                                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                  style: const TextStyle(
+                                    color: AppThemes.primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              title: Text(
+                                name,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.school_rounded,
+                                          size: 14,
+                                          color: colorScheme.onSurfaceVariant),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          instansi,
+                                          style: TextStyle(
+                                            color: colorScheme.onSurfaceVariant,
+                                            fontSize: 12,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.work_rounded,
+                                          size: 14,
+                                          color: colorScheme.onSurfaceVariant),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        divisi,
+                                        style: TextStyle(
+                                          color: colorScheme.onSurfaceVariant,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded,
+                                    color: AppThemes.errorColor),
+                                onPressed: () => _confirmDelete(id, name),
+                              ),
+                              onTap: () {
+                                // Opsional: Buka detail peserta jika ada screen-nya
+                              },
+                            ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),
