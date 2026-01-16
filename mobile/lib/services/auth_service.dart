@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../models/api_response.dart';
 import '../models/login_response.dart';
 import '../models/user.dart';
@@ -7,6 +8,41 @@ import 'storage_service.dart';
 
 class AuthService {
   static final ApiService _apiService = ApiService();
+
+  // State Management Sederhana (Static)
+  static User? currentUser;
+  static String? accessToken;
+  static bool _initialized = false;
+
+  /// Init Auth State saat App Start (Panggil di main.dart)
+  static Future<void> init() async {
+    if (_initialized) return;
+    print("🔐 AuthService: Initializing...");
+
+    try {
+      // 1. Load Token
+      accessToken = await StorageService.getToken();
+      
+      // 2. Load User Data
+      final userJson = await StorageService.getString(AppConstants.userDataKey);
+      if (accessToken != null && accessToken!.isNotEmpty && userJson != null) {
+        final Map<String, dynamic> data = jsonDecode(userJson);
+        currentUser = User.fromJson(data);
+        print("✅ AuthService: User loaded -> ${currentUser?.username}");
+      } else {
+        print("ℹ️ AuthService: No active session found.");
+      }
+    } catch (e) {
+      print("❌ AuthService Init Error: $e");
+    } finally {
+      _initialized = true;
+    }
+  }
+
+  /// Cek status login (Synchronous / Instant)
+  static bool get isLoggedIn => 
+      accessToken != null && accessToken!.isNotEmpty && currentUser != null;
+
 
   static Future<ApiResponse<LoginResponse>> login(
     String username,
@@ -155,7 +191,7 @@ class AuthService {
   }
 
   static Future<void> logout() async {
-    await StorageService.remove(AppConstants.tokenKey);
+    await StorageService.removeTokens();
     await StorageService.remove(AppConstants.userDataKey);
   }
 }

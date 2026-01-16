@@ -53,7 +53,7 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.isDarkMode;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final user = authProvider.user;
 
     // FIX: Ambil ColorScheme dari Theme context
@@ -140,7 +140,7 @@ class ProfileScreen extends StatelessWidget {
                       icon: Icons.dark_mode_rounded,
                       title: 'Mode Gelap',
                       trailing: Switch(
-                        value: themeProvider.themeMode == ThemeMode.dark,
+                        value: isDarkMode,
                         onChanged: (value) {
                           themeProvider.setThemeMode(
                             value ? ThemeMode.dark : ThemeMode.light,

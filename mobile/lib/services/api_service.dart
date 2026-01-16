@@ -13,6 +13,10 @@ class ApiService {
   late Dio _dio;
 
   ApiService._internal() {
+    if (AppConstants.baseUrl.isEmpty) {
+      throw Exception('ApiService initialized before AppConfigService.init()');
+    }
+
     _dio = Dio(
       BaseOptions(
         baseUrl: AppConstants.baseUrl,
@@ -25,7 +29,7 @@ class ApiService {
 
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final token = await StorageService.getString(AppConstants.tokenKey);
+        final token = await StorageService.getToken();
         if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
         }

@@ -3,6 +3,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
 // Import Provider & Router
+import 'navigation/auth_gate.dart';
 import 'navigation/app_router.dart';
 import 'navigation/route_names.dart';
 import 'providers/attendance_provider.dart';
@@ -16,41 +17,20 @@ import 'themes/app_themes.dart';
 import 'utils/constants.dart';
 import 'utils/global_context.dart';
 
+import 'services/auth_service.dart'; // [IMPORT AUTH SERVICE]
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inisialisasi format tanggal Indonesia
   await initializeDateFormatting('id_ID', null);
 
-  // Inisialisasi Notifikasi
-  try {
-    final notificationService = NotificationService();
-    await notificationService.initialize();
-    await notificationService.scheduleDailyReminders();
-  } catch (e) {
-    debugPrint('❌ Failed to initialize notifications: $e');
-  }
+  // [PENTING] Init Config DULU sebelum Auth/API
+  await AppConfigService.init();
 
-  // [PENTING] Inisialisasi URL
-  try {
-    AppConstants.baseUrl = await AppConfigService.initBaseUrl();
-    debugPrint('🌐 Configured Base URL: ${AppConstants.baseUrl}');
-  } catch (e) {
-    // Fallback darurat (Ganti IP sesuai kebutuhan)
-    AppConstants.baseUrl = 'http://192.168.1.8:3000/api';
-    debugPrint(
-        '⚠️ Error initBaseUrl: $e. Using fallback: ${AppConstants.baseUrl}');
-  }
-
-  try {
-    final notificationService = NotificationService();
-    await notificationService.initialize();
-
-    // Jadwalkan pengingat absen rutin
-    await notificationService.scheduleDailyReminders();
-  } catch (e) {
-    debugPrint('❌ Failed to initialize notifications: $e');
-  }
+  // [PENTING] Init Auth State sebelum App Jalan
+  await AuthService.init();
+  await OnboardProvider.init();
 
   runApp(const MyApp());
 }
@@ -77,7 +57,7 @@ class MyApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             navigatorKey: GlobalContext.navigatorKey,
             scaffoldMessengerKey: GlobalContext.scaffoldMessengerKey,
-            initialRoute: RouteNames.splash,
+            home: const AuthGate(),
             onGenerateRoute: AppRouter.generateRoute,
           );
         },

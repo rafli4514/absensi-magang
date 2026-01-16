@@ -21,6 +21,8 @@ router.post('/login-peserta', loginPesertaMagang);
 router.post('/register', register);
 router.post('/register-peserta-magang', registerPesertaMagang);
 
+router.post('/refresh-token', refreshToken);
+
 // Protected routes
 router.use(authenticateToken);
 router.get('/profile', getProfile);
@@ -38,6 +40,5 @@ router.post('/upload-avatar', (req, res, next) => {
   });
 }, uploadAvatar);
 router.delete('/avatar', removeAvatar);
-router.post('/refresh-token', refreshToken);
 
 module.exports = router;

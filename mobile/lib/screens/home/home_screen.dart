@@ -16,6 +16,7 @@ import '../../services/leave_service.dart';
 import '../../services/location_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/permission_service.dart';
+import '../../services/app_config_service.dart'; // [IMPORT CONFIG]
 import '../../services/settings_service.dart';
 import '../../services/storage_service.dart';
 import '../../themes/app_themes.dart';
@@ -84,6 +85,18 @@ class _HomeScreenState extends State<HomeScreen> {
     final attendanceProvider =
         Provider.of<AttendanceProvider>(context, listen: false);
 
+    // [OPTIMIZATION] Lazy load Base URL (background)
+    // Aplikasi switch ke mode online jika mDNS menemukan server
+    AppConfigService.initBaseUrl().then((url) {
+      if (mounted && AppConstants.baseUrl != url) {
+        setState(() {
+          AppConstants.baseUrl = url;
+        });
+        debugPrint('🌐 Base URL Updated Lazy: $url');
+      }
+    });
+
+    // Refresh profile uses stored token/url initially
     await authProvider.refreshProfile();
 
     await Future.wait([

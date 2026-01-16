@@ -41,10 +41,9 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (success && mounted) {
-        final role = authProvider.user?.role;
-        if (role == 'admin') {
+        if (authProvider.isAdmin) {
           Navigator.pushReplacementNamed(context, RouteNames.adminHome);
-        } else if (role == 'mentor') {
+        } else if (authProvider.isMentor) {
           Navigator.pushReplacementNamed(context, RouteNames.mentorHome);
         } else {
           Navigator.pushReplacementNamed(context, RouteNames.home);

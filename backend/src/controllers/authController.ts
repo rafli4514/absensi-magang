@@ -1,7 +1,7 @@
 import { type Request, type Response } from "express";
 import { prisma } from "../lib/prisma";
 import { sendSuccess, sendError } from "../utils/response";
-import { generateToken } from "../utils/jwt";
+import { generateToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt";
 import bcrypt from "bcryptjs";
 import fs from "fs";
 import path from "path";
@@ -34,11 +34,15 @@ export const login = async (req: Request, res: Response) => {
       return sendError(res, "Invalid credentials", 401);
     }
 
-    // Generate JWT token
-    const token = generateToken({
+    // Generate JWT tokens
+    const accessToken = generateToken({
       id: user.id,
       username: user.username,
       role: user.role,
+    }); // Default 1h
+
+    const refreshToken = generateRefreshToken({
+      id: user.id,
     });
 
     // Return user data without password
@@ -53,8 +57,10 @@ export const login = async (req: Request, res: Response) => {
 
     sendSuccess(res, "Login successful", {
       user: userResponse,
-      token,
-      expiresIn: "24h",
+      token: accessToken, // Keep key 'token' for backward compatibility if needed, or switch frontend to use accessToken
+      accessToken,
+      refreshToken,
+      expiresIn: "1h",
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -98,13 +104,17 @@ export const loginPesertaMagang = async (req: Request, res: Response) => {
       return sendError(res, "Invalid credentials", 401);
     }
 
-    // Generate JWT token for peserta magang
-    const token = generateToken({
+    // Generate JWT tokens
+    const accessToken = generateToken({
       id: user.id,
       username: user.username,
       nama: user.pesertaMagang.nama,
       role: "student",
       divisi: user.pesertaMagang.divisi,
+    });
+
+    const refreshToken = generateRefreshToken({
+      id: user.id,
     });
 
     sendSuccess(res, "Login successful", {
@@ -117,8 +127,10 @@ export const loginPesertaMagang = async (req: Request, res: Response) => {
         instansi: user.pesertaMagang.instansi,
         avatar: user.pesertaMagang.avatar,
       },
-      token,
-      expiresIn: "30d",
+      token: accessToken,
+      accessToken,
+      refreshToken,
+      expiresIn: "1h",
     });
   } catch (error) {
     console.error("Peserta magang login error:", error);
@@ -193,11 +205,15 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
-    // Generate JWT token
-    const token = generateToken({
+    // Generate JWT tokens
+    const accessToken = generateToken({
       id: user.id,
       username: user.username,
       role: user.role,
+    });
+
+    const refreshToken = generateRefreshToken({
+      id: user.id,
     });
 
     sendSuccess(
@@ -206,8 +222,10 @@ export const register = async (req: Request, res: Response) => {
       {
         user,
         pesertaMagang,
-        token,
-        expiresIn: "24h",
+        token: accessToken,
+        accessToken,
+        refreshToken,
+        expiresIn: "1h",
       },
       201
     );
@@ -345,11 +363,15 @@ export const registerPesertaMagang = async (req: Request, res: Response) => {
       return { user, pesertaMagang };
     });
 
-    // Generate JWT token
-    const token = generateToken({
+    // Generate JWT tokens
+    const accessToken = generateToken({
       id: result.user.id,
       username: result.user.username,
       role: result.user.role,
+    });
+
+    const refreshToken = generateRefreshToken({
+      id: result.user.id,
     });
 
     sendSuccess(
@@ -358,14 +380,16 @@ export const registerPesertaMagang = async (req: Request, res: Response) => {
       {
         user: result.user,
         pesertaMagang: result.pesertaMagang,
-        token,
-        expiresIn: "24h",
+        token: accessToken,
+        accessToken,
+        refreshToken,
+        expiresIn: "1h",
       },
       201
     );
   } catch (error: any) {
     console.error("Peserta magang registration error:", error);
-    
+
     // Handle Prisma errors
     if (error?.code === "P2002") {
       // Unique constraint violation
@@ -747,12 +771,23 @@ export const removeAvatar = async (req: Request, res: Response) => {
 
 export const refreshToken = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const { refreshToken } = req.body;
 
-    if (!userId) {
-      return sendError(res, "User not authenticated", 401);
+    if (!refreshToken) {
+      return sendError(res, "Refresh token is required", 400);
     }
 
+    // Verify refresh token
+    let decoded: any;
+    try {
+      decoded = verifyRefreshToken(refreshToken);
+    } catch (e) {
+      return sendError(res, "Invalid or expired refresh token", 401);
+    }
+
+    const userId = decoded.id;
+
+    // Check if user exists
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -771,16 +806,20 @@ export const refreshToken = async (req: Request, res: Response) => {
       return sendError(res, "Account is deactivated", 401);
     }
 
-    // Generate new JWT token
-    const token = generateToken({
+    // Generate new JWT tokens
+    const accessToken = generateToken({
       id: user.id,
       username: user.username,
       role: user.role,
-    });
+    }); // Default 1h
+
+    // Optional: Rotate refresh token as well for extra security, but for now unauthorized rotation might be simpler.
+    // Let's just return new access token.
 
     sendSuccess(res, "Token refreshed successfully", {
-      token,
-      expiresIn: "24h",
+      token: accessToken,
+      accessToken,
+      expiresIn: "1h",
     });
   } catch (error) {
     console.error("Refresh token error:", error);

@@ -2,7 +2,7 @@ class AppConstants {
   static const String appName = 'MyInternPlus';
 
   // Base URL Dinamis (Diisi oleh AppConfigService)
-  static late String baseUrl;
+  static String baseUrl = '';
 
   // Storage Keys
   static const String tokenKey = 'auth_token';

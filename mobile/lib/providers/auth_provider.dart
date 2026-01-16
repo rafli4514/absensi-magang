@@ -17,7 +17,10 @@ class AuthProvider with ChangeNotifier {
   String? _token;
 
   User? get user => _user;
+  bool _isCheckingAuth = true; // Default true agar start di Splash
+
   bool get isLoading => _isLoading;
+  bool get isCheckingAuth => _isCheckingAuth;
   String? get error => _error;
   bool get isAuthenticated => _user != null;
   bool get isAdmin => _user?.isAdmin ?? false;
@@ -25,7 +28,14 @@ class AuthProvider with ChangeNotifier {
   bool get isMentor => _user?.isPembimbing ?? false;
 
   AuthProvider() {
-    _loadUserData();
+    // Sync immediately with AuthService static state
+    if (AuthService.isLoggedIn) {
+      _user = AuthService.currentUser;
+      _token = AuthService.accessToken;
+      _isCheckingAuth = false;
+    } else {
+      _isCheckingAuth = false; // No need to check if we trust AuthService
+    }
   }
 
   // --- CORE LOGIC: LOAD DATA AMAN ---
@@ -33,26 +43,24 @@ class AuthProvider with ChangeNotifier {
     try {
       final userDataStr =
           await StorageService.getString(AppConstants.userDataKey);
-      final token = await StorageService.getString(AppConstants.tokenKey);
+      final token = await StorageService.getToken(); // Secure Storage
 
-      // [PERBAIKAN MUTLAK DISINI]
-      // Simpan token DULUAN. Jangan peduli data user rusak atau tidak.
-      // Selama ada string token di HP, kita anggap dia login.
+      print('🔍 [DEBUG] Loading User Data...');
+      print('   -> Token found: ${token != null && token.isNotEmpty ? "YES (${token.substring(0, 5)}...)" : "NO"}');
+      print('   -> UserData found: ${userDataStr != null ? "YES" : "NO"}');
+
       if (token != null && token.isNotEmpty) {
         _token = token;
       }
 
-      // Baru coba parsing data user
       if (userDataStr != null && userDataStr.isNotEmpty) {
         try {
           final userData = jsonDecode(userDataStr);
           _user = User.fromJson(userData);
+          print('✅ [DEBUG] User loaded successfully: ${_user?.username} (${_user?.role})');
         } catch (e) {
           print(
-              '⚠️ Data user lokal korup, tapi Token AMAN. Aplikasi akan auto-repair.');
-          // Jangan lakukan apa-apa di sini. Biarkan _user null.
-          // Nanti checkAuthentication() yang akan sadar _token ada tapi _user null,
-          // lalu dia akan fetch data baru.
+              '⚠️ Data user lokal korup, tapi Token AMAN. Aplikasi akan auto-repair. Error: $e');
         }
       }
       notifyListeners();
@@ -63,40 +71,113 @@ class AuthProvider with ChangeNotifier {
 
   // --- LOGIC CHECK AUTH (STAY LOGIN) ---
   Future<bool> checkAuthentication() async {
-    // 1. Load data dari HP
+    print('🚀 [DEBUG] checkAuthentication started');
+    _isCheckingAuth = true;
+    notifyListeners();
+
     await _loadUserData();
 
-    // 2. Cek apakah Token ada?
-    if (_token == null || _token!.isEmpty) {
-      return false; // Tidak ada token, harus login
-    }
-
-    // 3. Skenario A: Data User Lengkap (Ideal)
-    if (_user != null) {
-      // Sync data terbaru di background agar tidak memblokir UI
-      refreshProfile().catchError((e) {
-        if (kDebugMode) print('Background sync failed (Offline?): $e');
-      });
-      return true; // IZINKAN MASUK
-    }
-
-    // 4. Skenario B: Token Ada, tapi Data User Hilang/Rusak
-    // Coba pulihkan session dengan meminta data baru ke server
-    print("⚠️ Memulihkan sesi menggunakan Token...");
-    try {
-      await refreshProfile(); // Tunggu sampai selesai
-
-      if (_user != null) {
-        print("✅ Sesi berhasil dipulihkan!");
-        return true; // IZINKAN MASUK
+    // 1. Cek Access Token Lokal
+    if (_token != null && _token!.isNotEmpty) {
+      // 2. Validate Session ke Server (Cek apakah Access Token Expired)
+      final isValid = await _validateSession();
+      if (isValid) {
+        print('✅ [DEBUG] Session Valid (Access Token OK)');
+        _isCheckingAuth = false;
+        notifyListeners();
+        return true;
       }
-    } catch (e) {
-      print("❌ Gagal memulihkan sesi: $e");
+
+      // 3. Jika Expired, coba Rotate Token (Refresh Token)
+      print('⚠️ [DEBUG] Access Token Expired/Invalid. Attempting Refresh...');
+      final refreshed = await _attemptRefreshToken();
+      if (refreshed) {
+        print('✅ [DEBUG] Session Refreshed Successfully!');
+        _isCheckingAuth = false;
+        notifyListeners();
+        return true;
+      }
+    } else {
+       // Coba Refresh token jika access token hilang total (jarang terjadi tapi mungkin)
+       final refreshed = await _attemptRefreshToken();
+       if (refreshed) {
+          _isCheckingAuth = false;
+          notifyListeners();
+          return true;
+       }
     }
 
-    // 5. Jika semua gagal, baru return false
+    print('❌ [DEBUG] All auth attempts failed. Logout.');
+    // Jangan panggil logout full karena akan trigger notifyListeners berkali-kali
+    // Cukup clear state internal jika perlu, atau biarkan logout yang bersihin.
+    // Tapi karena AuthGate bergantung pada _user, pastikan _user null.
+    _user = null; 
+    _token = null; // Opsional: bersihkan memory
+    // await logout(); // -> Hati-hati loop. Logout call notifyListeners.
+    // Lebih aman kita set manual:
+    
+    _isCheckingAuth = false;
+    _authHandled = false; // Reset guard
+    notifyListeners();
     return false;
   }
+
+  // Helper: Validasi sesi ke /auth/profile
+  Future<bool> _validateSession() async {
+    try {
+      final response = await AuthService.getProfile();
+      if (response.success) {
+        // Update user data terbaru
+        _user = response.data;
+        await _saveUserData(_user!);
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('❌ Validation error: $e');
+      return false;
+    }
+  }
+
+  // Helper: Coba refresh access token menggunakan refresh token
+  Future<bool> _attemptRefreshToken() async {
+    try {
+      final refreshToken = await StorageService.getRefreshToken();
+      if (refreshToken == null) return false;
+
+      // Call endpoint Refresh Token (Backend: /auth/refresh-token)
+      final response = await http.post(
+        Uri.parse('${AppConstants.baseUrl}/auth/refresh-token'),
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'refreshToken': refreshToken,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+         final data = jsonDecode(response.body);
+         if (data['success'] == true) {
+            // Backend returns: { token: accessToken, accessToken, expiresIn }
+            final newAccessToken = data['data']['token'] ?? data['data']['accessToken'];
+            if (newAccessToken != null) {
+              await StorageService.setToken(newAccessToken);
+              _token = newAccessToken;
+              
+              // Validate lagi user data
+              await _validateSession(); 
+              return true;
+            }
+         }
+      }
+    } catch (e) {
+      print('❌ Refresh attempt error: $e');
+    }
+    return false;
+  }
+
 
   // --- REFRESH PROFILE ---
   Future<void> refreshProfile() async {
@@ -230,10 +311,11 @@ class AuthProvider with ChangeNotifier {
 
   // --- LOGOUT ---
   Future<void> logout() async {
-    await StorageService.remove(AppConstants.tokenKey);
+    await StorageService.removeTokens();
     await StorageService.remove(AppConstants.userDataKey);
     _user = null;
     _token = null;
+    _authHandled = false;
     notifyListeners();
   }
 
@@ -332,12 +414,38 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  bool _authHandled = false; // Guard to prevent double auth handling
+
   Future<void> _handleAuthSuccess(LoginResponse loginResponse) async {
-    await StorageService.setString(AppConstants.tokenKey, loginResponse.token);
+    if (_authHandled) {
+      print("⚠️ [AUTH] handleAuthSuccess called but already handled. Skipping.");
+      return;
+    }
+    
+    print("🔐 [AUTH] Handling Auth Success...");
+    _authHandled = true;
+    
+    // 1. Simpan Access Token (Short-Lived)
+    if (loginResponse.token != null) {
+      print("   -> Saving Access Token: ${loginResponse.token.substring(0, 10)}...");
+      await StorageService.setToken(loginResponse.token!);
+      _token = loginResponse.token;
+    } else {
+      print("   ❌ [AUTH] Access Token is NULL in response!");
+    }
+
+    // 2. Simpan Refresh Token (Long-Lived)
+    if (loginResponse.refreshToken != null) {
+      print("   -> Saving Refresh Token: ${loginResponse.refreshToken!.substring(0, 10)}...");
+      await StorageService.setRefreshToken(loginResponse.refreshToken!);
+    } else {
+      print("   ⚠️ [AUTH] Refresh Token is NULL in response!");
+    }
+
     _user = loginResponse.user;
     await _saveUserData(_user!);
-    _token = loginResponse.token;
     _isLoading = false;
+    print("✅ [AUTH] Auth Success Handled. User: ${_user?.username}");
     notifyListeners();
   }
 

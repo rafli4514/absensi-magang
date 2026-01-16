@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:provider/provider.dart';
 
-import '../../navigation/route_names.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/onboard_provider.dart';
-import '../../utils/constants.dart';
 import '../../widgets/loading_indicator.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -22,7 +17,7 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     _getAppVersion();
-    _initializeApp();
+    // Logic initialization is now handled by AuthGate
   }
 
   // Method untuk mendapatkan info versi aplikasi
@@ -37,46 +32,6 @@ class _SplashScreenState extends State<SplashScreen> {
       setState(() {
         appVersion = 'v1.0.0';
       });
-    }
-  }
-
-  Future<void> _initializeApp() async {
-    // Simulasi delay splash screen
-    await Future.delayed(
-      const Duration(milliseconds: AppConstants.splashDelay),
-    );
-
-    if (!mounted) return;
-
-    final onboardProvider = Provider.of<OnboardProvider>(
-      context,
-      listen: false,
-    );
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    // [FIX] Tunggu load data ondbarding selesai
-    await onboardProvider.init();
-
-    // Cek apakah user sudah melihat onboarding
-    if (!onboardProvider.onboardCompleted) {
-      Navigator.pushReplacementNamed(context, RouteNames.onboard);
-      return;
-    }
-
-    // Cek status autentikasi user
-    final isAuthenticated = await authProvider.checkAuthentication();
-
-    if (isAuthenticated) {
-      // LOGIKA REDIRECT BERDASARKAN ROLE
-      if (authProvider.isAdmin) {
-        Navigator.pushReplacementNamed(context, RouteNames.adminHome);
-      } else if (authProvider.isMentor) {
-        Navigator.pushReplacementNamed(context, RouteNames.mentorHome);
-      } else {
-        Navigator.pushReplacementNamed(context, RouteNames.home);
-      }
-    } else {
-      Navigator.pushReplacementNamed(context, RouteNames.login);
     }
   }
 

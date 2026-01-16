@@ -3,12 +3,12 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/activity.dart';
-import '../../models/attendance.dart'; // Import Attendance
+import '../../models/attendance.dart'; 
 import '../../models/logbook.dart';
 import '../../models/timeline_activity.dart';
 import '../../navigation/route_names.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/attendance_service.dart'; // Import Service Absensi
+import '../../services/attendance_service.dart'; 
 import '../../services/logbook_service.dart';
 import '../../utils/navigation_helper.dart';
 import '../../utils/responsive_layout.dart';

@@ -45,6 +45,7 @@ dependencies:
   # Others
   share_plus: ^7.2.1
   multicast_dns: ^0.3.2
+  flutter_secure_storage: ^10.0.0
 
 dev_dependencies:
   flutter_test:

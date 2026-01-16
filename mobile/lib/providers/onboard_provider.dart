@@ -4,16 +4,24 @@ import '../services/storage_service.dart';
 import '../utils/constants.dart'; // MAKE SURE THIS IMPORT EXISTS
 
 class OnboardProvider with ChangeNotifier {
-  bool _onboardCompleted = false;
+  static bool _hasSeenOnboarding = false;
+
+  static Future<void> init() async {
+    _hasSeenOnboarding =
+        (await StorageService.getBool(AppConstants.onboardSeenKey)) ?? false;
+  }
+
+  bool _onboardCompleted = _hasSeenOnboarding;
 
   bool get onboardCompleted => _onboardCompleted;
 
   OnboardProvider() {
-    // Constructor tidak boleh async, jadi default false dulu.
-    // Pemanggil (Splash Screen) WAJIB panggil init() agar state sinkron.
+     // Sync with static state
+     _onboardCompleted = _hasSeenOnboarding;
   }
-
-  Future<void> init() async {
+  
+  // Method instance init sudah tidak diperlukan untuk startup, tapi dibiarkan jika ada use case lain
+  Future<void> initInstance() async {
     await _loadOnboardStatus();
   }
 

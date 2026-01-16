@@ -71,7 +71,7 @@ class GlobalErrorHandler {
   }
 
   static void _handleUnauthorized(BuildContext context) async {
-    final token = await StorageService.getString(AppConstants.tokenKey);
+    final token = await StorageService.getToken();
     if (token == null || token.isEmpty) return;
 
     showDialog(
@@ -84,7 +84,11 @@ class GlobalErrorHandler {
         onPrimaryButtonPressed: () async {
           final navContext = GlobalContext.navigatorKey.currentContext;
           if (navContext != null) {
-            await Provider.of<AuthProvider>(navContext, listen: false).logout();
+            await StorageService.removeTokens(); // Explicit secure removal
+            // await Provider.of<AuthProvider>(navContext, listen: false).logout(); // Logout already calls remove but let's be safe
+            // To avoid circular dep complexity or partial logout, better to use AuthProvider.logout() if it uses secure storage.
+            // Let's stick to calling authProvider.logout() but verify that .logout() uses secure storage.
+             await Provider.of<AuthProvider>(navContext, listen: false).logout();
             Navigator.pushNamedAndRemoveUntil(
                 navContext, RouteNames.login, (r) => false);
           }

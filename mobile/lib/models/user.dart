@@ -122,8 +122,10 @@ class User {
   }
 
   String get displayName => nama ?? username;
-  bool get isAdmin => role.toLowerCase() == 'admin';
+  bool get isAdmin =>
+      role.toLowerCase() == 'admin' || role.toLowerCase() == 'administrator';
   bool get isStudent =>
       role.toLowerCase() == 'student' || role.toLowerCase() == 'peserta_magang';
-  bool get isPembimbing => role.toLowerCase() == 'pembimbing_magang';
+  bool get isPembimbing =>
+      role.toLowerCase() == 'pembimbing_magang' || role.toLowerCase() == 'mentor';
 }
