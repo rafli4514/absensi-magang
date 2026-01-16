@@ -2,6 +2,9 @@ import dotenv = require('dotenv');
 import app from './app';
 import { prisma } from './lib/prisma';
 
+import userRoutes from "./routes/userRoutes";
+import pembimbingRoutes from "./routes/pembimbingRoutes";
+
 // Load environment variables
 dotenv.config();
 

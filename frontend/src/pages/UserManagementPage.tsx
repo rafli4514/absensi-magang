@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { PesertaMagang } from "../types/index";
 import {
   AlertDialog,
@@ -14,6 +14,7 @@ import {
   Text,
   TextField,
   Tabs,
+  Grid,
 } from "@radix-ui/themes";
 import {
   EyeOpenIcon,
@@ -26,13 +27,14 @@ import {
   CalendarIcon,
 } from "@radix-ui/react-icons";
 import pesertaMagangService from "../services/pesertaMagangService";
+import pembimbingService, { type Pembimbing } from "../services/pembimbingService";
 import Avatar from "../components/Avatar";
 
 // Import Halaman User
 import ManageUsersPage from "./ManageUsersPage";
 
-// --- UPDATE: OPSI BIDANG / DIVISI SESUAI REQUEST ---
-const BIDANG_OPSI = [
+// BIDANG_OPSI will be fetched from API now
+const BIDANG_OPSI_FALLBACK = [
   "Bidang Pemasaran & Penjualan",
   "Retail SBU",
   "Pembangunan & Aktivasi",
@@ -62,6 +64,7 @@ const StatusBadge = ({ status }: { status: PesertaMagang["status"] }) => {
 
 export default function UserManagementPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(
     location.pathname === "/manage-users" ? "users" : "peserta-magang"
   );
@@ -83,6 +86,11 @@ export default function UserManagementPage() {
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [currentEditingId, setCurrentEditingId] = useState<string | null>(null);
 
+  // Data for dropdowns
+  const [bidangList, setBidangList] = useState<string[]>([]);
+  const [pembimbingList, setPembimbingList] = useState<Pembimbing[]>([]);
+  const [loadingPembimbing, setLoadingPembimbing] = useState(false);
+
   // Form states
   const [formData, setFormData] = useState({
     nama: "",
@@ -96,13 +104,60 @@ export default function UserManagementPage() {
     tanggalSelesai: "",
     status: "AKTIF" as PesertaMagang["status"],
     password: "",
+    pembimbingId: "", // Internal system ID
   });
 
   const [updateFormData, setUpdateFormData] = useState<Partial<PesertaMagang>>({});
 
   useEffect(() => {
     fetchPesertaMagang();
+    fetchBidangList();
   }, []);
+
+  const fetchBidangList = async () => {
+    try {
+      const response = await pembimbingService.getBidangList();
+      if (response.success && response.data && response.data.length > 0) {
+        setBidangList(response.data);
+      } else {
+        setBidangList(BIDANG_OPSI_FALLBACK);
+      }
+    } catch (e) {
+      console.error("Failed to fetch bidang", e);
+      setBidangList(BIDANG_OPSI_FALLBACK);
+    }
+  }
+
+  // Fetch pembimbing when bidang changes (Create Form)
+  useEffect(() => {
+    if (formData.divisi) {
+      fetchPembimbing(formData.divisi);
+    } else {
+      setPembimbingList([]);
+    }
+  }, [formData.divisi]);
+
+  // Fetch pembimbing when bidang changes (Update Form)
+  useEffect(() => {
+    if (updateFormData.divisi) {
+      fetchPembimbing(updateFormData.divisi);
+    }
+  }, [updateFormData.divisi]);
+
+
+  const fetchPembimbing = async (bidang: string) => {
+    setLoadingPembimbing(true);
+    try {
+      const response = await pembimbingService.getPembimbings(bidang);
+      if (response.success) {
+        setPembimbingList(response.data);
+      }
+    } catch (e) {
+      console.error("Error fetching pembimbing", e);
+    } finally {
+      setLoadingPembimbing(false);
+    }
+  }
 
   const fetchPesertaMagang = async () => {
     try {
@@ -142,7 +197,7 @@ export default function UserManagementPage() {
 
     // Handle overflow tanggal
     if (endDate.getDate() !== startDate.getDate()) {
-       endDate.setDate(0);
+      endDate.setDate(0);
     }
 
     const startDateString = toInputDate(startDate);
@@ -195,6 +250,7 @@ export default function UserManagementPage() {
           tanggalSelesai: "",
           status: "AKTIF",
           password: "",
+          pembimbingId: "",
         });
       } else {
         setError(response.message || "Failed to create peserta magang");
@@ -253,6 +309,7 @@ export default function UserManagementPage() {
       tanggalSelesai: item.tanggalSelesai ? new Date(item.tanggalSelesai).toISOString().split('T')[0] : "",
       status: item.status,
       avatar: item.avatar,
+      pembimbingId: item.pembimbingId || "",
     });
   };
 
@@ -326,71 +383,91 @@ export default function UserManagementPage() {
                   </Dialog.Description>
 
                   <Flex direction="column" gap="4">
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <TextField.Root placeholder="Nama Lengkap" value={formData.nama} onChange={e => setFormData({...formData, nama: e.target.value})} />
-                        <TextField.Root placeholder="Username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} />
-                        <TextField.Root placeholder="NISN/NIM" value={formData.id_peserta_magang} onChange={e => setFormData({...formData, id_peserta_magang: e.target.value})} />
-                        <TextField.Root placeholder="Nomor HP" value={formData.nomorHp} onChange={e => setFormData({...formData, nomorHp: e.target.value})} />
-                        <TextField.Root type="password" placeholder="Password Awal" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
-                        <Select.Root value={formData.status} onValueChange={v => setFormData({...formData, status: v as any})}>
-                          <Select.Trigger placeholder="Status" />
-                          <Select.Content>
-                            <Select.Item value="AKTIF">Aktif</Select.Item>
-                            <Select.Item value="NONAKTIF">Tidak Aktif</Select.Item>
-                            <Select.Item value="SELESAI">Selesai</Select.Item>
-                          </Select.Content>
-                        </Select.Root>
-                     </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <TextField.Root placeholder="Nama Lengkap" value={formData.nama} onChange={e => setFormData({ ...formData, nama: e.target.value })} />
+                      <TextField.Root placeholder="Username" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} />
+                      <TextField.Root placeholder="NISN/NIM" value={formData.id_peserta_magang} onChange={e => setFormData({ ...formData, id_peserta_magang: e.target.value })} />
+                      <TextField.Root placeholder="Nomor HP" value={formData.nomorHp} onChange={e => setFormData({ ...formData, nomorHp: e.target.value })} />
+                      <TextField.Root type="password" placeholder="Password Awal" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+                      <Select.Root value={formData.status} onValueChange={v => setFormData({ ...formData, status: v as any })}>
+                        <Select.Trigger placeholder="Status" />
+                        <Select.Content>
+                          <Select.Item value="AKTIF">Aktif</Select.Item>
+                          <Select.Item value="NONAKTIF">Tidak Aktif</Select.Item>
+                          <Select.Item value="SELESAI">Selesai</Select.Item>
+                        </Select.Content>
+                      </Select.Root>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                        {/* INPUT BIDANG / DIVISI (DROPDOWN) */}
-                        <Select.Root value={formData.divisi} onValueChange={v => setFormData({...formData, divisi: v})}>
-                          <Select.Trigger placeholder="Pilih Bidang/Divisi" />
-                          <Select.Content>
-                            {BIDANG_OPSI.map(bidang => (
-                              <Select.Item key={bidang} value={bidang}>{bidang}</Select.Item>
-                            ))}
-                          </Select.Content>
-                        </Select.Root>
+                      {/* INPUT BIDANG / DIVISI (DROPDOWN) */}
+                      <Select.Root value={formData.divisi} onValueChange={v => setFormData({ ...formData, divisi: v })}>
+                        <Select.Trigger placeholder="Pilih Bidang/Divisi" />
+                        <Select.Content>
+                          {bidangList.map(bidang => (
+                            <Select.Item key={bidang} value={bidang}>{bidang}</Select.Item>
+                          ))}
+                        </Select.Content>
+                      </Select.Root>
 
-                        <TextField.Root placeholder="Instansi" value={formData.instansi} onChange={e => setFormData({...formData, instansi: e.target.value})} />
-                        <TextField.Root placeholder="ID Instansi" value={formData.id_instansi} onChange={e => setFormData({...formData, id_instansi: e.target.value})} />
-                     </div>
+                      <TextField.Root placeholder="Instansi" value={formData.instansi} onChange={e => setFormData({ ...formData, instansi: e.target.value })} />
+                      <TextField.Root placeholder="ID Instansi" value={formData.id_instansi} onChange={e => setFormData({ ...formData, id_instansi: e.target.value })} />
+                    </div>
 
-                     {/* BAGIAN TANGGAL */}
-                     <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
-                        <Text size="2" weight="bold" color="gray" className="flex items-center gap-2">
-                           <CalendarIcon /> Periode & Durasi
-                        </Text>
+                    {/* PEMBIMBING SELECTION */}
+                    <Grid columns="1" gap="2">
+                      <label className="text-xs font-semibold text-gray-700">Pilih Pembimbing</label>
+                      <Select.Root
+                        value={formData.pembimbingId}
+                        onValueChange={v => setFormData({ ...formData, pembimbingId: v })}
+                        disabled={!formData.divisi || loadingPembimbing}
+                      >
+                        <Select.Trigger placeholder={formData.divisi ? "Pilih Pembimbing..." : "Pilih Bidang Terlebih Dahulu"} />
+                        <Select.Content>
+                          {pembimbingList.map(p => (
+                            <Select.Item key={p.id} value={p.id}>
+                              {p.nama} (Kuota: {p.kuota})
+                            </Select.Item>
+                          ))}
+                        </Select.Content>
+                      </Select.Root>
+                      {!formData.divisi && <Text size="1" color="gray">Silakan pilih bidang/divisi untuk melihat daftar pembimbing.</Text>}
+                    </Grid>
 
-                        <div className="flex flex-wrap gap-2 items-center">
-                           <Text size="1" color="gray" className="mr-1">Template:</Text>
-                           {[1, 3, 5, 6, 12].map((bulan) => (
-                              <Button
-                                key={bulan}
-                                variant="soft"
-                                size="1"
-                                color="blue"
-                                type="button"
-                                onClick={() => handleSetDuration(bulan, false)}
-                                className="cursor-pointer hover:bg-blue-200"
-                              >
-                                {bulan} Bln
-                              </Button>
-                           ))}
-                        </div>
+                    {/* BAGIAN TANGGAL */}
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+                      <Text size="2" weight="bold" color="gray" className="flex items-center gap-2">
+                        <CalendarIcon /> Periode & Durasi
+                      </Text>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                           <label className="text-xs font-medium">
-                              Mulai
-                              <TextField.Root type="date" className="mt-1" value={formData.tanggalMulai} onChange={e => setFormData({...formData, tanggalMulai: e.target.value})} />
-                           </label>
-                           <label className="text-xs font-medium">
-                              Selesai
-                              <TextField.Root type="date" className="mt-1" value={formData.tanggalSelesai} onChange={e => setFormData({...formData, tanggalSelesai: e.target.value})} />
-                           </label>
-                        </div>
-                     </div>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <Text size="1" color="gray" className="mr-1">Template:</Text>
+                        {[1, 3, 5, 6, 12].map((bulan) => (
+                          <Button
+                            key={bulan}
+                            variant="soft"
+                            size="1"
+                            color="blue"
+                            type="button"
+                            onClick={() => handleSetDuration(bulan, false)}
+                            className="cursor-pointer hover:bg-blue-200"
+                          >
+                            {bulan} Bln
+                          </Button>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label className="text-xs font-medium">
+                          Mulai
+                          <TextField.Root type="date" className="mt-1" value={formData.tanggalMulai} onChange={e => setFormData({ ...formData, tanggalMulai: e.target.value })} />
+                        </label>
+                        <label className="text-xs font-medium">
+                          Selesai
+                          <TextField.Root type="date" className="mt-1" value={formData.tanggalSelesai} onChange={e => setFormData({ ...formData, tanggalSelesai: e.target.value })} />
+                        </label>
+                      </div>
+                    </div>
 
                   </Flex>
                   <Flex gap="3" mt="4" justify="end">
@@ -437,7 +514,7 @@ export default function UserManagementPage() {
             <Card className="shadow-sm overflow-hidden">
               <Flex direction="row" justify="between" align="center" className="border-b border-gray-100 bg-gray-50/50" p="3">
                 <Flex align="center" gap="2">
-                  <PersonIcon width="16" height="16" className="text-gray-700"/>
+                  <PersonIcon width="16" height="16" className="text-gray-700" />
                   <Text weight="bold" size="2" className="text-gray-900">Daftar Peserta</Text>
                 </Flex>
                 <Text size="1" color="gray">{filteredPesertaMagang.length} data ditemukan</Text>
@@ -458,7 +535,11 @@ export default function UserManagementPage() {
 
                 <Table.Body>
                   {filteredPesertaMagang.map((item) => (
-                    <Table.Row key={item.id} className="hover:bg-blue-50/30 transition-colors">
+                    <Table.Row
+                      key={item.id}
+                      className="hover:bg-blue-50/30 transition-colors cursor-pointer"
+                      onClick={() => navigate(`/profil-peserta/${item.id}`)}
+                    >
                       <Table.Cell className="p-3">
                         <div className="flex items-center">
                           <Avatar src={item.avatar} alt={item.nama} name={item.nama} size="sm" showBorder className="border-gray-200 shadow-sm" />
@@ -477,7 +558,7 @@ export default function UserManagementPage() {
                       </Table.Cell>
                       <Table.Cell className="p-3 align-middle"><StatusBadge status={item.status} /></Table.Cell>
                       <Table.Cell className="p-3 align-middle" align="center">
-                        <Flex align="center" justify="center" gap="2">
+                        <Flex align="center" justify="center" gap="2" onClick={(e) => e.stopPropagation()}>
                           <Link to={`/profil-peserta/${item.id}`}>
                             <IconButton size="1" color="blue" variant="outline" highContrast><EyeOpenIcon width="14" height="14" /></IconButton>
                           </Link>
@@ -489,81 +570,100 @@ export default function UserManagementPage() {
 
                             {/* --- EDIT DIALOG --- */}
                             <Dialog.Content maxWidth="850px" onKeyDown={handleUpdateKeyDown}>
-                                <Dialog.Title>Edit Peserta</Dialog.Title>
-                                <Flex direction="column" gap="4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                      <TextField.Root value={updateFormData.nama} onChange={e => setUpdateFormData({...updateFormData, nama: e.target.value})} placeholder="Nama" />
-                                      <TextField.Root value={updateFormData.username} onChange={e => setUpdateFormData({...updateFormData, username: e.target.value})} placeholder="Username" />
-                                      <TextField.Root value={updateFormData.id_peserta_magang} onChange={e => setUpdateFormData({...updateFormData, id_peserta_magang: e.target.value})} placeholder="NISN/NIM" />
-                                      <TextField.Root value={updateFormData.nomorHp} onChange={e => setUpdateFormData({...updateFormData, nomorHp: e.target.value})} placeholder="Nomor HP" />
-                                      <Select.Root value={updateFormData.status} onValueChange={v => setUpdateFormData({...updateFormData, status: v as any})}>
-                                        <Select.Trigger />
-                                        <Select.Content>
-                                          <Select.Item value="AKTIF">Aktif</Select.Item>
-                                          <Select.Item value="NONAKTIF">Tidak Aktif</Select.Item>
-                                          <Select.Item value="SELESAI">Selesai</Select.Item>
-                                        </Select.Content>
-                                      </Select.Root>
-                                    </div>
+                              <Dialog.Title>Edit Peserta</Dialog.Title>
+                              <Flex direction="column" gap="4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <TextField.Root value={updateFormData.nama} onChange={e => setUpdateFormData({ ...updateFormData, nama: e.target.value })} placeholder="Nama" />
+                                  <TextField.Root value={updateFormData.username} onChange={e => setUpdateFormData({ ...updateFormData, username: e.target.value })} placeholder="Username" />
+                                  <TextField.Root value={updateFormData.id_peserta_magang} onChange={e => setUpdateFormData({ ...updateFormData, id_peserta_magang: e.target.value })} placeholder="NISN/NIM" />
+                                  <TextField.Root value={updateFormData.nomorHp} onChange={e => setUpdateFormData({ ...updateFormData, nomorHp: e.target.value })} placeholder="Nomor HP" />
+                                  <Select.Root value={updateFormData.status} onValueChange={v => setUpdateFormData({ ...updateFormData, status: v as any })}>
+                                    <Select.Trigger />
+                                    <Select.Content>
+                                      <Select.Item value="AKTIF">Aktif</Select.Item>
+                                      <Select.Item value="NONAKTIF">Tidak Aktif</Select.Item>
+                                      <Select.Item value="SELESAI">Selesai</Select.Item>
+                                    </Select.Content>
+                                  </Select.Root>
+                                </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                                       {/* INPUT BIDANG / DIVISI (DROPDOWN) */}
-                                       <Select.Root value={updateFormData.divisi} onValueChange={v => setUpdateFormData({...updateFormData, divisi: v})}>
-                                          <Select.Trigger placeholder="Pilih Bidang/Divisi" />
-                                          <Select.Content>
-                                            {BIDANG_OPSI.map(bidang => (
-                                              <Select.Item key={bidang} value={bidang}>{bidang}</Select.Item>
-                                            ))}
-                                          </Select.Content>
-                                       </Select.Root>
+                                  {/* INPUT BIDANG / DIVISI (DROPDOWN) */}
+                                  <Select.Root value={updateFormData.divisi} onValueChange={v => setUpdateFormData({ ...updateFormData, divisi: v })}>
+                                    <Select.Trigger placeholder="Pilih Bidang/Divisi" />
+                                    <Select.Content>
+                                      {bidangList.map(bidang => (
+                                        <Select.Item key={bidang} value={bidang}>{bidang}</Select.Item>
+                                      ))}
+                                    </Select.Content>
+                                  </Select.Root>
 
-                                       <TextField.Root value={updateFormData.instansi} onChange={e => setUpdateFormData({...updateFormData, instansi: e.target.value})} placeholder="Instansi" />
-                                    </div>
+                                  <TextField.Root value={updateFormData.instansi} onChange={e => setUpdateFormData({ ...updateFormData, instansi: e.target.value })} placeholder="Instansi" />
+                                </div>
 
-                                    {/* BAGIAN TANGGAL EDIT */}
-                                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
-                                        <Text size="2" weight="bold" color="gray" className="flex items-center gap-2">
-                                           <CalendarIcon /> Periode & Durasi
-                                        </Text>
+                                {/* PEMBIMBING SELECTION (UPDATE) */}
+                                <div className="space-y-1">
+                                  <label className="text-xs font-semibold text-gray-700">Pilih Pembimbing</label>
+                                  <Select.Root
+                                    value={updateFormData.pembimbingId}
+                                    onValueChange={v => setUpdateFormData({ ...updateFormData, pembimbingId: v })}
+                                    disabled={!updateFormData.divisi || loadingPembimbing}
+                                  >
+                                    <Select.Trigger placeholder={updateFormData.divisi ? "Pilih Pembimbing..." : "Pilih Bidang Terlebih Dahulu"} />
+                                    <Select.Content>
+                                      {pembimbingList.map(p => (
+                                        <Select.Item key={p.id} value={p.id}>
+                                          {p.nama} (Kuota: {p.kuota})
+                                        </Select.Item>
+                                      ))}
+                                    </Select.Content>
+                                  </Select.Root>
+                                </div>
 
-                                        <div className="flex flex-wrap gap-2 items-center">
-                                           <Text size="1" color="gray" className="mr-1">Set Durasi:</Text>
-                                           {[1, 3, 5, 6, 12].map((bulan) => (
-                                              <Button
-                                                key={bulan}
-                                                variant="soft"
-                                                size="1"
-                                                color="orange"
-                                                type="button"
-                                                onClick={() => handleSetDuration(bulan, true)}
-                                                className="cursor-pointer hover:bg-orange-200"
-                                              >
-                                                {bulan} Bln
-                                              </Button>
-                                           ))}
-                                        </div>
+                                {/* BAGIAN TANGGAL EDIT */}
+                                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+                                  <Text size="2" weight="bold" color="gray" className="flex items-center gap-2">
+                                    <CalendarIcon /> Periode & Durasi
+                                  </Text>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                           <label className="text-xs font-medium">
-                                              Mulai
-                                              <TextField.Root type="date" className="mt-1" value={updateFormData.tanggalMulai} onChange={e => setUpdateFormData({...updateFormData, tanggalMulai: e.target.value})} />
-                                           </label>
-                                           <label className="text-xs font-medium">
-                                              Selesai
-                                              <TextField.Root type="date" className="mt-1" value={updateFormData.tanggalSelesai} onChange={e => setUpdateFormData({...updateFormData, tanggalSelesai: e.target.value})} />
-                                           </label>
-                                        </div>
-                                     </div>
+                                  <div className="flex flex-wrap gap-2 items-center">
+                                    <Text size="1" color="gray" className="mr-1">Set Durasi:</Text>
+                                    {[1, 3, 5, 6, 12].map((bulan) => (
+                                      <Button
+                                        key={bulan}
+                                        variant="soft"
+                                        size="1"
+                                        color="orange"
+                                        type="button"
+                                        onClick={() => handleSetDuration(bulan, true)}
+                                        className="cursor-pointer hover:bg-orange-200"
+                                      >
+                                        {bulan} Bln
+                                      </Button>
+                                    ))}
+                                  </div>
 
-                                    <div className="w-full border-2 border-dashed border-gray-300 rounded-lg p-2 text-center">
-                                      <input type="file" accept="image/*" onChange={(e) => {if(e.target.files?.[0]) handleAvatarUpload(item.id, e.target.files[0])}} className="text-xs" />
-                                    </div>
-                                </Flex>
-                                <Flex gap="3" mt="4" justify="end">
-                                    <Dialog.Close><Button variant="soft" color="gray">Batal</Button></Dialog.Close>
-                                    <Button onClick={() => handleUpdate(item.id)} disabled={isUpdating === item.id}>Simpan</Button>
-                                </Flex>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <label className="text-xs font-medium">
+                                      Mulai
+                                      <TextField.Root type="date" className="mt-1" value={updateFormData.tanggalMulai} onChange={e => setUpdateFormData({ ...updateFormData, tanggalMulai: e.target.value })} />
+                                    </label>
+                                    <label className="text-xs font-medium">
+                                      Selesai
+                                      <TextField.Root type="date" className="mt-1" value={updateFormData.tanggalSelesai} onChange={e => setUpdateFormData({ ...updateFormData, tanggalSelesai: e.target.value })} />
+                                    </label>
+                                  </div>
+                                </div>
+
+                                <div className="w-full border-2 border-dashed border-gray-300 rounded-lg p-2 text-center">
+                                  <input type="file" accept="image/*" onChange={(e) => { if (e.target.files?.[0]) handleAvatarUpload(item.id, e.target.files[0]) }} className="text-xs" />
+                                </div>
+                              </Flex>
+                              <Flex gap="3" mt="4" justify="end">
+                                <Dialog.Close><Button variant="soft" color="gray">Batal</Button></Dialog.Close>
+                                <Button onClick={() => handleUpdate(item.id)} disabled={isUpdating === item.id}>Simpan</Button>
+                              </Flex>
                             </Dialog.Content>
                           </Dialog.Root>
 

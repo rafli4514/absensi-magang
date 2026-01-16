@@ -1,13 +1,14 @@
-const { Router } = require('express');
-import pesertaMagangRoutes = require('./pesertaMagangRoutes');
-import absensiRoutes = require('./absensiRoutes');
-import userRoutes = require('./userRoutes');
-import authRoutes = require('./authRoutes');
-import pengajuanIzinRoutes = require('./pengajuanIzinRoutes');
-import logbookRoutes = require('./logbookRoutes');
-import dashboardRoutes = require('./dashboardRoutes');
-import settingsRoutes = require('./settingsRoutes');
-import serverMonitorRoutes = require('./serverMonitorRoutes');
+import { Router } from 'express';
+import pesertaMagangRoutes from './pesertaMagangRoutes';
+import absensiRoutes from './absensiRoutes';
+import userRoutes from './userRoutes';
+import authRoutes from './authRoutes';
+import pengajuanIzinRoutes from './pengajuanIzinRoutes';
+import logbookRoutes from './logbookRoutes';
+import dashboardRoutes from './dashboardRoutes';
+import settingsRoutes from './settingsRoutes';
+import serverMonitorRoutes from './serverMonitorRoutes';
+import pembimbingRoutes from './pembimbingRoutes';
 
 const router = Router();
 
@@ -33,8 +34,24 @@ router.use('/logbook', logbookRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/settings', settingsRoutes);
 
+// [BARU] Daftarkan route pembimbing
+router.use('/pembimbing', pembimbingRoutes);
+
+// [BARU] Daftarkan route server monitor
 // [BARU] Daftarkan route server monitor
 // Ini akan membuat endpoint: /api/server/specs dan /api/server/stats
 router.use('/server', serverMonitorRoutes);
 
-module.exports = router;
+// [BARU] Route Upload
+import uploadRoutes from './uploadRoutes';
+router.use('/upload', uploadRoutes);
+
+// [BARU] Route Export
+import exportRoutes from './exportRoutes';
+router.use('/export', exportRoutes);
+
+// [BARU] Route Activity Timeline
+import activityRoutes from './activityRoutes';
+router.use('/activity', activityRoutes);
+
+export default router;

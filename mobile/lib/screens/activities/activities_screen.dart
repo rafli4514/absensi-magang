@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/activity.dart';
 import '../../models/attendance.dart'; 
 import '../../models/logbook.dart';
-import '../../models/timeline_activity.dart';
 import '../../navigation/route_names.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/logbook_provider.dart';
 import '../../services/attendance_service.dart'; 
-import '../../services/logbook_service.dart';
 import '../../utils/navigation_helper.dart';
 import '../../utils/responsive_layout.dart';
 import '../../utils/ui_utils.dart';
@@ -33,166 +33,124 @@ class ActivitiesScreen extends StatefulWidget {
 }
 
 class _ActivitiesScreenState extends State<ActivitiesScreen> {
-  String? _errorMessage;
+  // Local state only for UI Tabs/Filter
   int _selectedTabIndex = 0; // 0: Timeline, 1: Logbook List
-  int _selectedWeekIndex = 0;
-  late DateTime _startDateMagang;
+  
+  // Statistics Data (Still fetched manually for now or move to Provider later)
+  List<Attendance> _allAttendance = [];
+  bool _isLoadingStats = false;
   final int _totalWeeksDuration = 16;
-
-  List<LogBook> _allLogBooks = [];
-  List<LogBook> _filteredLogBooks = [];
-  List<Attendance> _allAttendance = []; // Store attendance data
-  List<TimelineActivity> _timelineActivities = [];
-  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeStartDate();
+    // Defer data loading until after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
+      _initializeData();
     });
   }
 
-  void _initializeStartDate() {
+  void _initializeData() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final logbookProvider = Provider.of<LogbookProvider>(context, listen: false);
     final user = authProvider.user;
+    
+    // 1. Set Start Date
     if (user?.tanggalMulai != null) {
       try {
-        _startDateMagang = DateTime.parse(user!.tanggalMulai!);
+        logbookProvider.setStartDate(DateTime.parse(user!.tanggalMulai!));
       } catch (e) {
-        _startDateMagang = DateTime.now().subtract(const Duration(days: 1));
+        logbookProvider.setStartDate(DateTime.now());
       }
     } else {
-      _startDateMagang = DateTime.now();
+      logbookProvider.setStartDate(DateTime.now());
+    }
+
+    // 2. Load Logbooks
+    final pesertaId = user?.profileId ?? '';
+    if (pesertaId.isNotEmpty) {
+       logbookProvider.fetchLogbooks(pesertaId);
+       _loadAttendanceStats(pesertaId);
     }
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadAttendanceStats(String pesertaId) async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
-
+    setState(() => _isLoadingStats = true);
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final user = authProvider.user;
-      final pesertaId = user?.idPesertaMagang ?? '';
-
-      if (pesertaId.isEmpty) {
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      // 1. Fetch Logbooks
-      final logbookResponse = await LogbookService.getAllLogbook(
-          pesertaMagangId: pesertaId, limit: 100);
-
-      // 2. Fetch Attendance (Untuk Pie Chart)
       final attendanceResponse = await AttendanceService.getAllAttendance(
           pesertaMagangId: pesertaId, limit: 100);
-
-      if (logbookResponse.success && logbookResponse.data != null) {
-        _allLogBooks = logbookResponse.data!;
-
-        // Convert Logbook ke Timeline Activity
-        _timelineActivities = _allLogBooks.map((log) {
-          return TimelineActivity(
-              time: log.tanggal,
-              activity: log.kegiatan,
-              status: log.status?.displayName ?? 'Pending',
-              location: '-');
-        }).toList();
-
-        _timelineActivities.sort((a, b) => b.time.compareTo(a.time));
-      }
-
       if (attendanceResponse.success && attendanceResponse.data != null) {
-        _allAttendance = attendanceResponse.data!;
-      }
-
-      if (!logbookResponse.success) {
-        setState(() => _errorMessage = logbookResponse.message);
-      } else {
-        _filterLogBooks(); // Filter awal
+        setState(() {
+          _allAttendance = attendanceResponse.data!;
+        });
       }
     } catch (e) {
-      setState(() => _errorMessage = e.toString());
+      debugPrint("Error loading attendance stats: $e");
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoadingStats = false);
     }
   }
 
-  void _filterLogBooks() {
-    final weekStart =
-        _startDateMagang.add(Duration(days: _selectedWeekIndex * 7));
-    final weekEnd =
-        weekStart.add(const Duration(days: 6, hours: 23, minutes: 59));
-
-    setState(() {
-      _filteredLogBooks = _allLogBooks.where((log) {
-        try {
-          final logDate = DateTime.parse(log.tanggal);
-          return logDate
-                  .isAfter(weekStart.subtract(const Duration(seconds: 1))) &&
-              logDate.isBefore(weekEnd);
-        } catch (_) {
-          return false;
-        }
-      }).toList();
-
-      _filteredLogBooks.sort((a, b) => b.tanggal.compareTo(a.tanggal));
-    });
-  }
-
-  // --- LOGIC FORM & DELETE (Sama seperti sebelumnya) ---
+  // --- LOGIC FORM & DELETE ---
+  
   void _showLogBookForm(BuildContext context, LogBook? log) {
     showDialog(
       context: context,
-      builder: (context) => LogBookFormDialog(
+      builder: (dialogContext) => LogBookFormDialog(
         existingLog: log,
-        onSave:
-            (tanggal, kegiatan, deskripsi, durasi, type, status, foto) async {
-          Navigator.pop(context);
-          _showLoadingDialog();
-          try {
-            final authProvider =
-                Provider.of<AuthProvider>(context, listen: false);
-            final pesertaId = authProvider.user?.idPesertaMagang ?? '';
+        onSave: (tanggal, kegiatan, deskripsi, durasi, type, status, foto) async {
+          // 1. Close Form Dialog
+          Navigator.of(dialogContext).pop();
+          
+          // 2. Validate User
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          final logbookProvider = Provider.of<LogbookProvider>(context, listen: false);
+          final pesertaId = authProvider.user?.profileId ?? '';
 
-            if (log == null) {
-              await LogbookService.createLogbook(
-                pesertaMagangId: pesertaId,
+          if (pesertaId.isEmpty) {
+             GlobalSnackBar.show('Error: ID Peserta tidak ditemukan', isError: true);
+             return;
+          }
+
+          // 3. Call Provider (Handles API + State)
+          // Fix: 'foto' is already XFile? now
+          
+          bool success = false;
+          if (log == null) {
+             success = await logbookProvider.addLogbook(
+                pesertaId: pesertaId,
                 tanggal: tanggal,
                 kegiatan: kegiatan,
                 deskripsi: deskripsi,
                 durasi: durasi,
                 type: type?.value,
                 status: status?.value,
-                foto: foto,
-              );
-              GlobalSnackBar.show('Logbook berhasil ditambahkan',
-                  isSuccess: true);
-            } else {
-              await LogbookService.updateLogbook(
-                id: log.id,
+                foto: foto, // Pass directly
+             );
+          } else {
+             success = await logbookProvider.updateLogbook(
+                log: log,
                 tanggal: tanggal,
                 kegiatan: kegiatan,
                 deskripsi: deskripsi,
                 durasi: durasi,
                 type: type?.value,
                 status: status?.value,
-              );
-              GlobalSnackBar.show('Logbook berhasil diperbarui',
-                  isSuccess: true);
-            }
-            if (mounted) {
-              Navigator.pop(context);
-              _loadData();
-            }
-          } catch (e) {
-            if (mounted) {
-              Navigator.pop(context);
-              GlobalSnackBar.show('Gagal menyimpan: $e', isError: true);
-            }
+                foto: foto, // Pass directly
+             );
+          }
+
+          if (success) {
+            GlobalSnackBar.show(
+              log == null ? 'Logbook berhasil ditambahkan' : 'Logbook diperbarui', 
+              isSuccess: true
+            );
+          } else {
+            GlobalSnackBar.show(
+              'Gagal menyimpan: ${logbookProvider.errorMessage}', 
+              isError: true
+            );
           }
         },
       ),
@@ -202,103 +160,69 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
   void _showActivityForm(BuildContext context, Activity? activity) {
     showDialog(
       context: context,
-      builder: (context) => ActivityFormDialog(
+      builder: (dialogContext) => ActivityFormDialog(
         existingActivity: activity,
         onSave: (kegiatan, deskripsi, tanggal, type, status, foto) async {
-          Navigator.pop(context);
-          _showLoadingDialog();
-          try {
-            final authProvider =
-                Provider.of<AuthProvider>(context, listen: false);
-            final pesertaId = authProvider.user?.idPesertaMagang ?? '';
-            final dateStr = DateFormat('yyyy-MM-dd').format(tanggal);
+          Navigator.of(dialogContext).pop();
+          
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          final logbookProvider = Provider.of<LogbookProvider>(context, listen: false);
+          final pesertaId = authProvider.user?.profileId ?? '';
 
-            if (activity == null) {
-              await LogbookService.createLogbook(
-                pesertaMagangId: pesertaId,
+          if (pesertaId.isEmpty) {
+             GlobalSnackBar.show('Error: ID Peserta tidak ditemukan', isError: true);
+             return;
+          }
+
+          final dateStr = DateFormat('yyyy-MM-dd').format(tanggal);
+          // Fix: foto is already XFile?
+          
+          if (activity == null) {
+            bool success = await logbookProvider.addLogbook(
+                pesertaId: pesertaId,
                 tanggal: dateStr,
                 kegiatan: kegiatan,
                 deskripsi: deskripsi,
                 type: type.value,
                 status: status.value,
-                foto: foto,
-              );
-              GlobalSnackBar.show('Aktivitas berhasil ditambahkan',
-                  isSuccess: true);
-            } else {
-              // Jika Activity dianggap Logbook, kita bisa update by ID jika Activity punya ID
-              // Namun model Activity saat ini mungkin berbeda.
-              // Asumsi: Activity yang diedit berasal dari list Logbook yang di-cast.
-              // Jika struktur terpisah, kita perlu penyesuaian.
-              // Untuk saat ini, fitur "Edit" dari form ini hanya support Create baru
-              // karena Timeline biasanya read-only atau edit detail Logbook.
-              // Fallback: Create New (atau implement update jika ID tersedia di Activity)
-              
-              // Note: Karena parameter existingActivity bertipe Activity? tapi kita save ke Logbook,
-              // ini menyiratkan penyatuan fitur.
-              // Jika user mengedit item "Activity", idealnya kita butuh ID logbooknya.
-              // Di kode saat ini, timelineActivities dibangun dari Logbook.
-              // Tapi 'Activity' model class mungkin tidak punya ID yang sama dengan Logbook.
-              
-              // SEMENTARA: Kita treat Activity form sebagai "Input Logbook versi Ringkas"
-              // Jadi selalu Create New jika null.
-              // Jika tidak null, kita tampilkan info belum support edit via form ini (atau implement jika ID ada)
-               GlobalSnackBar.show('Edit via Timeline belum didukung sepenuhnya', isInfo: true);
-            }
+                foto: foto, // Pass directly
+            );
             
-            if (mounted) {
-              Navigator.pop(context); // Close loading
-              _loadData(); // Refresh data
+            if (success) {
+               GlobalSnackBar.show('Aktivitas berhasil ditambahkan', isSuccess: true);
+            } else {
+               GlobalSnackBar.show(logbookProvider.errorMessage ?? 'Gagal', isError: true);
             }
-          } catch (e) {
-            if (mounted) {
-              Navigator.pop(context); // Close loading
-              GlobalSnackBar.show('Gagal menyimpan aktivitas: $e',
-                  isError: true);
-            }
+          } else {
+             GlobalSnackBar.show('Edit via Timeline belum didukung sepenuhnya', isInfo: true);
           }
         },
       ),
     );
   }
 
-  void _confirmDeleteLog(BuildContext context, int index) {
-    final logToDelete = _filteredLogBooks[index];
+  void _confirmDeleteLog(BuildContext context, LogBook log) {
     showDialog(
       context: context,
       builder: (context) => CustomDialog(
         title: 'Hapus Logbook?',
-        content:
-            'Anda yakin ingin menghapus kegiatan "${logToDelete.kegiatan}"?',
+        content: 'Anda yakin ingin menghapus kegiatan "${log.kegiatan}"?',
         primaryButtonText: 'Hapus',
         primaryButtonColor: Theme.of(context).colorScheme.error,
         onPrimaryButtonPressed: () async {
           Navigator.pop(context);
-          _showLoadingDialog();
-          try {
-            await LogbookService.deleteLogbook(logToDelete.id);
-            if (mounted) {
-              Navigator.pop(context);
-              GlobalSnackBar.show('Logbook dihapus', isSuccess: true);
-              _loadData();
-            }
-          } catch (e) {
-            if (mounted) {
-              Navigator.pop(context);
-              GlobalSnackBar.show('Gagal menghapus: $e', isError: true);
-            }
+          
+          final logbookProvider = Provider.of<LogbookProvider>(context, listen: false);
+          bool success = await logbookProvider.deleteLogbook(log.id);
+          
+          if (success) {
+            GlobalSnackBar.show('Logbook dihapus', isSuccess: true);
+          } else {
+            GlobalSnackBar.show('Gagal: ${logbookProvider.errorMessage}', isError: true);
           }
         },
         secondaryButtonText: 'Batal',
       ),
-    );
-  }
-
-  void _showLoadingDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: LoadingIndicator()),
     );
   }
 
@@ -318,19 +242,46 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
         showBackButton: false,
         actions: [
           IconButton(
-            icon: Icon(Icons.filter_list_rounded, color: colorScheme.onSurface),
-            onPressed: () {
-              GlobalSnackBar.show('Filter mingguan aktif di tab Logbook',
-                  isInfo: true);
+            icon: Icon(Icons.download, color: colorScheme.onSurface),
+            onPressed: () => _showExportOptions(context),
+          ),
+          IconButton(
+            icon: Icon(Icons.refresh, color: colorScheme.onSurface),
+            onPressed: () { 
+                _initializeData();
+                GlobalSnackBar.show("Refreshing...", isInfo: true);
             },
           ),
         ],
       ),
+      drawer: null, // No Drawer here as we use Bottom Nav
       body: Stack(
         children: [
-          ResponsiveLayout(
-            mobileBody: _buildMobileLayout(),
-            tabletBody: _buildTabletLayout(),
+          Consumer<LogbookProvider>(
+            builder: (context, provider, child) {
+              
+              // Handle Full Page Loading ONLY on initial load if needed, 
+              // but standard is to show skeleton or loader inside list.
+              // Here we just overlay if provider.isLoading is true? 
+              // Better: Show loading indicator in list part.
+              
+              return ResponsiveLayout(
+                mobileBody: _buildMobileLayout(provider),
+                tabletBody: _buildMobileLayout(provider), // Reuse for now
+              );
+            },
+          ),
+           // Loading Overlay for CRUD operations
+           Consumer<LogbookProvider>(
+            builder: (context, provider, _) {
+              if (provider.isLoading) {
+                return Container(
+                  color: Colors.black12,
+                  child: const Center(child: LoadingIndicator()),
+                );
+              }
+              return const SizedBox.shrink();
+            },
           ),
           Positioned(
             left: 0,
@@ -346,24 +297,27 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     );
   }
 
-  Widget _buildMobileLayout() {
-    // Current week calculation for charts
-    final weekStart =
-        _startDateMagang.add(Duration(days: _selectedWeekIndex * 7));
-    final weekEnd = weekStart.add(const Duration(days: 6));
-
+  Widget _buildMobileLayout(LogbookProvider provider) {
+    // Week calculation for charts using provider's start date
+    // Note: Provider doesn't expose _startDate directly via getter, 
+    // but we can assume provider methods handle filter logic.
+    // For the UI statistics "current week", we might need helper.
+    // Let's assume Statistics widget needs raw list.
+    
     return RefreshIndicator(
-      onRefresh: _loadData,
+      onRefresh: () async {
+         _initializeData();
+      },
       child: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          if (_errorMessage != null)
+          if (provider.errorMessage != null)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: CustomErrorWidget(
-                  message: _errorMessage!,
-                  onDismiss: () => setState(() => _errorMessage = null),
+                  message: provider.errorMessage!,
+                  onDismiss: () => _initializeData(), // Retry?
                 ),
               ),
             ),
@@ -381,10 +335,10 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: ActivitiesStatistics(
                 isMobile: true,
-                logbooks: _allLogBooks,
-                attendanceList: _allAttendance, // KIRIM DATA ABSENSI
-                currentWeekStart: weekStart, // KIRIM MINGGU AKTIF
-                currentWeekEnd: weekEnd,
+                logbooks: provider.allLogBooks,
+                attendanceList: _allAttendance,
+                currentWeekStart: DateTime.now(), // Fallback/Minor, mainly for visual
+                currentWeekEnd: DateTime.now().add(const Duration(days: 6)),
               ),
             ),
           ),
@@ -400,12 +354,12 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: ActivitiesTimeline(activities: _timelineActivities),
+                child: ActivitiesTimeline(activities: provider.activities),
               ),
             ),
           if (_selectedTabIndex == 1) ...[
-            SliverToBoxAdapter(child: _buildWeekFilter()),
-            _buildListContent(),
+            SliverToBoxAdapter(child: _buildWeekFilter(provider)),
+            _buildListContent(provider),
           ],
           const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
         ],
@@ -413,14 +367,9 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     );
   }
 
-  // Tablet layout implementation would mirror mobile but with responsive flex...
-  Widget _buildTabletLayout() {
-    // Simplified for brevity, similar structure to mobile but side-by-side
-    return _buildMobileLayout();
-  }
-
-  Widget _buildWeekFilter() {
+  Widget _buildWeekFilter(LogbookProvider provider) {
     final colorScheme = Theme.of(context).colorScheme;
+    final selectedIndex = provider.selectedWeekIndex;
 
     return Container(
       height: 50,
@@ -431,17 +380,11 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
         itemCount: _totalWeeksDuration,
         separatorBuilder: (context, index) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          final isSelected = index == _selectedWeekIndex;
-          final weekStart = _startDateMagang.add(Duration(days: index * 7));
-          final weekEnd = weekStart.add(const Duration(days: 6));
-          final dateRange =
-              "${DateFormat('dd MMM').format(weekStart)} - ${DateFormat('dd MMM').format(weekEnd)}";
-
-          return GestureDetector(
-            onTap: () => setState(() {
-              _selectedWeekIndex = index;
-              _filterLogBooks();
-            }),
+           // Visual date logic could be improved by asking provider for week range
+           // For now just showing week numbers is safe.
+           final isSelected = index == selectedIndex;
+           return GestureDetector(
+            onTap: () => provider.setWeekIndex(index),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
@@ -455,29 +398,17 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                       : colorScheme.outline.withOpacity(0.2),
                 ),
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Minggu ${index + 1}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected
-                          ? colorScheme.onPrimary
-                          : colorScheme.onSurface,
-                    ),
+              child: Center(
+                child: Text(
+                  'Minggu ${index + 1}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected
+                        ? colorScheme.onPrimary
+                        : colorScheme.onSurface,
                   ),
-                  Text(
-                    dateRange,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isSelected
-                          ? colorScheme.onPrimary.withOpacity(0.9)
-                          : colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           );
@@ -486,14 +417,9 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     );
   }
 
-  Widget _buildListContent() {
+  Widget _buildListContent(LogbookProvider provider) {
     final colorScheme = Theme.of(context).colorScheme;
-    if (_isLoading) {
-      return SliverFillRemaining(
-          child: Center(child: CircularProgressIndicator()));
-    }
-
-    final listData = _filteredLogBooks;
+    final listData = provider.filteredLogBooks;
 
     if (listData.isEmpty) {
       return SliverFillRemaining(
@@ -519,14 +445,71 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
           child: LogBookCard(
             log: listData[index],
             onEdit: () => _showLogBookForm(context, listData[index]),
-            onDelete: () => _confirmDeleteLog(context, index),
+            onDelete: () => _confirmDeleteLog(context, listData[index]),
           ),
         );
       }, childCount: listData.length),
     );
   }
+
+  void _showExportOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Export Data", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                title: const Text("Export Logbook (PDF)"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _handleExport('logbook', 'pdf');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.table_chart, color: Colors.green),
+                title: const Text("Export Logbook (CSV)"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _handleExport('logbook', 'csv');
+                },
+              ),
+               ListTile(
+                leading: const Icon(Icons.history, color: Colors.blue),
+                title: const Text("Export Activity Log (CSV)"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _handleExport('activity', 'csv');
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _handleExport(String type, String format) async {
+    final provider = Provider.of<LogbookProvider>(context, listen: false);
+    try {
+      GlobalSnackBar.show("Mengunduh export...", isInfo: true);
+      
+      await provider.exportData(type: type, format: format);
+      
+      GlobalSnackBar.show("Download berhasil! Membuka file...", isSuccess: true);
+    } catch (e) {
+       GlobalSnackBar.show("Gagal export: $e", isError: true);
+    }
+  }
 }
 
+
+// ... _StickyTabDelegate and _TabButton remain unchanged ...
 class _StickyTabDelegate extends SliverPersistentHeaderDelegate {
   final int selectedIndex;
   final Function(int) onTabSelected;

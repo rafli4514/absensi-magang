@@ -29,12 +29,13 @@ class AttendanceCard extends StatelessWidget {
     // SYSTEM HOOKS (Otomatis deteksi mode)
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final colors = theme.extension<AppColors>()!;
     final isLight = theme.brightness == Brightness.light;
 
     final isOnLeave = leaveStatus != null && leaveStatus!.isNotEmpty;
     final isSakit = leaveStatus?.toUpperCase() == 'SAKIT';
 
-    final statusColor = isSakit ? AppThemes.infoColor : AppThemes.warningColor;
+    final statusColor = isSakit ? colors.info : colors.warning;
     final statusIcon = isSakit
         ? Icons.medical_services_outlined
         : Icons.assignment_ind_outlined;
@@ -59,7 +60,7 @@ class AttendanceCard extends StatelessWidget {
         boxShadow: isLight
             ? [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: colors.shadow,
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -141,16 +142,16 @@ class AttendanceCard extends StatelessWidget {
                           : 'Plg Jam $workEndTime'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: canClockOut
-                            ? AppThemes.warningColor
+                            ? colors.warning
                             : colorScheme.surfaceContainerHigh,
                         foregroundColor: canClockOut
-                            ? Colors.white
+                            ? colorScheme.onPrimary
                             : colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
                 if (!showClockIn && !showClockOut)
-                  Expanded(child: _buildDoneState(colorScheme)),
+                  Expanded(child: _buildDoneState(colorScheme, colors)),
               ],
             ),
 
@@ -174,19 +175,19 @@ class AttendanceCard extends StatelessWidget {
     );
   }
 
-  Widget _buildDoneState(ColorScheme colorScheme) {
+  Widget _buildDoneState(ColorScheme colorScheme, AppColors colors) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: AppThemes.successColor.withOpacity(0.1),
+        color: colors.success.withOpacity(0.1),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppThemes.successColor),
+        border: Border.all(color: colors.success),
       ),
-      child: const Center(
+      child: Center(
         child: Text(
           'Absensi Hari Ini Selesai',
           style: TextStyle(
-            color: AppThemes.successColor,
+            color: colors.success,
             fontWeight: FontWeight.bold,
           ),
         ),

@@ -22,4 +22,4 @@ router.post('/', createLogbook); // Peserta magang can create their own logbook
 router.put('/:id', updateLogbook); // Peserta magang can update their own logbook
 router.delete('/:id', deleteLogbook); // Peserta magang can delete their own logbook
 
-module.exports = router;
+export default router;

@@ -9,6 +9,7 @@ import 'navigation/route_names.dart';
 import 'providers/attendance_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/onboard_provider.dart';
+import 'providers/logbook_provider.dart';
 import 'providers/theme_provider.dart';
 // [PENTING] Import Service & Utils
 import 'services/app_config_service.dart'; // <--- JANGAN LUPA INI
@@ -46,6 +47,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => OnboardProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),
+        ChangeNotifierProvider(create: (_) => LogbookProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {

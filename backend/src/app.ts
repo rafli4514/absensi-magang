@@ -9,7 +9,7 @@ dotenv.config();
 
 // Import local modules
 import { prisma } from './lib/prisma';
-const routes = require('./routes');
+import routes from './routes';
 import { corsMiddleware } from './middleware/cors';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -27,7 +27,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "http://localhost:3000", "http://localhost:3000/uploads/"],
+      imgSrc: ["'self'", "data:", "http://localhost:3000", "http://10.64.75.71:3000", "blob:"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
     },
@@ -47,7 +47,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static files
-const uploadsPath = path.join(__dirname, 'uploads');
+const uploadsPath = path.join(process.cwd(), 'uploads');
 const fs = require('fs');
 if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
@@ -59,12 +59,13 @@ app.use('/uploads', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  
+  res.setHeader('Access-Control-Allow-Private-Network', 'true');
+
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
-  
+
   next();
 });
 

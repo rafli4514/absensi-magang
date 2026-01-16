@@ -23,4 +23,4 @@ router.post('/', createAbsensi);
 router.put('/:id', requireAdmin, updateAbsensi);
 router.delete('/:id', requireAdmin, deleteAbsensi);
 
-module.exports = router
+export default router;

@@ -19,6 +19,12 @@ model User {
   
   // Relasi dengan PesertaMagang
   pesertaMagang PesertaMagang?
+  
+  // Relasi dengan Pembimbing
+  pembimbing    Pembimbing?
+
+  // Relasi dengan ActivityLog
+  activityLogs  ActivityLog[]
 
   @@map("users")
 }
@@ -49,7 +55,30 @@ model PesertaMagang {
   pengajuanIzin  PengajuanIzin[]
   logbook        Logbook[]
 
+  // Relasi dengan Pembimbing
+  pembimbingId   String?
+  pembimbing     Pembimbing?     @relation(fields: [pembimbingId], references: [id])
+
   @@map("peserta_magang")
+}
+
+model Pembimbing {
+  id        String   @id @default(cuid())
+  nip       String?  @unique // Optional if not all mentors have NIP immediately, but implementation plan said 'identifier unik tambahan'
+  nama      String
+  bidang    String
+  kuota     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relasi dengan User (Login info)
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Relasi dengan Peserta
+  peserta   PesertaMagang[]
+
+  @@map("pembimbing")
 }
 
 model Absensi {
@@ -99,6 +128,7 @@ model Logbook {
   durasi          String?
   type            ActivityType?    @default(OTHER)
   status          ActivityStatus?  @default(PENDING)
+  fotoKegiatan    String?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   pesertaMagang   PesertaMagang    @relation(fields: [pesertaMagangId], references: [id], onDelete: Cascade)
@@ -168,4 +198,23 @@ enum ActivityStatus {
   IN_PROGRESS
   PENDING
   CANCELLED
+}
+
+// [NEW] ActivityLog for Event-Driven Timeline
+model ActivityLog {
+  id          String      @id @default(cuid())
+  userId      String      // Actor (Peserta/Pembimbing)
+  action      String      // Enum-like: "LOGIN", "LOGBOOK_CREATE", "LOGBOOK_UPDATE", "ABSENSI_IN", "IZIN_REQ"
+  entityType  String      // "LOGBOOK", "ABSENSI", "IZIN"
+  entityId    String?     // ID of the related record
+  description String      // Human readable summary
+  metadata    Json?       // Snapshot/Diff data
+  createdAt   DateTime    @default(now())
+
+  // Relation
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([createdAt])
+  @@map("activity_logs")
 }

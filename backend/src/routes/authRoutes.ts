@@ -41,4 +41,4 @@ router.post('/upload-avatar', (req, res, next) => {
 }, uploadAvatar);
 router.delete('/avatar', removeAvatar);
 
-module.exports = router;
+export default router;

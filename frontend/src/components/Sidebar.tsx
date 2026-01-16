@@ -12,7 +12,8 @@ import {
   QrCode,
   Server,
   LayoutDashboard,
-  ClipboardList // Icon baru yang lebih representatif untuk Manajemen
+  ClipboardList,
+  Activity // Icon baru
 } from "lucide-react";
 import Logo from "../assets/64eb562e223ee070362018.png";
 import Logo2 from "../assets/pln-logo-png_seeklogo-355620.png";
@@ -40,7 +41,8 @@ const navigation: NavItem[] = [
   // Unified Menu
   { name: "Manajemen Kehadiran", href: "/kehadiran", icon: ClipboardList, requiredRole: null },
   { name: "Laporan & Rekap", href: "/laporan", icon: Users, requiredRole: null },
-  
+  { name: "Activity Log", href: "/activity-log", icon: Activity, requiredRole: null },
+
   // Admin Only
   { name: "Data Pengguna", href: "/manage-users", icon: Users, requiredRole: "ADMIN" },
   { name: "QR Code Check-In", href: "/barcode", icon: QrCode, requiredRole: "ADMIN" },

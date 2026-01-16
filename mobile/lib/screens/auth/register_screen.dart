@@ -22,7 +22,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Controllers untuk Data Akun & Pribadi
   final _namaController = TextEditingController();
   final _usernameController = TextEditingController();
-  final _emailController = TextEditingController();
   final _nomorHpController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -53,11 +52,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _isLoading = false;
 
+  // State Mentor
+  List<dynamic> _mentors = [];
+  String? _selectedPembimbingId;
+  bool _isLoadingMentors = false;
+
+  Future<void> _fetchMentors(String divisi) async {
+    setState(() {
+      _isLoadingMentors = true;
+      _mentors = [];
+      _selectedPembimbingId = null;
+      _mentorController.clear();
+    });
+
+    try {
+       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+       final mentors = await authProvider.fetchMentors(divisi);
+       if(mounted) {
+         setState(() {
+           _mentors = mentors;
+         });
+       }
+    } finally {
+      if(mounted) {
+        setState(() {
+          _isLoadingMentors = false;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     _namaController.dispose();
     _usernameController.dispose();
-    _emailController.dispose();
     _nomorHpController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -71,6 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   // --- LOGIC TANGGAL ---
   Future<void> _selectStartDate() async {
+    final colorScheme = Theme.of(context).colorScheme;
     DateTime initialDate = DateTime.now();
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -81,8 +110,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
-              primary: AppThemes.primaryColor,
-              onPrimary: Colors.white,
+              primary: colorScheme.primary,
+              onPrimary: colorScheme.onPrimary,
               onSurface: Theme.of(context).colorScheme.onSurface,
             ),
           ),
@@ -158,6 +187,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         tanggalMulai: _tanggalMulaiController.text.trim(),
         tanggalSelesai: _tanggalSelesaiController.text.trim(),
         namaMentor: _mentorController.text.trim(),
+        pembimbingId: _selectedPembimbingId,
         role: 'PESERTA_MAGANG',
       );
 
@@ -215,15 +245,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   hint: 'Sesuai KTP/KTM',
                   icon: Icons.person_rounded,
                   validator: Validators.validateName,
-                ),
-                const SizedBox(height: 16),
-
-                CustomTextField(
-                  controller: _emailController,
-                  label: 'Email',
-                  hint: 'email@example.com',
-                  icon: Icons.email_rounded,
-                  keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
 
@@ -288,9 +309,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     filled: true,
                     fillColor: colorScheme.surfaceContainer,
-                    prefixIcon: const Icon(
+                    prefixIcon: Icon(
                       Icons.work_rounded,
-                      color: AppThemes.primaryColor,
+                      color: colorScheme.primary,
                       size: 18,
                     ),
                     border: OutlineInputBorder(
@@ -329,6 +350,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     setState(() {
                       _selectedDivisi = newValue;
                     });
+                    if (newValue != null) {
+                      _fetchMentors(newValue);
+                    }
                   },
                   validator: (val) => val == null ? 'Wajib dipilih' : null,
                 ),
@@ -336,12 +360,101 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 const SizedBox(height: 16),
 
-                CustomTextField(
-                  controller: _mentorController,
-                  label: 'Nama Mentor (Opsional)',
-                  hint: 'Nama Pembimbing Lapangan',
-                  icon: Icons.supervisor_account_rounded,
-                ),
+                const SizedBox(height: 16),
+
+                // --- DROPDOWN MENTOR ---
+                  // --- DROPDOWN MENTOR ---
+                  Text(
+                    'Pilih Mentor (Opsional)',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _selectedPembimbingId,
+                    isExpanded: true,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w500,
+                      fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+                    ),
+                    decoration: InputDecoration(
+                      // Logic Hint Text: Kalo Divisi belum pilih -> "Pilih Divisi Dulu", Kalo Loading -> "Memuat...", Else -> "Pilih Mentor"
+                      hintText: _selectedDivisi == null
+                          ? 'Pilih Divisi Terlebih Dahulu'
+                          : (_isLoadingMentors
+                              ? 'Memuat mentor...'
+                              : 'Pilih Mentor'),
+                      hintStyle: TextStyle(
+                        fontSize: 13,
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                      ),
+                      filled: true,
+                      // Logic Color: Kalo disabled (Divisi null) -> Warnanya lebih gelap/abu
+                      fillColor: _selectedDivisi == null
+                          ? colorScheme.surfaceContainerHighest.withOpacity(0.3)
+                          : colorScheme.surfaceContainer,
+                      prefixIcon: Icon(
+                        Icons.supervisor_account_rounded,
+                        // Logic Icon Color: Kalo disabled -> Abu, Else -> Primary
+                        color: _selectedDivisi == null
+                            ? colorScheme.onSurfaceVariant.withOpacity(0.4)
+                            : colorScheme.primary,
+                        size: 18,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(
+                          color: colorScheme.outline.withOpacity(0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(
+                          color: colorScheme.outline.withOpacity(0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                    ),
+                    dropdownColor: colorScheme.surfaceContainer,
+                    // Logic Items: Kalo disabled -> null items. Kalo enabled -> list mentors.
+                    // Note: onChanged: null disables the dropdown.
+                    items: _selectedDivisi == null
+                        ? [] // atau null, tapi empty list aman
+                        : _mentors.map((mentor) {
+                            return DropdownMenuItem<String>(
+                              value: mentor['id'],
+                              child: Text(
+                                "${mentor['nama']}",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: colorScheme.onSurface,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                    // Logic onChanged: NULL jika Divisi belum dipilih atau sedang loading -> Bikin Disabled
+                    onChanged: (_selectedDivisi == null || _isLoadingMentors)
+                        ? null
+                        : (String? newValue) {
+                            setState(() {
+                              _selectedPembimbingId = newValue;
+                               final selected = _mentors.firstWhere((m) => m['id'] == newValue, orElse: () => {});
+                               if(selected.isNotEmpty) {
+                                 _mentorController.text = selected['nama'];
+                               }
+                            });
+                          },
+                  ),
                 const SizedBox(height: 16),
 
                 // --- PILIH TANGGAL ---
@@ -396,11 +509,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           onSelected: (selected) {
                             if (selected) _updateDuration(d);
                           },
-                          selectedColor: AppThemes.primaryColor,
+                          selectedColor: colorScheme.primary,
                           backgroundColor: colorScheme.surfaceContainerHigh,
                           labelStyle: TextStyle(
                             color: isSelected
-                                ? Colors.white
+                                ? colorScheme.onPrimary
                                 : colorScheme.onSurface,
                             fontSize: 12,
                           ),
@@ -459,14 +572,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       : ElevatedButton(
                           onPressed: _handleRegister,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppThemes.primaryColor,
-                            foregroundColor: Colors.white,
+                            backgroundColor: colorScheme.primary,
+                            foregroundColor: colorScheme.onPrimary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                             elevation: 3,
                             shadowColor:
-                                AppThemes.primaryColor.withOpacity(0.4),
+                                colorScheme.primary.withOpacity(0.4),
                           ),
                           child: const Text(
                             'Daftar Sekarang',
@@ -490,10 +603,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
-                      child: const Text(
+                      child: Text(
                         'Masuk',
                         style: TextStyle(
-                          color: AppThemes.primaryColor,
+                          color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -509,6 +622,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _buildSectionTitle(String title) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -516,17 +630,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: AppThemes.primaryColor,
+              color: colorScheme.primary,
             ),
           ),
           Container(
             margin: const EdgeInsets.only(top: 4),
             width: 30,
             height: 2,
-            color: AppThemes.primaryColor.withOpacity(0.5),
+            color: colorScheme.primary.withOpacity(0.5),
           ),
         ],
       ),

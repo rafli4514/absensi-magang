@@ -239,6 +239,7 @@ class AuthProvider with ChangeNotifier {
     String? tanggalMulai,
     String? tanggalSelesai,
     String? namaMentor,
+    String? avatar,
   }) async {
     _isLoading = true;
     _error = null;
@@ -255,6 +256,7 @@ class AuthProvider with ChangeNotifier {
         tanggalMulai: tanggalMulai,
         tanggalSelesai: tanggalSelesai,
         namaMentor: namaMentor,
+        avatar: avatar,
       );
 
       if (response.success) {
@@ -344,6 +346,18 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<List<dynamic>> fetchMentors(String bidang) async {
+    try {
+      final response = await AuthService.getPembimbingByBidang(bidang);
+      if (response.success && response.data != null) {
+        return response.data!;
+      }
+    } catch (e) {
+      if (kDebugMode) print('Error fetching mentors: $e');
+    }
+    return [];
+  }
+
   Future<bool> register(
     String username,
     String password, {
@@ -356,6 +370,7 @@ class AuthProvider with ChangeNotifier {
     String? tanggalSelesai,
     String? role,
     String? namaMentor,
+    String? pembimbingId,
   }) async {
     _isLoading = true;
     _error = null;
@@ -383,6 +398,7 @@ class AuthProvider with ChangeNotifier {
           tanggalSelesai: tanggalSelesai,
           instansi: instansi,
           namaMentor: namaMentor,
+          pembimbingId: pembimbingId,
         );
       } else {
         response = await AuthService.register(

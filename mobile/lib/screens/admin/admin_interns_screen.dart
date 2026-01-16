@@ -69,18 +69,21 @@ class _AdminInternsScreenState extends State<AdminInternsScreen> {
   void _confirmDelete(String id, String name) {
     showDialog(
       context: context,
-      builder: (context) => CustomDialog(
-        title: 'Hapus Peserta',
-        content:
-            'Yakin ingin menghapus $name? Data yang dihapus tidak dapat dikembalikan.',
-        primaryButtonText: 'Hapus',
-        primaryButtonColor: AppThemes.errorColor,
-        onPrimaryButtonPressed: () async {
-          Navigator.pop(context);
-          await _deleteIntern(id);
-        },
-        secondaryButtonText: 'Batal',
-      ),
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return CustomDialog(
+          title: 'Hapus Peserta',
+          content:
+              'Yakin ingin menghapus $name? Data yang dihapus tidak dapat dikembalikan.',
+          primaryButtonText: 'Hapus',
+          primaryButtonColor: colorScheme.error,
+          onPrimaryButtonPressed: () async {
+            Navigator.pop(context);
+            await _deleteIntern(id);
+          },
+          secondaryButtonText: 'Batal',
+        );
+      },
     );
   }
 
@@ -163,11 +166,11 @@ class _AdminInternsScreenState extends State<AdminInternsScreen> {
                               contentPadding: const EdgeInsets.all(12),
                               leading: CircleAvatar(
                                 backgroundColor:
-                                    AppThemes.primaryColor.withOpacity(0.1),
+                                    colorScheme.primary.withOpacity(0.1),
                                 child: Text(
                                   name.isNotEmpty ? name[0].toUpperCase() : '?',
-                                  style: const TextStyle(
-                                    color: AppThemes.primaryColor,
+                                  style: TextStyle(
+                                    color: colorScheme.primary,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -221,8 +224,8 @@ class _AdminInternsScreenState extends State<AdminInternsScreen> {
                                 ],
                               ),
                               trailing: IconButton(
-                                icon: const Icon(Icons.delete_outline_rounded,
-                                    color: AppThemes.errorColor),
+                                icon: Icon(Icons.delete_outline_rounded,
+                                    color: colorScheme.error),
                                 onPressed: () => _confirmDelete(id, name),
                               ),
                               onTap: () {

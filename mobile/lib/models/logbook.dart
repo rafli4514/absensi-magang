@@ -10,6 +10,7 @@ class LogBook {
   final String? durasi; // Durasi (optional)
   final ActivityType? type; // Type activity (untuk menggabungkan dengan Activity)
   final ActivityStatus? status; // Status activity
+  final String? fotoKegiatan; // URL foto kegiatan
   final DateTime createdAt;
   final DateTime updatedAt;
   
@@ -25,6 +26,7 @@ class LogBook {
     this.durasi,
     this.type,
     this.status,
+    this.fotoKegiatan,
     required this.createdAt,
     required this.updatedAt,
     this.pesertaMagang,
@@ -44,6 +46,7 @@ class LogBook {
       status: json['status'] != null
           ? ActivityStatus.fromString(json['status'].toString())
           : null,
+      fotoKegiatan: json['fotoKegiatan']?.toString(),
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
@@ -62,6 +65,7 @@ class LogBook {
     String? durasi,
     ActivityType? type,
     ActivityStatus? status,
+    String? fotoKegiatan,
   }) {
     return LogBook(
       id: this.id,
@@ -72,6 +76,7 @@ class LogBook {
       durasi: durasi ?? this.durasi,
       type: type ?? this.type,
       status: status ?? this.status,
+      fotoKegiatan: fotoKegiatan ?? this.fotoKegiatan,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       pesertaMagang: this.pesertaMagang,

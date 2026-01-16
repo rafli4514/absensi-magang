@@ -26,40 +26,46 @@ export interface ApiResponse<T = any> {
 class AuthService {
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     const response = await api.post<LoginResponse>('/auth/login', credentials);
-    
+
     if (response.data.success && response.data.data) {
       // Store token and user info
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
     }
-    
+
     return response.data;
   }
 
   async loginPesertaMagang(credentials: LoginRequest): Promise<LoginResponse> {
     const response = await api.post<LoginResponse>('/auth/login-peserta', credentials);
-    
+
     if (response.data.success && response.data.data) {
       // Store token and user info
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
     }
-    
+
     return response.data;
   }
 
   async getProfile(): Promise<ApiResponse<User>> {
     const response = await api.get<ApiResponse<User>>('/auth/profile');
+
+    if (response.data.success && response.data.data) {
+      // Automatically refresh local storage to keep data in sync
+      localStorage.setItem('user', JSON.stringify(response.data.data));
+    }
+
     return response.data;
   }
 
   async refreshToken(): Promise<ApiResponse<{ token: string; expiresIn: string }>> {
     const response = await api.post<ApiResponse<{ token: string; expiresIn: string }>>('/auth/refresh-token');
-    
+
     if (response.data.success && response.data.data) {
       localStorage.setItem('token', response.data.data.token);
     }
-    
+
     return response.data;
   }
 

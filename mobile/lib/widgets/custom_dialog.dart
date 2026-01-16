@@ -40,7 +40,7 @@ class CustomDialog extends StatelessWidget {
       content: 'Unduh $fileName?',
       primaryButtonText: 'Unduh',
       secondaryButtonText: 'Batal',
-      primaryButtonColor: AppThemes.primaryColor,
+      primaryButtonColor: null, // Use theme primary
       onPrimaryButtonPressed: onDownload,
       onSecondaryButtonPressed: onCancel,
       icon: Icons.download_rounded,
@@ -57,7 +57,7 @@ class CustomDialog extends StatelessWidget {
       content: description,
       primaryButtonText: 'Tutup',
       onPrimaryButtonPressed: onClose,
-      primaryButtonColor: AppThemes.primaryColor,
+      primaryButtonColor: null, // Use theme primary
       icon: Icons.info_outline_rounded,
       type: DialogType.detail,
     );
@@ -65,8 +65,9 @@ class CustomDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final accentColor = primaryButtonColor ?? AppThemes.primaryColor;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final accentColor = primaryButtonColor ?? colorScheme.primary;
 
     return Dialog(
       backgroundColor: colorScheme.surfaceContainer,
@@ -147,7 +148,7 @@ class CustomDialog extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       backgroundColor: accentColor,
-                      foregroundColor: Colors.white,
+                      foregroundColor: colorScheme.onPrimary,
                     ),
                     child: Text(primaryButtonText ?? 'OK'),
                   ),

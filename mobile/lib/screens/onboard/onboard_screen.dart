@@ -121,10 +121,9 @@ class _OnboardScreenState extends State<OnboardScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: OnboardButton(
-                currentPage: _currentPage,
-                pageCount: _pages.length,
-                onNext: _onNext,
-                onSkip: _onSkip,
+                text: _currentPage == _pages.length - 1 ? 'Mulai Sekarang' : 'Lanjut',
+                onPressed: _onNext,
+                isPrimary: true,
               ),
             ),
             const SizedBox(height: 32),

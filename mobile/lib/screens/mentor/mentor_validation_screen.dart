@@ -55,6 +55,7 @@ class _MentorValidationScreenState extends State<MentorValidationScreen> {
       context: context,
       builder: (context) {
         final colorScheme = Theme.of(context).colorScheme;
+        final colors = Theme.of(context).extension<AppColors>()!;
         return AlertDialog(
           backgroundColor: colorScheme.surfaceContainer,
           title: Text(
@@ -102,8 +103,8 @@ class _MentorValidationScreenState extends State<MentorValidationScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor:
-                    isApprove ? AppThemes.successColor : AppThemes.errorColor,
-                foregroundColor: Colors.white,
+                    isApprove ? colors.success : colorScheme.error,
+                foregroundColor: colorScheme.onPrimary,
               ),
               child: Text(isApprove ? 'Setujui' : 'Tolak'),
             ),
@@ -204,6 +205,7 @@ class _MentorValidationScreenState extends State<MentorValidationScreen> {
   // --- WIDGET CARD (UPDATE ACTION BUTTONS) ---
   Widget _buildValidationCard(Map<String, dynamic> item) {
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = Theme.of(context).extension<AppColors>()!;
     final id = item['id'].toString();
     final name = item['pesertaMagang']?['nama'] ?? 'Peserta';
     final tipeRaw = item['tipe'] ?? 'LAINNYA';
@@ -245,9 +247,9 @@ class _MentorValidationScreenState extends State<MentorValidationScreen> {
           Row(
             children: [
               CircleAvatar(
-                backgroundColor: AppThemes.primaryColor.withOpacity(0.1),
+                backgroundColor: colorScheme.primary.withOpacity(0.1),
                 child: Text(name[0],
-                    style: TextStyle(color: AppThemes.primaryColor)),
+                    style: TextStyle(color: colorScheme.primary)),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -299,7 +301,7 @@ class _MentorValidationScreenState extends State<MentorValidationScreen> {
                     style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: AppThemes.primaryColor)),
+                        color: colorScheme.primary)),
               ],
             ),
           ),
@@ -314,8 +316,8 @@ class _MentorValidationScreenState extends State<MentorValidationScreen> {
                   icon: const Icon(Icons.close_rounded, size: 18),
                   label: const Text('Tolak'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppThemes.errorColor,
-                    side: const BorderSide(color: AppThemes.errorColor),
+                    foregroundColor: colorScheme.error,
+                    side: BorderSide(color: colorScheme.error),
                   ),
                 ),
               ),
@@ -326,8 +328,8 @@ class _MentorValidationScreenState extends State<MentorValidationScreen> {
                   icon: const Icon(Icons.check_rounded, size: 18),
                   label: const Text('Setujui'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppThemes.successColor,
-                    foregroundColor: Colors.white,
+                    backgroundColor: colors.success,
+                    foregroundColor: colorScheme.onPrimary,
                   ),
                 ),
               ),

@@ -55,12 +55,14 @@ class UserService {
     String? password,
     String? role,
     bool? isActive,
+    String? avatar,
   }) async {
     final data = <String, dynamic>{};
     if (username != null) data['username'] = username;
     if (password != null) data['password'] = password;
     if (role != null) data['role'] = role;
     if (isActive != null) data['isActive'] = isActive;
+    if (avatar != null) data['avatar'] = avatar;
 
     return await _apiService.put(
       '/users/$id',

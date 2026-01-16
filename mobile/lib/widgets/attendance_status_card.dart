@@ -30,7 +30,9 @@ class AttendanceStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final colors = theme.extension<AppColors>()!;
     final canClockOut = _isClockOutAvailable();
     final clockOutStatus = _getClockOutStatus(isClockedOut, canClockOut);
 
@@ -48,20 +50,18 @@ class AttendanceStatusCard extends StatelessWidget {
               Expanded(
                 child: ModernStatusCard(
                   title: 'Jam Masuk',
-                  time: clockInTime,
+                  value: clockInTime,
                   icon: Icons.login_rounded,
-                  status: isClockedIn ? 'Valid' : 'Belum Absen',
-                  isCompleted: isClockedIn,
+                  color: isClockedIn ? colors.success : colorScheme.primary,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: ModernStatusCard(
                   title: 'Jam Pulang',
-                  time: clockOutTime ?? '--:--',
+                  value: clockOutTime ?? '--:--',
                   icon: Icons.logout_rounded,
-                  status: clockOutStatus,
-                  isCompleted: isClockedOut,
+                  color: isClockedOut ? colors.success : colorScheme.error,
                 ),
               ),
             ],
@@ -81,7 +81,7 @@ class AttendanceStatusCard extends StatelessWidget {
                   flex: isClockedIn ? 1 : 0,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: AppThemes.successColor,
+                      color: colors.success,
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(3),
                         bottomLeft: Radius.circular(3),
@@ -92,8 +92,8 @@ class AttendanceStatusCard extends StatelessWidget {
                 Expanded(
                   flex: isClockedIn && !isClockedOut ? 1 : 0,
                   child: Container(
-                    decoration: const BoxDecoration(
-                      color: AppThemes.primaryColor,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary,
                     ),
                   ),
                 ),

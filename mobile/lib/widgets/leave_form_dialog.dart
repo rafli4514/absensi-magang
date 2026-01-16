@@ -54,8 +54,8 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
         return Theme(
           data: theme.copyWith(
             colorScheme: theme.colorScheme.copyWith(
-              primary: AppThemes.primaryColor,
-              onPrimary: Colors.white,
+              primary: theme.colorScheme.primary,
+              onPrimary: theme.colorScheme.onPrimary,
             ),
           ),
           child: child!,
@@ -76,6 +76,7 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final colors = theme.extension<AppColors>()!;
     final isDark = theme.brightness == Brightness.dark;
 
     return Dialog(
@@ -123,11 +124,9 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
                         horizontal: 12, vertical: 12),
                     fillColor: isDark
                         ? colorScheme.surfaceContainerHigh
-                        : Colors.white,
+                        : colorScheme.onPrimary,
                     filled: true,
                   ),
-                  icon: const Icon(Icons.arrow_drop_down,
-                      color: AppThemes.primaryColor),
                   items: [
                     _buildDropdownItem(ActivityType.izin, colorScheme),
                     _buildDropdownItem(ActivityType.sakit, colorScheme),
@@ -181,8 +180,8 @@ class _LeaveFormDialogState extends State<LeaveFormDialog> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppThemes.primaryColor,
-                        foregroundColor: Colors.white,
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8)),
                       ),

@@ -298,6 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handleClockOut(BuildContext context) async {
+    final colors = Theme.of(context).extension<AppColors>()!;
     if (!_canClockOut) {
       HapticUtil.error(); // [HAPTIC] Warning (Belum Waktunya)
       GlobalSnackBar.show('Belum waktunya absen pulang (Jadwal: $_workEndTime)',
@@ -315,7 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
         content: 'Apakah Anda yakin ingin melakukan absen pulang?',
         primaryButtonText: 'Ya, Pulang',
         secondaryButtonText: 'Batal',
-        primaryButtonColor: AppThemes.warningColor,
+        primaryButtonColor: colors.warning,
         onPrimaryButtonPressed: () => Navigator.pop(context, true),
         onSecondaryButtonPressed: () => Navigator.pop(context, false),
         icon: Icons.logout_rounded,
@@ -458,6 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.extension<AppColors>()!;
     final colorScheme = theme.colorScheme;
     final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
@@ -471,7 +473,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(
               Icons.notifications_outlined,
               color: !_stopRealtimeCheck
-                  ? AppThemes.successColor
+                  ? colors.success
                   : colorScheme.onSurface,
             ),
             onPressed: () {

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-
 import '../navigation/route_names.dart';
 import '../themes/app_themes.dart';
-import '../utils/navigation_helper.dart';
 
 class MentorBottomNav extends StatelessWidget {
   final String currentRoute;
@@ -11,69 +9,76 @@ class MentorBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.extension<AppColors>()!;
+    final colorScheme = theme.colorScheme;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 30),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: colors.shadow,
+            blurRadius: 8,
+            offset: const Offset(0, -2),
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(context, Icons.dashboard_rounded,
-              Icons.dashboard_outlined, RouteNames.mentorHome, 'Dashboard'),
-          _buildNavItem(
-              context,
-              Icons.fact_check_rounded,
-              Icons.fact_check_outlined,
-              RouteNames.mentorValidation,
-              'Validasi'),
-          _buildNavItem(context, Icons.person_rounded, Icons.person_outline,
-              RouteNames.profile, 'Profil'),
+      child: BottomNavigationBar(
+        currentIndex: _getCurrentIndex(),
+        onTap: (index) => _navigate(context, index),
+        backgroundColor: colorScheme.surfaceContainer,
+        selectedItemColor: colorScheme.primary,
+        unselectedItemColor: colorScheme.onSurfaceVariant,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Beranda',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people),
+            label: 'Validasi',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profil',
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildNavItem(BuildContext context, IconData activeIcon, IconData icon,
-      String route, String label) {
-    final isActive = currentRoute == route;
-    final colorScheme = Theme.of(context).colorScheme;
+  int _getCurrentIndex() {
+    switch (currentRoute) {
+      case RouteNames.mentorHome:
+        return 0;
+      case RouteNames.mentorValidation:
+        return 1;
+      case RouteNames.profile:
+        return 2;
+      default:
+        return 0;
+    }
+  }
 
-    final color =
-        isActive ? AppThemes.primaryColor : colorScheme.onSurfaceVariant;
+  void _navigate(BuildContext context, int index) {
+    String route;
+    switch (index) {
+      case 0:
+        route = RouteNames.mentorHome;
+        break;
+      case 1:
+        route = RouteNames.mentorValidation;
+        break;
+      case 2:
+        route = RouteNames.profile;
+        break;
+      default:
+        return;
+    }
 
-    return GestureDetector(
-      onTap: () {
-        if (!isActive)
-          NavigationHelper.navigateWithoutAnimation(context, route);
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(isActive ? activeIcon : icon, color: color, size: 24),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
+    if (route != currentRoute) {
+      Navigator.pushReplacementNamed(context, route);
+    }
   }
 }

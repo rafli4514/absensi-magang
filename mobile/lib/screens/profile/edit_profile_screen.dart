@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -13,6 +14,7 @@ import '../../utils/validators.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../services/upload_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -41,6 +43,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   int _selectedDuration = 3;
   final List<int> _durations = [1, 2, 3, 4, 5, 6, 12];
 
+  String? _currentAvatarUrl; // Added state variable
+
   @override
   void initState() {
     super.initState();
@@ -49,19 +53,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _usernameController.dispose();
-    _idPesertaMagangController.dispose();
-    _divisiController.dispose();
-    _instansiController.dispose();
-    _nomorHpController.dispose();
-    _tanggalMulaiController.dispose();
-    _tanggalSelesaiController.dispose();
-    _mentorController.dispose();
-    super.dispose();
-  }
+  // ... dispose ...
 
   void _loadUserData() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -78,6 +70,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _tanggalMulaiController.text = user.tanggalMulai ?? '';
         _tanggalSelesaiController.text = user.tanggalSelesai ?? '';
         _mentorController.text = user.namaMentor ?? '';
+        _currentAvatarUrl = user.avatar; // Load existing avatar URL
 
         if (user.tanggalMulai != null && user.tanggalSelesai != null) {
           try {
@@ -147,10 +140,113 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+
+  
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Ganti Foto Profil',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildSourceOption(
+                  icon: Icons.camera_alt,
+                  label: 'Kamera',
+                  onTap: () => _pickImage(ImageSource.camera),
+                ),
+                _buildSourceOption(
+                  icon: Icons.photo_library,
+                  label: 'Galeri',
+                  onTap: () => _pickImage(ImageSource.gallery),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSourceOption({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: () {
+        Navigator.pop(context);
+        onTap();
+      },
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: colorScheme.primary.withOpacity(0.1),
+            child: Icon(icon, color: colorScheme.primary, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final ImagePicker picker = ImagePicker();
+    try {
+      final XFile? image = await picker.pickImage(
+        source: source,
+        imageQuality: 80, // Compress quality
+      );
+      if (image != null) {
+        setState(() {
+          _selectedImage = image;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+      GlobalSnackBar.show('Gagal memilih gambar', isError: true);
+    }
+  }
+
+
   Future<void> _updateProfile() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      String? avatarUrl;
+      // 1. Upload Avatar if selected
+      if (_selectedImage != null) {
+        try {
+          // Pass XFile directly to UploadService
+          final uploadResult = await UploadService.uploadImage(_selectedImage!);
+          if (uploadResult['success'] == true) {
+            avatarUrl = uploadResult['url'];
+          } else {
+             GlobalSnackBar.show('Gagal upload foto: ${uploadResult['message']}', isError: true);
+             setState(() => _isLoading = false);
+             return;
+          }
+        } catch (e) {
+           GlobalSnackBar.show('Error upload: $e', isError: true);
+           setState(() => _isLoading = false);
+           return;
+        }
+      }
 
       final success = await authProvider.updateUserProfile(
         nama: _nameController.text.trim(),
@@ -162,6 +258,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         tanggalMulai: _tanggalMulaiController.text.trim(),
         tanggalSelesai: _tanggalSelesaiController.text.trim(),
         namaMentor: _mentorController.text.trim(),
+        avatar: avatarUrl, // Pass New Avatar URL
       );
 
       setState(() => _isLoading = false);
@@ -185,14 +282,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  void _showImageSourceDialog() {
-    GlobalSnackBar.show(
-      'Fitur ganti foto akan segera tersedia',
-      title: 'Info',
-      isInfo: true,
-    );
-  }
-
   Widget _buildProfilePicture() {
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -202,10 +291,33 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         height: 120,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(color: AppThemes.primaryColor, width: 3),
+          border: Border.all(color: colorScheme.primary, width: 3),
         ),
         child: ClipOval(
-          child: Image.file(File(_selectedImage!.path), fit: BoxFit.cover),
+          child: kIsWeb
+              ? Image.network(_selectedImage!.path, fit: BoxFit.cover) // Web uses Blob URL in path
+              : Image.file(File(_selectedImage!.path), fit: BoxFit.cover), // Mobile/Desktop uses File
+        ),
+      );
+    } else if (_currentAvatarUrl != null && _currentAvatarUrl!.isNotEmpty) {
+      return Container(
+        width: 120,
+        height: 120,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: colorScheme.primary, width: 3),
+        ),
+        child: ClipOval(
+          child: Image.network(
+            _currentAvatarUrl!,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+               return Container(
+                color: colorScheme.surfaceContainerHigh,
+                child: Icon(Icons.person_off_rounded, color: colorScheme.onSurfaceVariant),
+               );
+            },
+          ), 
         ),
       );
     } else {
@@ -216,7 +328,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           shape: BoxShape.circle,
           // FIX: Gunakan colorScheme.surfaceContainerHigh pengganti neutralLight/darkSurface
           color: colorScheme.surfaceContainerHigh,
-          border: Border.all(color: AppThemes.primaryColor, width: 3),
+          border: Border.all(color: colorScheme.primary, width: 3),
         ),
         // FIX: Gunakan colorScheme.onSurfaceVariant pengganti hintColor
         child: Icon(Icons.person_rounded,
@@ -247,7 +359,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             width: 40,
             height: 3,
             // FIX: Gunakan primary color pengganti darkAccentBlue
-            color: AppThemes.primaryColor,
+            color: colorScheme.primary,
           ),
         ],
       ),
@@ -285,14 +397,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: AppThemes.primaryColor,
+                            color: colorScheme.primary,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
+                            border: Border.all(color: colorScheme.onPrimary, width: 2),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.camera_alt_rounded,
                             size: 18,
-                            color: Colors.white,
+                            color: colorScheme.onPrimary,
                           ),
                         ),
                       ),
@@ -396,10 +508,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 if (selected) _updateDuration(d);
                               },
                               // FIX: Gunakan primary color untuk selected color
-                              selectedColor: AppThemes.primaryColor,
+                              selectedColor: colorScheme.primary,
                               labelStyle: TextStyle(
                                 color: _selectedDuration == d
-                                    ? Colors.white
+                                    ? colorScheme.onPrimary
                                     : colorScheme.onSurface,
                               ),
                               // FIX: Gunakan surfaceContainer untuk background
@@ -429,8 +541,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         onPressed: _updateProfile,
                         style: ElevatedButton.styleFrom(
                           // FIX: Gunakan primary color
-                          backgroundColor: AppThemes.primaryColor,
-                          foregroundColor: Colors.white,
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),

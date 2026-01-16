@@ -32,4 +32,4 @@ router.post('/reset', requireAdmin, resetSettings);
 router.get('/export', requireAdmin, exportSettings);
 router.post('/import', requireAdmin, importSettings);
 
-module.exports = router;
+export default router;

@@ -25,6 +25,7 @@ class AppConstants {
   static const String qrEndpoint = '/qr';
   static const String attendanceEndpoint = '/absensi';
   static const String activitiesEndpoint = '/logbook';
+  static const String pembimbingEndpoint = '/pembimbing';
 
   // Splash Screen
   static const int splashDelay = 3000;

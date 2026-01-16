@@ -62,10 +62,16 @@ class AttendanceProvider with ChangeNotifier {
             await StorageService.getString(AppConstants.userDataKey);
         if (userDataStr != null) {
           final userData = jsonDecode(userDataStr);
-          if (userData['pesertaMagang'] != null &&
+          // PRIORITIZE INTERNAL ID (CUID)
+          if (userData['profileId'] != null) {
+             pesertaMagangId = userData['profileId'].toString();
+          } else if (userData['pesertaMagang'] != null &&
               userData['pesertaMagang']['id'] != null) {
             pesertaMagangId = userData['pesertaMagang']['id'].toString();
           } else if (userData['idPesertaMagang'] != null) {
+             // Fallback to NISN? This usually fails with backend, but kept for legacy
+             // Better to just warn or force empty if no proper ID.
+             // But let's assume if profileId is missing, maybe this user is old format.
             pesertaMagangId = userData['idPesertaMagang'].toString();
           }
         }

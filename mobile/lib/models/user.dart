@@ -17,6 +17,8 @@ class User {
   final DateTime? updatedAt;
   final String? token;
 
+  final String? profileId; // PK of Peserta/Pembimbing table
+
   User({
     required this.id,
     required this.username,
@@ -30,11 +32,12 @@ class User {
     this.tanggalMulai,
     this.tanggalSelesai,
     this.avatar,
-    this.namaMentor, // <--- Add to Constructor
+    this.namaMentor,
     this.isActive,
     this.createdAt,
     this.updatedAt,
     this.token,
+    this.profileId,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -42,6 +45,7 @@ class User {
     if (json.isEmpty) return User(id: '', username: '', role: 'user');
 
     final pesertaMagang = json['pesertaMagang'];
+    final pembimbing = json['pembimbing'];
 
     // Helper untuk mengambil nilai aman
     String safeString(dynamic val) => val?.toString() ?? '';
@@ -49,7 +53,12 @@ class User {
     return User(
       id: safeString(json['id']),
       username: safeString(json['username']),
-      nama: json['nama'] ?? json['name'] ?? pesertaMagang?['nama'] ?? 'User',
+      nama: json['nama'] ?? 
+            json['name'] ?? 
+            pesertaMagang?['nama'] ?? 
+            pembimbing?['nama'] ?? // Add Pembimbing Name Check
+            'User',
+
       email: json['email'],
 
       // Handle Role (bisa string, bisa object, huruf besar/kecil)
@@ -59,9 +68,13 @@ class User {
 
       idPesertaMagang: json['idPesertaMagang'] ??
           pesertaMagang?['id_peserta_magang'] ??
-          pesertaMagang?['idPesertaMagang'],
+          pesertaMagang?['idPesertaMagang'] ??
+          pembimbing?['nip'], // Fallback NIP for Mentor?
 
-      divisi: json['divisi'] ?? pesertaMagang?['divisi'],
+      divisi: json['divisi'] ?? 
+              pesertaMagang?['divisi'] ??
+              pembimbing?['bidang'], // Mentor Bidang as Divisi
+
       instansi: json['instansi'] ?? pesertaMagang?['instansi'],
 
       nomorHp:
@@ -85,6 +98,7 @@ class User {
           : null,
 
       token: json['token'],
+      profileId: pesertaMagang?['id'] ?? pembimbing?['id'],
     );
   }
 
@@ -102,10 +116,11 @@ class User {
       if (tanggalMulai != null) 'tanggalMulai': tanggalMulai,
       if (tanggalSelesai != null) 'tanggalSelesai': tanggalSelesai,
       if (avatar != null) 'avatar': avatar,
-      if (namaMentor != null) 'namaMentor': namaMentor, // <--- Add to JSON
+      if (namaMentor != null) 'namaMentor': namaMentor,
       if (isActive != null) 'isActive': isActive,
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+      if (profileId != null) 'profileId': profileId,
     };
   }
 

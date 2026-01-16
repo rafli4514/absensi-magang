@@ -17,13 +17,16 @@ class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   void _showLogoutDialog(BuildContext context, AuthProvider authProvider) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
     showDialog(
       context: context,
       builder: (context) => CustomDialog(
         title: 'Keluar',
         content: 'Apakah Anda yakin ingin keluar dari aplikasi?',
         primaryButtonText: 'Keluar',
-        primaryButtonColor: AppThemes.errorColor,
+        primaryButtonColor: colorScheme.error,
         onPrimaryButtonPressed: () async {
           await authProvider.logout();
           if (context.mounted) {
@@ -147,7 +150,7 @@ class ProfileScreen extends StatelessWidget {
                           );
                         },
                         // FIX: Gunakan primaryColor
-                        activeColor: AppThemes.primaryColor,
+                        activeColor: colorScheme.primary,
                       ),
                       isDarkMode: isDarkMode,
                     ),
@@ -175,8 +178,8 @@ class ProfileScreen extends StatelessWidget {
                       trailing: const SizedBox.shrink(),
                       onTap: () => _showLogoutDialog(context, authProvider),
                       isDarkMode: isDarkMode,
-                      iconColor: AppThemes.errorColor,
-                      titleColor: AppThemes.errorColor,
+                      iconColor: colorScheme.error,
+                      titleColor: colorScheme.error,
                     ),
                   ],
                 ),

@@ -121,6 +121,7 @@ class _AdminQrScreenState extends State<AdminQrScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final colors = theme.extension<AppColors>()!;
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -147,7 +148,7 @@ class _AdminQrScreenState extends State<AdminQrScreen> {
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: AppThemes.primaryColor.withOpacity(0.2),
+                          color: colorScheme.primary.withOpacity(0.2),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         )
@@ -159,18 +160,18 @@ class _AdminQrScreenState extends State<AdminQrScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.login_rounded, // Icon Masuk
-                              color: AppThemes.primaryColor,
+                              color: colorScheme.primary,
                               size: 28,
                             ),
                             const SizedBox(width: 8),
-                            const Text(
+                            Text(
                               'SCAN ABSEN MASUK',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w900,
-                                color: AppThemes.primaryColor,
+                                color: colorScheme.primary,
                                 letterSpacing: 1,
                               ),
                             ),
@@ -278,14 +279,14 @@ class _AdminQrScreenState extends State<AdminQrScreen> {
                       : const Icon(Icons.refresh_rounded),
                   label: Text(_isLoading ? 'Memuat...' : 'Perbarui Sekarang'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppThemes.primaryColor,
+                    backgroundColor: colorScheme.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     elevation: 4,
-                    shadowColor: AppThemes.primaryColor.withOpacity(0.4),
+                    shadowColor: colorScheme.primary.withOpacity(0.4),
                   ),
                 ),
               ),

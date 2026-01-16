@@ -1,26 +1,27 @@
 import { type Request, type Response } from "express";
 import { prisma } from "../lib/prisma";
 import {
-sendSuccess,
-sendError,
-sendPaginatedSuccess,
+  sendSuccess,
+  sendError,
+  sendPaginatedSuccess,
 } from "../utils/response";
+import { ActivityService } from "../services/activityService";
 
 export const getAllLogbook = async (req: Request, res: Response) => {
-try {
-const page = parseInt(req.query.page as string) || 1;
-const limit = parseInt(req.query.limit as string) || 10;
-const skip = (page - 1) * limit;
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
 
-const pesertaMagangId = req.query.pesertaMagangId as string;
-const tanggal = req.query.tanggal as string;
-// TAMBAHAN: Parameter Rentang Tanggal
-const startDate = req.query.startDate as string;
-const endDate = req.query.endDate as string;
+    const pesertaMagangId = req.query.pesertaMagangId as string;
+    const tanggal = req.query.tanggal as string;
+    // TAMBAHAN: Parameter Rentang Tanggal
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
 
-const where: any = {};
+    const where: any = {};
 
-if (pesertaMagangId) {
+    if (pesertaMagangId) {
       where.pesertaMagangId = pesertaMagangId;
     }
 
@@ -30,7 +31,6 @@ if (pesertaMagangId) {
     }
 
     // TAMBAHAN: Filter Rentang Tanggal (Mingguan)
-    // Asumsi format tanggal di database adalah String 'YYYY-MM-DD'
     if (startDate && endDate) {
       where.tanggal = {
         gte: startDate, // Lebih besar atau sama dengan
@@ -125,6 +125,17 @@ export const getLogbookById = async (req: Request, res: Response) => {
   }
 };
 
+// Helper to map UI values (Indonesian) to Prisma Enums (English)
+const mapActivityType = (type: string): any => {
+  const t = type.toUpperCase();
+  if (t === 'LAINNYA') return 'OTHER';
+  if (t === 'RAPAT') return 'MEETING';
+  if (t === 'PELATIHAN') return 'TRAINING';
+  if (t === 'PRESENTASI') return 'PRESENTATION';
+  if (t === 'DEADLINE') return 'DEADLINE';
+  return t; // Fallback to itself (e.g. if already 'OTHER' or 'MEETING')
+};
+
 export const createLogbook = async (req: Request, res: Response) => {
   try {
     const { pesertaMagangId, tanggal, kegiatan, deskripsi, durasi, type, status } = req.body;
@@ -170,7 +181,7 @@ export const createLogbook = async (req: Request, res: Response) => {
         kegiatan,
         deskripsi,
         durasi: durasi || null,
-        type: type ? (type.toUpperCase() as any) : null,
+        type: type ? mapActivityType(type) : null,
         status: status ? (status.toUpperCase().replace(/-/g, '_') as any) : null,
       },
       include: {
@@ -180,10 +191,21 @@ export const createLogbook = async (req: Request, res: Response) => {
             nama: true,
             username: true,
             divisi: true,
+            instansi: true,
+            avatar: true,
           },
         },
       },
     });
+
+    // [New] Log Activity
+    await ActivityService.log(
+      req.user?.id || pesertaMagang.userId || 'system',
+      'LOGBOOK_CREATE',
+      'LOGBOOK',
+      logbook.id,
+      `Membuat Logbook: ${kegiatan}`
+    );
 
     sendSuccess(res, "Logbook created successfully", logbook, 201);
   } catch (error) {
@@ -228,8 +250,9 @@ export const updateLogbook = async (req: Request, res: Response) => {
     if (kegiatan) updateData.kegiatan = kegiatan;
     if (deskripsi) updateData.deskripsi = deskripsi;
     if (durasi !== undefined) updateData.durasi = durasi || null;
-    if (type !== undefined) updateData.type = type ? (type.toUpperCase() as any) : null;
+    if (type !== undefined) updateData.type = type ? mapActivityType(type) : null;
     if (status !== undefined) updateData.status = status ? (status.toUpperCase().replace(/-/g, '_') as any) : null;
+
 
     const updatedLogbook = await prisma.logbook.update({
       where: { id },
@@ -241,10 +264,21 @@ export const updateLogbook = async (req: Request, res: Response) => {
             nama: true,
             username: true,
             divisi: true,
+            instansi: true,
+            avatar: true,
           },
         },
       },
     });
+
+    // [New] Log Activity
+    await ActivityService.log(
+      req.user?.id || 'system',
+      'LOGBOOK_UPDATE',
+      'LOGBOOK',
+      updatedLogbook.id,
+      `Memperbarui Logbook: ${updatedLogbook.kegiatan}`
+    );
 
     sendSuccess(res, "Logbook updated successfully", updatedLogbook);
   } catch (error) {
@@ -280,6 +314,15 @@ export const deleteLogbook = async (req: Request, res: Response) => {
       where: { id },
     });
 
+    // [New] Log Activity
+    await ActivityService.log(
+      req.user?.id || 'system',
+      'LOGBOOK_DELETE',
+      'LOGBOOK',
+      id,
+      `Menghapus Logbook: ${logbook.kegiatan}`
+    );
+
     sendSuccess(res, "Logbook deleted successfully");
   } catch (error) {
     console.error("Delete logbook error:", error);
@@ -290,7 +333,7 @@ export const deleteLogbook = async (req: Request, res: Response) => {
 export const getStatistics = async (req: Request, res: Response) => {
   try {
     const pesertaMagangId = req.query.pesertaMagangId as string;
-    
+
     const where: any = {};
     if (pesertaMagangId) {
       where.pesertaMagangId = pesertaMagangId;

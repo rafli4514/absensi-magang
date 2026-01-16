@@ -22,4 +22,4 @@ router.put('/:id', requireAdmin, updateUser);
 router.delete('/:id', requireAdmin, deleteUser);
 router.patch('/:id/toggle-status', requireAdmin, toggleUserStatus);
 
-module.exports = router;
+export default router;

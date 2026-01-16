@@ -40,7 +40,7 @@ class LogbookService {
     String? durasi,
     String? type,
     String? status,
-    File? foto,
+    String? fotoKegiatan,
   }) async {
     final Map<String, dynamic> fields = {
       'pesertaMagangId': pesertaMagangId,
@@ -50,27 +50,14 @@ class LogbookService {
       if (durasi != null) 'durasi': durasi,
       if (type != null) 'type': type,
       if (status != null) 'status': status,
+      if (fotoKegiatan != null) 'fotoKegiatan': fotoKegiatan,
     };
 
-    if (foto != null) {
-      final bytes = await foto.readAsBytes();
-      final fileName = foto.path.split('/').last;
-
-      return await _apiService.multipartPost(
-        AppConstants.activitiesEndpoint,
-        fields,
-        bytes,
-        fileName,
-        'foto',
-        fromJson: (data) => LogBook.fromJson(data),
-      );
-    } else {
-      return await _apiService.post(
-        AppConstants.activitiesEndpoint,
-        fields,
-        (data) => LogBook.fromJson(data),
-      );
-    }
+    return await _apiService.post(
+      AppConstants.activitiesEndpoint,
+      fields,
+      (data) => LogBook.fromJson(data),
+    );
   }
 
   static Future<ApiResponse<LogBook>> updateLogbook({
@@ -81,6 +68,7 @@ class LogbookService {
     String? durasi,
     String? type,
     String? status,
+    String? fotoKegiatan,
   }) async {
     final body = <String, dynamic>{};
     if (tanggal != null) body['tanggal'] = tanggal;
@@ -89,6 +77,7 @@ class LogbookService {
     if (durasi != null) body['durasi'] = durasi;
     if (type != null) body['type'] = type;
     if (status != null) body['status'] = status;
+    if (fotoKegiatan != null) body['fotoKegiatan'] = fotoKegiatan;
 
     return await _apiService.put(
       '${AppConstants.activitiesEndpoint}/$id',

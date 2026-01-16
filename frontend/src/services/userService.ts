@@ -5,6 +5,8 @@ export interface CreateUserRequest {
   password: string;
   role: 'ADMIN' | 'PESERTA_MAGANG' | 'PEMBIMBING_MAGANG';
   isActive?: boolean;
+  divisi?: string;
+  avatar?: string;
 }
 
 export interface UpdateUserRequest {
@@ -12,6 +14,8 @@ export interface UpdateUserRequest {
   password?: string;
   role?: 'ADMIN' | 'PESERTA_MAGANG' | 'PEMBIMBING_MAGANG';
   isActive?: boolean;
+  divisi?: string;
+  avatar?: string;
 }
 
 export interface UserFilters {
@@ -26,7 +30,7 @@ const userService = {
   // Get all users with filters
   async getUsers(filters: UserFilters = {}) {
     const params = new URLSearchParams();
-    
+
     if (filters.page) params.append('page', filters.page.toString());
     if (filters.limit) params.append('limit', filters.limit.toString());
     if (filters.role) params.append('role', filters.role);

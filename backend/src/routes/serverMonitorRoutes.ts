@@ -6,4 +6,4 @@ const router = Router();
 router.get('/specs', getServerSpecs);
 router.get('/stats', getServerStats);
 
-export = router;
+export default router;

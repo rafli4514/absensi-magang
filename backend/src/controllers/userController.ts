@@ -29,6 +29,23 @@ export const getAllUsers = async (req: Request, res: Response) => {
           isActive: true,
           createdAt: true,
           updatedAt: true,
+          pesertaMagang: {
+            select: {
+              nama: true,
+              divisi: true,
+              instansi: true,
+              nomorHp: true,
+              avatar: true,
+              id_peserta_magang: true,
+            }
+          },
+          pembimbing: {
+            select: {
+              nama: true,
+              bidang: true,
+              nip: true,
+            }
+          }
         },
         skip,
         take: limit,

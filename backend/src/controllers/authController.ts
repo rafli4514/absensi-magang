@@ -17,6 +17,9 @@ export const login = async (req: Request, res: Response) => {
     // Check if user exists
     const user = await prisma.user.findUnique({
       where: { username },
+      include: {
+        pembimbing: true, // Include pembimbing relation
+      },
     });
 
     if (!user) {
@@ -35,11 +38,17 @@ export const login = async (req: Request, res: Response) => {
     }
 
     // Generate JWT tokens
-    const accessToken = generateToken({
+    const payload: any = {
       id: user.id,
       username: user.username,
       role: user.role,
-    }); // Default 1h
+    };
+
+    if ((user as any).pembimbing) {
+      payload.pembimbingId = (user as any).pembimbing.id;
+    }
+
+    const accessToken = generateToken(payload); // Default 1h
 
     const refreshToken = generateRefreshToken({
       id: user.id,
@@ -61,6 +70,10 @@ export const login = async (req: Request, res: Response) => {
       accessToken,
       refreshToken,
       expiresIn: "1h",
+      pembimbing: (user as any).pembimbing ? { // Add simplified pembimbing info
+        id: (user as any).pembimbing.id,
+        nama: (user as any).pembimbing.nama,
+      } : undefined,
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -140,7 +153,7 @@ export const loginPesertaMagang = async (req: Request, res: Response) => {
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { username, password, role = "peserta_magang" } = req.body;
+    const { username, password, role = "peserta_magang", nama = "", bidang = "", kuota = 0 } = req.body;
 
     if (!username || !password) {
       return sendError(res, "Username and password are required", 400);
@@ -205,6 +218,25 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
+    // If role pembimbing magang, create pembimbing record linked to user
+    let pembimbing = null;
+    if ((user.role as string) === "PEMBIMBING_MAGANG") {
+      pembimbing = await prisma.pembimbing.create({
+        data: {
+          userId: user.id,
+          nama: nama || username,
+          bidang: bidang || "Umum",
+          kuota: typeof kuota === 'string' ? parseInt(kuota) : kuota || 10,
+        },
+        select: {
+          id: true,
+          nama: true,
+          bidang: true,
+          kuota: true,
+        },
+      });
+    }
+
     // Generate JWT tokens
     const accessToken = generateToken({
       id: user.id,
@@ -241,7 +273,8 @@ export const registerPesertaMagang = async (req: Request, res: Response) => {
       nama,
       username,
       password,
-      namaMentor,
+      pembimbingId, // Internal ID
+      namaMentor, // Deprecated but kept for backward compatibility if needed
       id_peserta_magang, // NISN/NIM
       divisi,
       instansi = "Universitas/Instansi Tidak Diketahui",
@@ -337,7 +370,8 @@ export const registerPesertaMagang = async (req: Request, res: Response) => {
           instansi,
           id_instansi: id_instansi || null,
           nomorHp,
-          namaMentor: namaMentor || '',
+          pembimbingId: pembimbingId || null,
+          namaMentor: namaMentor || '', // We can probably try to fetch mentor name if pembimbingId is present, but for now this is fine
           tanggalMulai,
           tanggalSelesai,
           status: upperStatus as any,
@@ -472,6 +506,13 @@ export const getProfile = async (req: Request, res: Response) => {
               orderBy: { createdAt: "desc" },
               take: 3,
             },
+            pembimbing: {
+              select: {
+                id: true,
+                nama: true,
+                bidang: true,
+              },
+            },
           },
         },
       },
@@ -505,6 +546,7 @@ export const updateProfile = async (req: Request, res: Response) => {
       nomorHp,
       tanggalMulai,
       tanggalSelesai,
+      avatar, // Added avatar
     } = req.body;
 
     if (!userId) {
@@ -534,6 +576,7 @@ export const updateProfile = async (req: Request, res: Response) => {
 
     const updateData: any = {};
     if (username) updateData.username = username;
+    if (avatar !== undefined) updateData.avatar = avatar; // Update avatar in User table
 
     // Handle password change
     if (newPassword) {
@@ -597,6 +640,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     if (nomorHp) pesertaUpdate.nomorHp = nomorHp;
     if (tanggalMulai) pesertaUpdate.tanggalMulai = tanggalMulai;
     if (tanggalSelesai) pesertaUpdate.tanggalSelesai = tanggalSelesai;
+    if (avatar !== undefined) pesertaUpdate.avatar = avatar; // Also sync to PesertaMagang
 
     let updatedPeserta = null;
     if (Object.keys(pesertaUpdate).length > 0) {

@@ -214,13 +214,23 @@ class IdentityCard extends StatelessWidget {
                 child: CircleAvatar(
                   radius: 35,
                   backgroundColor: avatarColor.withOpacity(0.15),
-                  child: Text(
-                    getInitials(user?.nama ?? user?.username ?? 'U'),
-                    style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: avatarColor),
-                  ),
+                  backgroundImage: (user?.avatar != null && user!.avatar!.isNotEmpty)
+                      ? NetworkImage(user!.avatar!)
+                      : null,
+                  onBackgroundImageError: (user?.avatar != null && user!.avatar!.isNotEmpty)
+                      ? (exception, stackTrace) {
+                          debugPrint('Error loading avatar: $exception');
+                        }
+                      : null,
+                  child: (user?.avatar != null && user!.avatar!.isNotEmpty) 
+                      ? null 
+                      : Text(
+                          getInitials(user?.nama ?? user?.username ?? 'U'),
+                          style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: avatarColor),
+                        ),
                 ),
               ),
               const SizedBox(width: 20),

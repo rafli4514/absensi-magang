@@ -17,6 +17,7 @@ import PengaturanPage from "./pages/PengaturanPage";
 import ProfilPage from "./pages/ProfilPage";
 import ProfilPesertaMagangPage from "./pages/ProfilPesertaMagangPage";
 import BarcodePage from "./pages/BarcodePage";
+import ActivityLogPage from "./pages/ActivityLogPage";
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
             {/* <Route path="izin" element={<PengajuanIzinPage />} /> */}
 
             <Route path="laporan" element={<LaporanPage />} />
+            <Route path="activity-log" element={<ActivityLogPage />} />
 
             {/* User Management */}
             <Route path="manage-users" element={<UserManagementPage />} />

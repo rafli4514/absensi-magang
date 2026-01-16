@@ -44,4 +44,4 @@ router.post('/:id/upload-avatar', requireAdmin, (req, res, next) => {
 }, uploadAvatar);
 router.delete('/:id/avatar', requireAdmin, removeAvatar);
 
-module.exports = router;
+export default router;

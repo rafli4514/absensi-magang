@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../navigation/route_names.dart';
+import 'add_user_screen.dart';
 import '../../services/user_service.dart';
 import '../../themes/app_themes.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -86,7 +87,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final colors = theme.extension<AppColors>()!;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -158,7 +161,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       // --- FAB ADD USER ---
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _navigateToAddUser,
-        backgroundColor: AppThemes.primaryColor,
+        backgroundColor: colorScheme.primary,
         elevation: 4,
         icon: const Icon(Icons.person_add_rounded, color: Colors.white),
         label: const Text(
@@ -183,18 +186,18 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppThemes.primaryColor
+              ? colorScheme.primary
               : colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
-                ? AppThemes.primaryColor
+                ? colorScheme.primary
                 : colorScheme.outline.withOpacity(0.3),
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppThemes.primaryColor.withOpacity(0.3),
+                    color: colorScheme.primary.withOpacity(0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   )
@@ -205,7 +208,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.white : colorScheme.onSurfaceVariant,
+              color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w600,
               fontSize: 13,
             ),
@@ -215,9 +218,209 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     );
   }
 
+  // Method: Tampilkan Detail User BottomSheet
+  void _showUserDetails(dynamic user) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final colors = Theme.of(context).extension<AppColors>()!;
+        final u = user;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 1. DRAG HANDLE
+              Container(
+                margin: const EdgeInsets.only(top: 8, bottom: 20),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.outline.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // 2. HEADER
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 35,
+                      backgroundColor: colorScheme.primary.withOpacity(0.1),
+                      backgroundImage: (u.avatar != null && u.avatar!.isNotEmpty)
+                          ? NetworkImage(u.avatar!)
+                          : null,
+                      child: (u.avatar == null || u.avatar!.isEmpty)
+                          ? Text(
+                              (u.nama ?? u.username).isNotEmpty
+                                  ? (u.nama ?? u.username)[0].toUpperCase()
+                                  : '?',
+                              style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            u.nama ?? u.username,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                          Text(
+                            u.username,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // 3. Info Detail Grid
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainer,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+                ),
+                child: Column(
+                  children: [
+                    _buildDetailRow('Role', u.displayRole, Icons.badge_rounded),
+                    if (u.divisi != null && u.divisi!.isNotEmpty)
+                      _buildDetailRow('Divisi', u.divisi!, Icons.work_rounded),
+                    if (u.instansi != null && u.instansi!.isNotEmpty)
+                      _buildDetailRow('Instansi', u.instansi!, Icons.school_rounded),
+                    _buildDetailRow(
+                      'Status',
+                      (u.isActive ?? false) ? 'Aktif' : 'Nonaktif',
+                      Icons.traffic_rounded,
+                      valueColor: (u.isActive ?? false)
+                          ? colors.success
+                          : colorScheme.error,
+                    ),
+                    if (u.nomorHp != null && u.nomorHp!.isNotEmpty)
+                      _buildDetailRow('Kontak', u.nomorHp!, Icons.phone_rounded),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // 4. ACTION BUTTONS (Edit & Close)
+              Row(
+                children: [
+                   Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                         Navigator.pop(context); // Close sheet
+                         final result = await Navigator.push(
+                           context,
+                           MaterialPageRoute(
+                             builder: (context) => AddUserScreen(user: u), // Pass user to edit
+                           ),
+                         );
+                         if (result == true) {
+                           _loadUsers(); // Refresh list if updated
+                         }
+                      },
+                      icon: Icon(Icons.edit_rounded, color: colorScheme.onPrimary),
+                      label: const Text('Edit User'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colorScheme.surfaceContainerHigh,
+                        foregroundColor: colorScheme.onSurface,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                         padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text('Tutup'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, IconData icon,
+      {Color? valueColor}) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: colorScheme.onSurfaceVariant),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: valueColor ?? colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Widget: Kartu User Modern
   Widget _buildUserCard(dynamic user) {
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = Theme.of(context).extension<AppColors>()!;
 
     // Extract Data
     final username = user.username ?? 'Unknown';
@@ -229,17 +432,17 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     Color roleColor = colorScheme.onSurfaceVariant;
     IconData roleIcon = Icons.person_outline;
 
-    if (roleRaw == 'ADMIN') {
+    if (user.isAdmin) {
       roleDisplay = 'Administrator';
-      roleColor = AppThemes.errorColor; // Merah
+      roleColor = colorScheme.error; // Merah
       roleIcon = Icons.admin_panel_settings_rounded;
-    } else if (roleRaw == 'PEMBIMBING_MAGANG') {
+    } else if (user.isPembimbing) {
       roleDisplay = 'Pembimbing';
       roleColor = AppThemes.infoColor; // Biru
       roleIcon = Icons.supervisor_account_rounded;
-    } else if (roleRaw == 'PESERTA_MAGANG') {
+    } else if (user.isStudent) {
       roleDisplay = 'Peserta Magang';
-      roleColor = AppThemes.successColor; // Hijau
+      roleColor = colors.success; // Hijau
       roleIcon = Icons.school_rounded;
     }
 
@@ -261,9 +464,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            // TODO: Buka detail user jika diperlukan
-          },
+          onTap: () => _showUserDetails(user), // Call detail here
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -286,7 +487,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        username,
+                        user.nama ?? username, // Use nama if available
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -319,8 +520,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: isActive
-                                  ? AppThemes.successColor.withOpacity(0.1)
-                                  : AppThemes.errorColor.withOpacity(0.1),
+                                  ? colors.success.withOpacity(0.1)
+                                  : colorScheme.error.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -329,8 +530,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                                 color: isActive
-                                    ? AppThemes.successColor
-                                    : AppThemes.errorColor,
+                                    ? colors.success
+                                    : colorScheme.error,
                               ),
                             ),
                           ),

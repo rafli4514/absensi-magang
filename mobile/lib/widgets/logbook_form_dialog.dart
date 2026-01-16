@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -19,7 +20,7 @@ class LogBookFormDialog extends StatefulWidget {
     String? durasi,
     ActivityType? type,
     ActivityStatus? status,
-    File? foto,
+    XFile? foto, // CHANGED: File? -> XFile?
   ) onSave;
 
   const LogBookFormDialog({super.key, this.existingLog, required this.onSave});
@@ -36,7 +37,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
   late DateTime _selectedDate;
   ActivityType? _selectedType;
   ActivityStatus? _selectedStatus;
-  File? _selectedImage;
+  XFile? _selectedImage; // CHANGED: File? -> XFile?
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -74,8 +75,9 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
     try {
       final XFile? pickedFile =
           await _picker.pickImage(source: source, imageQuality: 80);
+      if (!mounted) return; // FIX: Ensure widget is still properly mounted before using setState
       if (pickedFile != null) {
-        setState(() => _selectedImage = File(pickedFile.path));
+        setState(() => _selectedImage = pickedFile); // Store XFile directly
       }
     } catch (e) {
       debugPrint("Error picking image: $e");
@@ -187,10 +189,28 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                 if (_selectedImage != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                        'Foto dipilih: ${_selectedImage!.path.split('/').last}',
-                        style: TextStyle(
-                            fontSize: 12, color: colorScheme.onSurfaceVariant)),
+                    child: Column(
+                      children: [
+                        Text(
+                            'Foto dipilih: ${_selectedImage!.name}', // Use name instead of path split
+                            style: TextStyle(
+                                fontSize: 12, color: colorScheme.onSurfaceVariant)),
+                        const SizedBox(height: 8),
+                         // Conditional Rendering for Web vs Mobile
+                         kIsWeb
+                             ? Image.network(
+                                 _selectedImage!.path,
+                                 height: 150,
+                                 fit: BoxFit.cover,
+                                 errorBuilder: (_, __, ___) => const Text("Gagal memuat preview"),
+                               )
+                             : Image.file(
+                                 File(_selectedImage!.path),
+                                 height: 150,
+                                 fit: BoxFit.cover,
+                               ),
+                      ],
+                    ),
                   ),
                 const SizedBox(height: 24),
                 Row(
@@ -211,7 +231,7 @@ class _LogBookFormDialogState extends State<LogBookFormDialog> {
                             _durasiController.text,
                             _selectedType,
                             _selectedStatus,
-                            _selectedImage,
+                            _selectedImage, // Pass XFile directly
                           );
                         }
                       },

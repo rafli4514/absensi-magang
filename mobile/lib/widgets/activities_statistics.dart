@@ -24,7 +24,9 @@ class ActivitiesStatistics extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.extension<AppColors>()!;
+    final colorScheme = theme.colorScheme;
 
     return Column(
       children: [
@@ -58,10 +60,10 @@ class ActivitiesStatistics extends StatelessWidget {
               const SizedBox(height: 24),
               SizedBox(
                 height: 200,
-                child: _buildAttendancePieChart(colorScheme),
+                child: _buildAttendancePieChart(colorScheme, colors),
               ),
               const SizedBox(height: 16),
-              _buildPieChartLegend(colorScheme),
+              _buildPieChartLegend(colorScheme, colors),
             ],
           ),
         ),
@@ -98,7 +100,7 @@ class ActivitiesStatistics extends StatelessWidget {
               const SizedBox(height: 24),
               SizedBox(
                 height: 200,
-                child: _buildAttendanceLineChart(colorScheme), // Fungsi Baru
+                child: _buildAttendanceLineChart(colorScheme, colors), // Fungsi Baru
               ),
             ],
           ),
@@ -108,7 +110,7 @@ class ActivitiesStatistics extends StatelessWidget {
   }
 
   // --- PIE CHART LOGIC (MINGGUAN) ---
-  Widget _buildAttendancePieChart(ColorScheme colorScheme) {
+  Widget _buildAttendancePieChart(ColorScheme colorScheme, AppColors colors) {
     // Filter data minggu ini
     final weeklyAttendance = attendanceList.where((att) {
       final date = att.timestamp;
@@ -152,63 +154,63 @@ class ActivitiesStatistics extends StatelessWidget {
         sections: [
           if (hadir > 0)
             PieChartSectionData(
-              color: AppThemes.successColor,
+              color: colors.success,
               value: hadir.toDouble(),
               title: '${(hadir / total * 100).round()}%',
               radius: 50,
-              titleStyle: const TextStyle(
+              titleStyle: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white),
+                  color: colorScheme.onPrimary),
             ),
           if (sakit > 0)
             PieChartSectionData(
-              color: AppThemes.infoColor,
+              color: colors.info,
               value: sakit.toDouble(),
               title: '${(sakit / total * 100).round()}%',
               radius: 50,
-              titleStyle: const TextStyle(
+              titleStyle: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white),
+                  color: colorScheme.onPrimary),
             ),
           if (izin > 0)
             PieChartSectionData(
-              color: AppThemes.warningColor,
+              color: colors.warning,
               value: izin.toDouble(),
               title: '${(izin / total * 100).round()}%',
               radius: 50,
-              titleStyle: const TextStyle(
+              titleStyle: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white),
+                  color: colorScheme.onPrimary),
             ),
           if (alpha > 0)
             PieChartSectionData(
-              color: AppThemes.errorColor,
+              color: colorScheme.error,
               value: alpha.toDouble(),
               title: '${(alpha / total * 100).round()}%',
               radius: 50,
-              titleStyle: const TextStyle(
+              titleStyle: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white),
+                  color: colorScheme.onPrimary),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildPieChartLegend(ColorScheme colorScheme) {
+  Widget _buildPieChartLegend(ColorScheme colorScheme, AppColors colors) {
     return Wrap(
       spacing: 16,
       runSpacing: 8,
       alignment: WrapAlignment.center,
       children: [
-        _buildLegendItem('Hadir', AppThemes.successColor, colorScheme),
-        _buildLegendItem('Sakit', AppThemes.infoColor, colorScheme),
-        _buildLegendItem('Izin', AppThemes.warningColor, colorScheme),
-        _buildLegendItem('Alpha', AppThemes.errorColor, colorScheme),
+        _buildLegendItem('Hadir', colors.success, colorScheme),
+        _buildLegendItem('Sakit', colors.info, colorScheme),
+        _buildLegendItem('Izin', colors.warning, colorScheme),
+        _buildLegendItem('Alpha', colorScheme.error, colorScheme),
       ],
     );
   }
@@ -235,7 +237,7 @@ class ActivitiesStatistics extends StatelessWidget {
   }
 
   // --- LINE CHART LOGIC (BULANAN - KEHADIRAN) ---
-  Widget _buildAttendanceLineChart(ColorScheme colorScheme) {
+  Widget _buildAttendanceLineChart(ColorScheme colorScheme, AppColors colors) {
     if (attendanceList.isEmpty) {
       return Center(
         child: Text(
@@ -382,13 +384,13 @@ class ActivitiesStatistics extends StatelessWidget {
           LineChartBarData(
             spots: spots,
             isCurved: true,
-            color: AppThemes.primaryColor,
+            color: colorScheme.primary,
             barWidth: 3,
             isStrokeCapRound: true,
             dotData: FlDotData(show: true),
             belowBarData: BarAreaData(
               show: true,
-              color: AppThemes.primaryColor.withOpacity(0.1),
+              color: colorScheme.primary.withOpacity(0.1),
             ),
           ),
         ],

@@ -1,13 +1,13 @@
 const { Router } = require('express');
 import {
     getAllPengajuanIzin,
-getPengajuanIzinById,
-createPengajuanIzin,
-updatePengajuanIzin,
-deletePengajuanIzin,
-approvePengajuanIzin,
-rejectPengajuanIzin,
-getStatistics,
+    getPengajuanIzinById,
+    createPengajuanIzin,
+    updatePengajuanIzin,
+    deletePengajuanIzin,
+    approvePengajuanIzin,
+    rejectPengajuanIzin,
+    getStatistics,
 } from '../controllers/pengajuanIzinController';
 // FIX: Import requireAdminOrPembimbing
 import { authenticateToken, requireAdmin, requireAdminOrPembimbing } from '../middleware/auth';
@@ -31,4 +31,4 @@ router.delete('/:id', requireAdmin, deletePengajuanIzin);
 router.patch('/:id/approve', requireAdminOrPembimbing, approvePengajuanIzin);
 router.patch('/:id/reject', requireAdminOrPembimbing, rejectPengajuanIzin);
 
-module.exports = router;
+export default router;

@@ -87,7 +87,7 @@ class OnboardWelcomeScreen extends StatelessWidget {
                               Icon(
                                 Icons.rocket_launch,
                                 // FIX: Gunakan primaryColor dari AppThemes atau colorScheme.primary
-                                color: AppThemes.primaryColor,
+                                color: colorScheme.primary,
                                 size: 28,
                               ),
                               const SizedBox(width: 8),
@@ -131,14 +131,14 @@ class OnboardWelcomeScreen extends StatelessWidget {
                                 );
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppThemes.primaryColor,
+                                backgroundColor: colorScheme.primary,
                                 foregroundColor: Colors.white,
                                 elevation: 3,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 shadowColor:
-                                    AppThemes.primaryColor.withOpacity(0.4),
+                                    colorScheme.primary.withOpacity(0.4),
                               ),
                               child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -171,9 +171,9 @@ class OnboardWelcomeScreen extends StatelessWidget {
                               },
                               style: OutlinedButton.styleFrom(
                                 // FIX: Gunakan primary color untuk outline
-                                foregroundColor: AppThemes.primaryColor,
+                                foregroundColor: colorScheme.primary,
                                 side: BorderSide(
-                                  color: AppThemes.primaryColor,
+                                  color: colorScheme.primary,
                                   width: 2,
                                 ),
                                 shape: RoundedRectangleBorder(
@@ -193,7 +193,7 @@ class OnboardWelcomeScreen extends StatelessWidget {
                                       fontWeight: FontWeight.w600,
                                       letterSpacing: 0.3,
                                       // FIX: Gunakan primary color
-                                      color: AppThemes.primaryColor,
+                                      color: colorScheme.primary,
                                     ),
                                   ),
                                 ],
@@ -208,10 +208,10 @@ class OnboardWelcomeScreen extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               // FIX: Gunakan primary color dengan opacity
-                              color: AppThemes.primaryColor.withOpacity(0.1),
+                              color: colorScheme.primary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: AppThemes.primaryColor.withOpacity(0.3),
+                                color: colorScheme.primary.withOpacity(0.3),
                                 width: 1,
                               ),
                             ),
@@ -221,7 +221,7 @@ class OnboardWelcomeScreen extends StatelessWidget {
                                 Icon(
                                   Icons.people,
                                   // FIX: Gunakan primary color
-                                  color: AppThemes.primaryColor,
+                                  color: colorScheme.primary,
                                   size: 16,
                                 ),
                                 const SizedBox(width: 8),

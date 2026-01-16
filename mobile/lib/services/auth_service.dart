@@ -57,6 +57,17 @@ class AuthService {
     );
   }
 
+  // Fetch Mentors by Bidang
+  static Future<ApiResponse<List<dynamic>>> getPembimbingByBidang(String bidang) async {
+    return await _apiService.get(
+      '${AppConstants.pembimbingEndpoint}?bidang=$bidang',
+      (data) {
+        if (data is List) return data;
+        return [];
+      },
+    );
+  }
+
   // Unified Register Method
   static Future<ApiResponse<LoginResponse>> registerPesertaMagang({
     required String nama,
@@ -68,6 +79,7 @@ class AuthService {
     required String tanggalMulai,
     required String tanggalSelesai,
     String? namaMentor,
+    String? pembimbingId,
     String? instansi,
     String? idInstansi,
     String? status,
@@ -85,6 +97,7 @@ class AuthService {
       if (idInstansi != null) 'id_instansi': idInstansi,
       if (status != null) 'status': status,
       if (namaMentor != null) 'namaMentor': namaMentor,
+      if (pembimbingId != null) 'pembimbingId': pembimbingId,
     };
 
     return await _apiService.post(
@@ -104,6 +117,7 @@ class AuthService {
             'tanggalSelesai': data['pesertaMagang']['tanggalSelesai'],
             'avatar': data['pesertaMagang']['avatar'],
             'namaMentor': data['pesertaMagang']['namaMentor'],
+            'pembimbingId': data['pesertaMagang']['pembimbingId'],
           },
           if (!(data['user'] ?? {}).containsKey('role'))
             'role': 'PESERTA_MAGANG',
@@ -166,6 +180,7 @@ class AuthService {
     String? tanggalMulai,
     String? tanggalSelesai,
     String? namaMentor,
+    String? avatar,
   }) async {
     final body = <String, dynamic>{};
     if (username != null) body['username'] = username;
@@ -177,6 +192,7 @@ class AuthService {
     if (namaMentor != null) body['namaMentor'] = namaMentor;
     if (tanggalMulai != null) body['tanggalMulai'] = tanggalMulai;
     if (tanggalSelesai != null) body['tanggalSelesai'] = tanggalSelesai;
+    if (avatar != null) body['avatar'] = avatar;
 
     if (newPassword != null) {
       body['newPassword'] = newPassword;

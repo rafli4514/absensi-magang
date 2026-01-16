@@ -17,7 +17,7 @@ class AdminHomeScreen extends StatelessWidget {
         title: 'Keluar',
         content: 'Apakah Anda yakin ingin keluar?',
         primaryButtonText: 'Keluar',
-        primaryButtonColor: AppThemes.errorColor,
+        primaryButtonColor: Theme.of(context).colorScheme.error,
         onPrimaryButtonPressed: () async {
           await authProvider.logout();
           if (context.mounted) {
@@ -42,7 +42,7 @@ class AdminHomeScreen extends StatelessWidget {
         showBackButton: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout_rounded, color: AppThemes.errorColor),
+            icon: Icon(Icons.logout_rounded, color: colorScheme.error),
             onPressed: () => _handleLogout(context, authProvider),
           ),
         ],
@@ -57,13 +57,13 @@ class AdminHomeScreen extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: AppThemes.primaryColor.withOpacity(0.1),
+                  backgroundColor: colorScheme.primary.withOpacity(0.1),
                   child: Text(
                     (user?.nama ?? 'A')[0].toUpperCase(),
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: AppThemes.primaryColor),
+                        color: colorScheme.primary),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -150,7 +150,7 @@ class AdminHomeScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 40, color: AppThemes.primaryColor),
+            Icon(icon, size: 40, color: colorScheme.primary),
             const SizedBox(height: 12),
             Text(title,
                 textAlign: TextAlign.center,

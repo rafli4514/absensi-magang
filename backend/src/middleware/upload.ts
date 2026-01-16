@@ -1,42 +1,43 @@
-import multer = require('multer');
-import path = require('path');
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
-// Storage configuration
+// Ensure uploads directory exists
+const uploadDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Configure Storage
 const storage = multer.diskStorage({
-  destination: (req: any, file: any, cb: any) => {
-    const uploadPath = path.join(__dirname, '..', 'uploads');
-    console.log('Upload destination:', uploadPath);
-    cb(null, uploadPath);
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
   },
-  filename: (req: any, file: any, cb: any) => {
-    // Generate unique filename
+  filename: (req, file, cb) => {
+    // Generate unique filename: timestamp-random.ext
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    const ext = path.extname(file.originalname);
+    cb(null, 'image-' + uniqueSuffix + ext);
   }
 });
 
-// File filter
-const fileFilter = (req: any, file: any, cb: any) => {
-  // Allow only images
-  if (file.mimetype && file.mimetype.startsWith('image/')) {
-    cb(null, true);
+// File Filter
+const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  console.log(`[Multer] Processing file: ${file.originalname}, mime: ${file.mimetype}`);
+  const allowedTypes = /jpeg|jpg|png|gif/;
+  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedTypes.test(file.mimetype);
+
+  if (extname && mimetype) {
+    return cb(null, true);
   } else {
-    cb(new Error('Only image files are allowed!'));
+    cb(new Error('Only images (jpeg, jpg, png, gif) are allowed'));
   }
 };
 
-// Upload middleware
+// Limit size to 5MB
 export const upload = multer({
-  storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB
-  },
-  fileFilter,
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: fileFilter
 });
-
-// Single file upload
-export const uploadSingle = (fieldName: string) => upload.single(fieldName);
-
-// Multiple files upload
-export const uploadMultiple = (fieldName: string, maxCount: number = 5) =>
-  upload.array(fieldName, maxCount);

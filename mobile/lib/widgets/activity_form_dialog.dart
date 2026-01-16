@@ -1,7 +1,8 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart'; // Pastikan package ini ada
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../models/activity.dart';
@@ -12,14 +13,13 @@ import 'custom_text_field.dart';
 
 class ActivityFormDialog extends StatefulWidget {
   final Activity? existingActivity;
-  // Update callback untuk menerima File foto
   final Function(
     String kegiatan,
     String deskripsi,
     DateTime tanggal,
     ActivityType type,
     ActivityStatus status,
-    File? foto, // Parameter baru
+    XFile? foto,
   ) onSave;
 
   const ActivityFormDialog({
@@ -41,8 +41,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
   late ActivityType _selectedType;
   late ActivityStatus _selectedStatus;
 
-  // State untuk foto
-  File? _selectedImage;
+  XFile? _selectedImage;
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -88,8 +87,6 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
       firstDate: DateTime(2023),
       lastDate: DateTime(2030),
       builder: (context, child) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        // Gunakan tema default aplikasi
         return child!;
       },
     );
@@ -101,16 +98,16 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     }
   }
 
-  // Fungsi ambil gambar
   Future<void> _pickImage(ImageSource source) async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: source,
-        imageQuality: 70, // Kompresi ringan
+        imageQuality: 70,
       );
+      if (!mounted) return;
       if (pickedFile != null) {
         setState(() {
-          _selectedImage = File(pickedFile.path);
+          _selectedImage = pickedFile;
         });
       }
     } catch (e) {
@@ -158,7 +155,6 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
     return Dialog(
       backgroundColor: colorScheme.surfaceContainer,
@@ -251,12 +247,22 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                               children: [
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
-                                  child: Image.file(
-                                    _selectedImage!,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                    fit: BoxFit.cover,
-                                  ),
+                                  child: kIsWeb
+                                      ? Image.network(
+                                          _selectedImage!.path,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              const Center(
+                                                  child: Text("Preview Error")),
+                                        )
+                                      : Image.file(
+                                          File(_selectedImage!.path),
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          fit: BoxFit.cover,
+                                        ),
                                 ),
                                 Positioned(
                                   top: 8,
@@ -266,13 +272,13 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                         setState(() => _selectedImage = null),
                                     child: Container(
                                       padding: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.red,
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.error,
                                         shape: BoxShape.circle,
                                       ),
-                                      child: const Icon(
+                                      child: Icon(
                                         Icons.close,
-                                        color: Colors.white,
+                                        color: colorScheme.onPrimary,
                                         size: 16,
                                       ),
                                     ),
@@ -351,7 +357,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppThemes.primaryColor,
-                          foregroundColor: Colors.white,
+                          foregroundColor: colorScheme.onPrimary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -368,9 +374,9 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                               _selectedDate,
                               _selectedType,
                               _selectedStatus,
-                              _selectedImage, // Kirim foto
+                              _selectedImage,
                             );
-                            Navigator.pop(context);
+                            // Navigator.pop handled by parent
                           }
                         },
                         child: const Text('Simpan'),
@@ -411,7 +417,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: isDark ? Colors.transparent : Colors.white,
+            color: isDark ? Colors.transparent : colorScheme.surfaceContainer,
             border: Border.all(
               color: colorScheme.outline.withOpacity(0.5),
               width: 1.5,

@@ -13,6 +13,12 @@ export interface PesertaMagang {
   nama: string;
   username: string;
   id_peserta_magang?: string;
+  pembimbingId?: string;
+  pembimbing?: {
+    id: string;
+    nama: string;
+    bidang: string;
+  };
   divisi: string;
   instansi: string;
   id_instansi?: string;
@@ -101,17 +107,32 @@ export interface UnifiedAttendanceLog {
   sourceType: 'ABSENSI' | 'IZIN';
   peserta: PesertaMagang | undefined;
   timestamp: string;
-  
+
   // Normalized Status
   statusDisplay: "HADIR" | "TERLAMBAT" | "IZIN" | "SAKIT" | "PENDING" | "INVALID" | "REJECTED";
   statusColor: "green" | "orange" | "blue" | "red" | "yellow" | "gray";
-  
+
   // Detail Data
   tipe: string;
   detailTimeOrDuration: string;
   lokasiOrAlasan: string;
   buktiUrl?: string;
-  
+
   // Original Data (untuk aksi API)
   originalData: Absensi | PengajuanIzin;
+}
+
+export interface ActivityLog {
+  id: string;
+  userId: string;
+  user?: {
+    username: string;
+    avatar?: string;
+    role: string;
+  };
+  action: string;
+  entityType: string;
+  entityId?: string;
+  description: string;
+  createdAt: string;
 }

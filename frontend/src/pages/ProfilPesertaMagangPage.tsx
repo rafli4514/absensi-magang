@@ -12,7 +12,7 @@ import {
   Badge,
   Separator,
 } from "@radix-ui/themes";
-import { ClockIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { ClockIcon, MagnifyingGlassIcon, PersonIcon } from "@radix-ui/react-icons";
 import { Calendar, Clock, MapPin, Phone, GraduationCap } from "lucide-react";
 
 // Import services
@@ -227,6 +227,31 @@ export default function ProfilPesertaMagangPage() {
                   mb="4"
                   className="flex items-center gap-2"
                 >
+                  <PersonIcon className="h-4 w-4" />
+                  Pembimbing
+                </Text>
+                <Flex direction="column" gap="3">
+                  <Flex
+                    align="center"
+                    gap="3"
+                    className="p-3 bg-gray-50 rounded-lg"
+                  >
+                    <PersonIcon className="h-5 w-5 text-indigo-600" />
+                    <Text size="2" weight="medium">
+                      {peserta.pembimbing ? peserta.pembimbing.nama : "Belum ditentukan"}
+                    </Text>
+                  </Flex>
+                </Flex>
+              </Box>
+
+              <Box>
+                <Text
+                  size="3"
+                  weight="bold"
+                  color="gray"
+                  mb="4"
+                  className="flex items-center gap-2"
+                >
                   <Calendar className="h-4 w-4" />
                   Periode Magang
                 </Text>
@@ -260,8 +285,8 @@ export default function ProfilPesertaMagangPage() {
                           peserta.status === "AKTIF"
                             ? "green"
                             : peserta.status === "NONAKTIF"
-                            ? "red"
-                            : "gray"
+                              ? "red"
+                              : "gray"
                         }
                         variant="soft"
                         size="1"
@@ -275,11 +300,11 @@ export default function ProfilPesertaMagangPage() {
               </Box>
             </Grid>
           </Flex>
-        </Box>
-      </Card>
+        </Box >
+      </Card >
 
       {/* Attendance Records */}
-      <Card className="shadow-lg">
+      < Card className="shadow-lg" >
         <Box p="6">
           <Flex direction="column" gap="6">
             {/* Header */}
@@ -406,7 +431,7 @@ export default function ProfilPesertaMagangPage() {
             )}
           </Flex>
         </Box>
-      </Card>
-    </div>
+      </Card >
+    </div >
   );
 }

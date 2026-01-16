@@ -45,6 +45,38 @@ class InternService {
     );
   }
 
+  // --- [BARU] Update Peserta Magang ---
+  static Future<ApiResponse> updateIntern({
+    required String id, // PK Peserta
+    String? nama,
+    String? username,
+    String? divisi,
+    String? instansi,
+    String? nomorHp,
+    String? tanggalMulai,
+    String? tanggalSelesai,
+    String? idPesertaMagang,
+    String? namaMentor,
+  }) async {
+    final body = {
+      if (nama != null) 'nama': nama,
+      if (username != null) 'username': username,
+      if (divisi != null) 'divisi': divisi,
+      if (instansi != null) 'instansi': instansi,
+      if (nomorHp != null) 'nomorHp': nomorHp,
+      if (tanggalMulai != null) 'tanggalMulai': tanggalMulai,
+      if (tanggalSelesai != null) 'tanggalSelesai': tanggalSelesai,
+      if (idPesertaMagang != null) 'id_peserta_magang': idPesertaMagang,
+      if (namaMentor != null) 'namaMentor': namaMentor,
+    };
+
+    return await _apiService.put(
+      '/peserta-magang/$id',
+      body,
+      null,
+    );
+  }
+
   static Future<bool> deleteIntern(String id) async {
     final response = await _apiService.delete('/peserta-magang/$id', null);
     return response.success;

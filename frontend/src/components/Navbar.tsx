@@ -5,11 +5,14 @@ import {
   Settings,
   UserCircle,
   LogOut,
-  User
+  User as UserIcon
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { cn } from "../lib/utils";
+import Avatar from "./Avatar";
+import authService from "../services/authService";
+import type { User } from "../types";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -25,6 +28,17 @@ const Navigation = [
 
 export default function Header({ onMenuClick, onToggleMinimize, sidebarMinimized }: HeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(authService.getCurrentUser());
+
+  // FIX: Fetch profile on mount to sync changes made on other devices (like Mobile)
+  // This ensures the Avatar is up-to-date even if the user didn't re-login.
+  useEffect(() => {
+    authService.getProfile().then((response) => {
+      if (response.success && response.data) {
+        setCurrentUser(response.data);
+      }
+    }).catch(console.error);
+  }, []);
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 z-10">
@@ -65,11 +79,16 @@ export default function Header({ onMenuClick, onToggleMinimize, sidebarMinimized
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <div className="bg-gray-100 p-1 rounded-full">
-                <User className="h-5 w-5" />
-              </div>
-              <span className="ml-2 text-sm font-medium hidden sm:block">
-                Admin
+              <Avatar
+                src={currentUser?.avatar}
+                name={currentUser?.username || "Admin"}
+                alt="Profile"
+                size="sm"
+                className="mr-2"
+                showBorder={false}
+              />
+              <span className="text-sm font-medium hidden sm:block">
+                {currentUser?.username || "Admin"}
               </span>
             </button>
 
@@ -83,8 +102,12 @@ export default function Header({ onMenuClick, onToggleMinimize, sidebarMinimized
 
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
                   <div className="px-4 py-2 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">Admin Account</p>
-                    <p className="text-xs text-gray-500">admin@example.com</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {currentUser?.role === 'PESERTA_MAGANG' ? 'Peserta Magang' : (currentUser?.role || 'Admin')}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate" title={currentUser?.username}>
+                      @{currentUser?.username || 'admin'}
+                    </p>
                   </div>
                   <ul className="p-1">
                     {Navigation.map((item) => {

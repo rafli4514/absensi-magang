@@ -78,14 +78,15 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget _buildRequirementItem(String text) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final colors = theme.extension<AppColors>()!;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.check_circle_rounded,
-            color: AppThemes.successColor,
+            color: colors.success,
             size: 16,
           ),
           const SizedBox(width: 8),
@@ -107,10 +108,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final colors = theme.extension<AppColors>()!;
     final authProvider = Provider.of<AuthProvider>(context);
 
     // Gunakan warna primary dari tema
-    final primaryColor = AppThemes.primaryColor;
+    final primaryColor = colorScheme.primary;
 
     return Scaffold(
       appBar: CustomAppBar(title: 'Ganti Kata Sandi', showBackButton: true),
@@ -138,8 +140,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         color: primaryColor,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.lock_rounded,
-                          color: Colors.white, size: 24),
+                      child: Icon(Icons.lock_rounded,
+                          color: colorScheme.onPrimary, size: 24),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -210,7 +212,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         onPressed: _changePassword,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
+                          foregroundColor: colorScheme.onPrimary,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
                           elevation: 2,
@@ -219,7 +221,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           'Ubah Kata Sandi',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: colorScheme.onPrimary,
                           ),
                         ),
                       ),
@@ -232,15 +234,15 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   color: colorScheme.surfaceContainer,
                   borderRadius: BorderRadius.circular(16),
                   border:
-                      Border.all(color: AppThemes.infoColor.withOpacity(0.2)),
+                      Border.all(color: colors.info.withOpacity(0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.security_rounded,
-                            color: AppThemes.infoColor, size: 20),
+                        Icon(Icons.security_rounded,
+                            color: colors.info, size: 20),
                         const SizedBox(width: 8),
                         Text(
                           'Syarat Kata Sandi',

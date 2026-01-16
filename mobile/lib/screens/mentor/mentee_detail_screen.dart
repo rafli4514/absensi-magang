@@ -159,7 +159,9 @@ class _MenteeDetailScreenState extends State<MenteeDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final colors = theme.extension<AppColors>()!;
     final name = widget.menteeData['nama'] ?? 'Peserta';
     final division = widget.menteeData['divisi'] ?? '-';
 
@@ -250,14 +252,14 @@ class _MenteeDetailScreenState extends State<MenteeDetailScreen> {
                 Row(
                   children: [
                     Icon(Icons.date_range_rounded,
-                        size: 16, color: AppThemes.primaryColor),
+                        size: 16, color: colorScheme.primary),
                     const SizedBox(width: 6),
                     Text(
                       _currentDateRangeLabel,
                       style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: AppThemes.primaryColor),
+                          color: colorScheme.primary),
                     ),
                   ],
                 ),
@@ -309,13 +311,13 @@ class _MenteeDetailScreenState extends State<MenteeDetailScreen> {
         children: [
           CircleAvatar(
             radius: 28,
-            backgroundColor: AppThemes.primaryColor.withOpacity(0.1),
+            backgroundColor: colorScheme.primary.withOpacity(0.1),
             child: Text(
               name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: AppThemes.primaryColor),
+                  color: colorScheme.primary),
             ),
           ),
           const SizedBox(width: 16),
@@ -358,16 +360,16 @@ class _MenteeDetailScreenState extends State<MenteeDetailScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppThemes.primaryColor
+              ? colorScheme.primary
               : colorScheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(12), // Pill shape kotak
           border: Border.all(
-            color: isSelected ? AppThemes.primaryColor : Colors.transparent,
+            color: isSelected ? colorScheme.primary : Colors.transparent,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppThemes.primaryColor.withOpacity(0.3),
+                    color: colorScheme.primary.withOpacity(0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   )
@@ -402,12 +404,12 @@ class _MenteeDetailScreenState extends State<MenteeDetailScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppThemes.primaryColor.withOpacity(0.1)
+              ? colorScheme.primary.withOpacity(0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20), // Pill shape bulat penuh
           border: Border.all(
             color: isSelected
-                ? AppThemes.primaryColor
+                ? colorScheme.primary
                 : colorScheme.outline.withOpacity(0.3),
           ),
         ),
@@ -416,7 +418,7 @@ class _MenteeDetailScreenState extends State<MenteeDetailScreen> {
             label,
             style: TextStyle(
               color: isSelected
-                  ? AppThemes.primaryColor
+                  ? colorScheme.primary
                   : colorScheme.onSurfaceVariant,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               fontSize: 12,

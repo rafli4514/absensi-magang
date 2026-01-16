@@ -17,8 +17,8 @@ class FloatingBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // FIX: Gunakan Theme Context
     final theme = Theme.of(context);
+    final colors = theme.extension<AppColors>()!;
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
@@ -39,7 +39,7 @@ class FloatingBottomNav extends StatelessWidget {
                 : null,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+                color: colors.shadow,
                 blurRadius: 15,
                 offset: const Offset(0, 5),
                 spreadRadius: 2,
@@ -101,8 +101,11 @@ class FloatingBottomNav extends StatelessWidget {
                     ],
                     // FIX: Border dihapus agar full color tanpa outline
                   ),
-                  child: const Icon(Icons.qr_code_scanner_outlined,
-                      color: Colors.white, size: 35),
+                  child: const Icon(
+                    Icons.qr_code_scanner_outlined,
+                    color: Color(0xFFFFFFFF),
+                    size: 35,
+                  ),
                 ),
               ),
             ),

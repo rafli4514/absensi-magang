@@ -2,24 +2,29 @@ import { type Request, type Response } from "express";
 import { Role } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import {
-sendSuccess,
-sendError,
-sendPaginatedSuccess,
+  sendSuccess,
+  sendError,
+  sendPaginatedSuccess,
 } from "../utils/response";
 import path from "path";
 import fs from "fs";
 import bcrypt from 'bcryptjs';
 
 export const getAllPesertaMagang = async (req: Request, res: Response) => {
-try {
-const page = parseInt(req.query.page as string) || 1;
-const limit = parseInt(req.query.limit as string) || 10;
-const skip = (page - 1) * limit;
-const status = req.query.status as string;
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+    const status = req.query.status as string;
 
-const where: any = {};
-if (status && status !== "Semua") {
+    const where: any = {};
+    if (status && status !== "Semua") {
       where.status = status.toUpperCase();
+    }
+
+    // Role-based filtering
+    if (req.user?.role === 'PEMBIMBING_MAGANG' && req.user.pembimbingId) {
+      where.pembimbingId = req.user.pembimbingId;
     }
 
     const [pesertaMagang, total] = await Promise.all([
@@ -78,6 +83,13 @@ export const getPesertaMagangById = async (req: Request, res: Response) => {
           orderBy: { createdAt: "desc" },
           take: 5,
         },
+        pembimbing: {
+          select: {
+            id: true,
+            nama: true,
+            bidang: true
+          }
+        }
       },
     });
 
@@ -107,6 +119,7 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
       avatar,
       password = "password123",
       namaMentor, // INPUT BARU: Nama Mentor
+      pembimbingId, // INPUT BARU: Pembimbing Internal ID
     } = req.body;
 
     if (!nama || !username || !divisi || !nomorHp || !tanggalMulai || !tanggalSelesai) {
@@ -153,7 +166,8 @@ export const createPesertaMagang = async (req: Request, res: Response) => {
         status: status.toUpperCase(),
         avatar,
         userId: user.id,
-        namaMentor, // SIMPAN KE DB
+        namaMentor: namaMentor || '',
+        pembimbingId: pembimbingId || null,
       },
       include: {
         user: {
@@ -189,6 +203,7 @@ export const updatePesertaMagang = async (req: Request, res: Response) => {
       status,
       avatar,
       namaMentor, // INPUT BARU: Nama Mentor
+      pembimbingId,
     } = req.body;
 
     const existingPeserta = await prisma.pesertaMagang.findUnique({
@@ -221,6 +236,7 @@ export const updatePesertaMagang = async (req: Request, res: Response) => {
     if (status) updateData.status = status.toUpperCase();
     if (avatar !== undefined) updateData.avatar = avatar;
     if (namaMentor) updateData.namaMentor = namaMentor; // UPDATE KE DB
+    if (pembimbingId) updateData.pembimbingId = pembimbingId;
 
     const updatedPesertaMagang = await prisma.pesertaMagang.update({
       where: { id },

@@ -7,11 +7,14 @@ import '../../themes/app_themes.dart';
 import '../../utils/ui_utils.dart';
 import '../../utils/validators.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/custom_dialog.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/loading_indicator.dart';
 
 class AddUserScreen extends StatefulWidget {
-  const AddUserScreen({super.key});
+  final dynamic user; // Allow editing existing user (User model)
+
+  const AddUserScreen({super.key, this.user});
 
   @override
   State<AddUserScreen> createState() => _AddUserScreenState();
@@ -20,6 +23,8 @@ class AddUserScreen extends StatefulWidget {
 class _AddUserScreenState extends State<AddUserScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _isEditing = false;
+  bool _isActive = true; // State for Active status
 
   // Role Selection
   String _selectedRole = 'PESERTA_MAGANG';
@@ -40,6 +45,41 @@ class _AddUserScreenState extends State<AddUserScreen> {
   final _tanggalSelesaiController = TextEditingController();
 
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.user != null) {
+      _isEditing = true;
+      _loadUserData(widget.user);
+    }
+  }
+
+  void _loadUserData(dynamic user) {
+    // Determine Role
+    String rawRole = (user.role ?? 'peserta_magang').toString().toUpperCase();
+    if (_roles.contains(rawRole)) {
+      _selectedRole = rawRole;
+    }
+
+    _usernameController.text = user.username ?? '';
+    // Password ignored during edit init
+
+    // Load Detail based on User fields (which we mapped in User.dart)
+    _namaController.text = user.nama ?? '';
+    _idPesertaController.text = user.idPesertaMagang ?? '';
+    _divisiController.text = user.divisi ?? '';
+    _instansiController.text = user.instansi ?? '';
+    _nomorHpController.text = user.nomorHp ?? '';
+    _mentorController.text = user.namaMentor ?? '';
+    _tanggalMulaiController.text = user.tanggalMulai ?? '';
+    _tanggalSelesaiController.text = user.tanggalSelesai ?? '';
+
+    // Load Status
+    if (user.isActive != null) {
+      _isActive = user.isActive;
+    }
+  }
 
   @override
   void dispose() {
@@ -70,6 +110,86 @@ class _AddUserScreenState extends State<AddUserScreen> {
     }
   }
 
+  // --- ACTIONS --- (New)
+
+  Future<void> _handleToggleStatus() async {
+    setState(() => _isLoading = true);
+    try {
+      // Toggle via API
+      final response = await UserService.toggleUserStatus(widget.user.id);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          if (response.success) {
+            _isActive = !_isActive; // Toggle local state
+            GlobalSnackBar.show(
+              'User berhasil ${_isActive ? "diaktifkan" : "dinonaktifkan"}',
+              isSuccess: true,
+            );
+          } else {
+             GlobalSnackBar.show(response.message, isError: true);
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        GlobalSnackBar.show('Gagal mengubah status: $e', isError: true);
+      }
+    }
+  }
+
+  Future<void> _handleDelete() async {
+    // Confirm Dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return CustomDialog(
+        title: 'Hapus User',
+        content: 'Apakah Anda yakin ingin menghapus user ini? Tindakan ini tidak dapat dibatalkan.',
+        primaryButtonText: 'Hapus Permanen',
+        primaryButtonColor: colorScheme.error,
+        onPrimaryButtonPressed: () => Navigator.pop(context, true),
+        secondaryButtonText: 'Batal',
+        );
+      },
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      bool success = false;
+      
+      // Delete Logic
+      if (_selectedRole == 'PESERTA_MAGANG' && widget.user.profileId != null) {
+        // Use InternService for cleanup
+        success = await InternService.deleteIntern(widget.user.profileId!);
+      } else {
+        // Use UserService for generic/other roles
+        final response = await UserService.deleteUser(widget.user.id);
+        success = response.success;
+      }
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        if (success) {
+          GlobalSnackBar.show('User berhasil dihapus', isSuccess: true);
+          Navigator.pop(context, true); // Close screen & Refresh list
+        } else {
+          GlobalSnackBar.show('Gagal menghapus user', isError: true);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        GlobalSnackBar.show('Error: $e', isError: true);
+      }
+    }
+  }
+
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -79,41 +199,84 @@ class _AddUserScreenState extends State<AddUserScreen> {
       bool success = false;
       String? errorMessage;
 
-      if (_selectedRole == 'PESERTA_MAGANG') {
-        // Gunakan InternService (Full Profile)
-        final response = await InternService.createIntern(
-          nama: _namaController.text.trim(),
-          username: _usernameController.text.trim(),
-          password: _passwordController.text,
-          divisi: _divisiController.text.trim(),
-          instansi: _instansiController.text.trim(),
-          nomorHp: _nomorHpController.text.trim(),
-          tanggalMulai: _tanggalMulaiController.text.trim(),
-          tanggalSelesai: _tanggalSelesaiController.text.trim(),
-          idPesertaMagang: _idPesertaController.text.trim(),
-          namaMentor: _mentorController.text.trim(),
-        );
-        success = response.success;
-        errorMessage = response.message;
+      if (_isEditing) {
+        // --- LOGIC UPDATE ---
+        if (_selectedRole == 'PESERTA_MAGANG') {
+          // Use InternService.updateIntern
+          // Need profileId (PK of PesertaMagang)
+          final profileId = widget.user.profileId;
+          
+          if (profileId == null) {
+             throw Exception("ID Profil Peserta tidak ditemukan untuk update");
+          }
+
+          final response = await InternService.updateIntern(
+            id: profileId,
+            nama: _namaController.text.trim(),
+            username: _usernameController.text.trim(),
+            divisi: _divisiController.text.trim(),
+            instansi: _instansiController.text.trim(),
+            nomorHp: _nomorHpController.text.trim(),
+            tanggalMulai: _tanggalMulaiController.text.trim(),
+            tanggalSelesai: _tanggalSelesaiController.text.trim(),
+            idPesertaMagang: _idPesertaController.text.trim(),
+            namaMentor: _mentorController.text.trim(),
+          );
+           // Also update password if provided? InternService update doesn't support password yet.
+           // Ignore password for now or warn user.
+           success = response.success;
+           errorMessage = response.message;
+
+        } else {
+           // Use UserService.updateUser
+           final response = await UserService.updateUser(
+             id: widget.user.id,
+             username: _usernameController.text.trim(),
+             role: _selectedRole,
+             password: _passwordController.text.isNotEmpty ? _passwordController.text : null,
+           );
+           success = response.success;
+           errorMessage = response.message;
+        }
+
       } else {
-        // Gunakan UserService (Basic User)
-        final response = await UserService.createUser(
-          username: _usernameController.text.trim(),
-          password: _passwordController.text,
-          role: _selectedRole,
-          isActive: true,
-        );
-        success = response.success;
-        errorMessage = response.message;
+        // --- LOGIC CREATE (Existing) ---
+        if (_selectedRole == 'PESERTA_MAGANG') {
+          // Gunakan InternService (Full Profile)
+          final response = await InternService.createIntern(
+            nama: _namaController.text.trim(),
+            username: _usernameController.text.trim(),
+            password: _passwordController.text,
+            divisi: _divisiController.text.trim(),
+            instansi: _instansiController.text.trim(),
+            nomorHp: _nomorHpController.text.trim(),
+            tanggalMulai: _tanggalMulaiController.text.trim(),
+            tanggalSelesai: _tanggalSelesaiController.text.trim(),
+            idPesertaMagang: _idPesertaController.text.trim(),
+            namaMentor: _mentorController.text.trim(),
+          );
+          success = response.success;
+          errorMessage = response.message;
+        } else {
+          // Gunakan UserService (Basic User)
+          final response = await UserService.createUser(
+            username: _usernameController.text.trim(),
+            password: _passwordController.text,
+            role: _selectedRole,
+            isActive: true,
+          );
+          success = response.success;
+          errorMessage = response.message;
+        }
       }
 
       if (mounted) {
         setState(() => _isLoading = false);
         if (success) {
-          GlobalSnackBar.show('User berhasil ditambahkan', isSuccess: true);
+          GlobalSnackBar.show(_isEditing ? 'Data berhasil diperbarui' : 'User berhasil ditambahkan', isSuccess: true);
           Navigator.pop(context, true); // Return true to refresh list
         } else {
-          GlobalSnackBar.show(errorMessage ?? 'Gagal menambahkan user',
+          GlobalSnackBar.show(errorMessage ?? 'Gagal menyimpan data',
               isError: true);
         }
       }
@@ -127,11 +290,16 @@ class _AddUserScreenState extends State<AddUserScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ... (Theme setup same)
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = Theme.of(context).extension<AppColors>()!;
     final isPeserta = _selectedRole == 'PESERTA_MAGANG';
 
     return Scaffold(
-      appBar: CustomAppBar(title: 'Tambah Pengguna', showBackButton: true),
+      appBar: CustomAppBar(
+        title: _isEditing ? 'Edit Pengguna' : 'Tambah Pengguna', 
+        showBackButton: true
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -139,6 +307,59 @@ class _AddUserScreenState extends State<AddUserScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 1. STATUS BAR (Editing Only)
+              if (_isEditing) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: _isActive 
+                        ? colors.success.withOpacity(0.1) 
+                        : colorScheme.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _isActive 
+                          ? colors.success
+                          : colorScheme.error,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _isActive ? Icons.check_circle : Icons.cancel,
+                        color: _isActive ? colors.success : colorScheme.error,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _isActive ? 'Status: AKTIF' : 'Status: NONAKTIF',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: _isActive ? colors.success : colorScheme.error,
+                              ),
+                            ),
+                            Text(
+                              _isActive 
+                                  ? 'User dapat login dan akses aplikasi'
+                                  : 'Akses user dibekukan sementara',
+                              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: _isActive,
+                        activeColor: colors.success,
+                        onChanged: (val) => _handleToggleStatus(),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               // Role Dropdown
               _buildSectionTitle('Peran Pengguna'),
               Container(
@@ -184,10 +405,10 @@ class _AddUserScreenState extends State<AddUserScreen> {
               CustomTextField(
                 controller: _passwordController,
                 label: 'Password',
-                hint: 'Masukkan password',
+                hint: _isEditing ? 'Isi untuk ubah password' : 'Masukkan password', // Hint changed logic
                 icon: Icons.lock_outline,
                 isPassword: true,
-                validator: Validators.validatePassword,
+                validator: _isEditing ? null : Validators.validatePassword, // Optional if editing
               ),
 
               if (isPeserta) ...[
@@ -274,6 +495,8 @@ class _AddUserScreenState extends State<AddUserScreen> {
               ],
 
               const SizedBox(height: 32),
+              
+              // MAIN SAVE BUTTON
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -282,15 +505,36 @@ class _AddUserScreenState extends State<AddUserScreen> {
                     : ElevatedButton(
                         onPressed: _handleSubmit,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppThemes.primaryColor,
-                          foregroundColor: Colors.white,
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text('Simpan User'),
+                        child: Text(_isEditing ? 'Simpan Perubahan' : 'Simpan User'), // Updated Label
                       ),
               ),
+
+              // DELETE BUTTON (Editing Only)
+              if (_isEditing) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: OutlinedButton(
+                    onPressed: _isLoading ? null : _handleDelete,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: colorScheme.error,
+                      side: BorderSide(color: colorScheme.error),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Hapus User'),
+                  ),
+                ),
+              ],
+              
               const SizedBox(height: 30),
             ],
           ),

@@ -57,7 +57,7 @@ class _DigitalClockWidgetState extends State<DigitalClockWidget> {
     return Text(
       _timeString,
       style: widget.style ??
-          const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.bold),
     );
   }
 }
@@ -241,7 +241,7 @@ class _QrScanScreenState extends State<QrScanScreen>
         title: title,
         content: message,
         primaryButtonText: 'Buka Pengaturan',
-        primaryButtonColor: AppThemes.primaryColor,
+        primaryButtonColor: Theme.of(context).colorScheme.primary,
         onPrimaryButtonPressed: () async {
           Navigator.pop(context);
           await PermissionService.openAppSettings();
@@ -464,9 +464,12 @@ class _QrScanScreenState extends State<QrScanScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final colors = theme.extension<AppColors>()!;
+    final isDarkMode = theme.brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDarkMode ? Colors.black : Colors.white,
+      backgroundColor: isDarkMode ? Colors.black : colorScheme.onPrimary,
       extendBodyBehindAppBar: true,
       appBar: _showBottomNav
           ? null
@@ -479,8 +482,8 @@ class _QrScanScreenState extends State<QrScanScreen>
                   decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.3),
                       shape: BoxShape.circle),
-                  child: const Icon(Icons.arrow_back_rounded,
-                      color: Colors.white, size: 20),
+                  child: Icon(Icons.arrow_back_rounded,
+                      color: colorScheme.onPrimary, size: 20),
                 ),
                 onPressed: _handleBackButton,
               ),
@@ -523,6 +526,8 @@ class _QrScanScreenState extends State<QrScanScreen>
 
   Widget _buildScannerOverlay(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final colors = theme.extension<AppColors>()!;
     final size = MediaQuery.of(context).size;
     final scannerSize = size.width * 0.70;
 
@@ -538,10 +543,10 @@ class _QrScanScreenState extends State<QrScanScreen>
                   children: [
                     _buildInfoBadge(
                       icon: Icons.access_time_rounded,
-                      color: AppThemes.primaryColor,
+                      color: colorScheme.primary,
                       child: DigitalClockWidget(
                         style: theme.textTheme.labelLarge?.copyWith(
-                          color: Colors.white,
+                          color: colorScheme.onPrimary,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,
                         ),
@@ -559,12 +564,12 @@ class _QrScanScreenState extends State<QrScanScreen>
                   color: _isLocationLoading
                       ? AppThemes.warningColor
                       : _locationSettings != null
-                          ? AppThemes.successColor
+                          ? colors.success
                           : AppThemes.errorColor,
                   child: Text(
                     _locationStatus,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white, fontWeight: FontWeight.w500),
+                        color: colorScheme.onPrimary, fontWeight: FontWeight.w500),
                   ),
                 ),
               ],
@@ -581,10 +586,10 @@ class _QrScanScreenState extends State<QrScanScreen>
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                      color: AppThemes.primaryColor.withOpacity(0.8), width: 3),
+                      color: colorScheme.primary.withOpacity(0.8), width: 3),
                   boxShadow: [
                     BoxShadow(
-                        color: AppThemes.primaryColor.withOpacity(0.3),
+                        color: colorScheme.primary.withOpacity(0.3),
                         blurRadius: 20,
                         spreadRadius: 2),
                   ],
@@ -603,10 +608,10 @@ class _QrScanScreenState extends State<QrScanScreen>
                             child: Container(
                               height: 3,
                               decoration: BoxDecoration(
-                                color: AppThemes.primaryColor,
+                                color: colorScheme.primary,
                                 boxShadow: [
                                   BoxShadow(
-                                      color: AppThemes.primaryColor,
+                                      color: colorScheme.primary,
                                       blurRadius: 10,
                                       spreadRadius: 1)
                                 ],
@@ -623,7 +628,7 @@ class _QrScanScreenState extends State<QrScanScreen>
               Text(
                 'Pindai QR Code Presensi',
                 style: theme.textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
+                  color: colorScheme.onPrimary,
                   fontWeight: FontWeight.bold,
                   shadows: [
                     const Shadow(
@@ -639,7 +644,7 @@ class _QrScanScreenState extends State<QrScanScreen>
                     ? 'Memproses data...'
                     : 'Posisikan kode QR di dalam bingkai',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withOpacity(0.9),
+                  color: colorScheme.onPrimary.withOpacity(0.9),
                   shadows: [
                     const Shadow(
                         color: Colors.black54,
@@ -659,13 +664,13 @@ class _QrScanScreenState extends State<QrScanScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 3),
+                  CircularProgressIndicator(
+                      color: colorScheme.onPrimary, strokeWidth: 3),
                   const SizedBox(height: 20),
                   Text(
                     'Mencatat Kehadiran...',
                     style: theme.textTheme.titleMedium?.copyWith(
-                        color: Colors.white, fontWeight: FontWeight.w600),
+                        color: colorScheme.onPrimary, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -677,12 +682,13 @@ class _QrScanScreenState extends State<QrScanScreen>
 
   Widget _buildInfoBadge(
       {required IconData icon, required Widget child, required Color color}) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.45),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.15), width: 1),
+        border: Border.all(color: colorScheme.onPrimary.withOpacity(0.15), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -696,6 +702,8 @@ class _QrScanScreenState extends State<QrScanScreen>
   }
 
   Widget _buildFloatingButtons() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final colors = Theme.of(context).extension<AppColors>()!;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -704,20 +712,20 @@ class _QrScanScreenState extends State<QrScanScreen>
           _buildFloatingButton(
             icon: _isFlashOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
             label: _isFlashOn ? 'Senter' : 'Senter',
-            color: _isFlashOn ? AppThemes.warningColor : AppThemes.primaryColor,
+            color: _isFlashOn ? AppThemes.warningColor : colorScheme.primary,
             onPressed: _isProcessing ? () {} : _toggleFlash,
           ),
           _buildFloatingButton(
             icon: Icons.qr_code_scanner_rounded,
             label: 'Pindai',
-            color: AppThemes.primaryColor,
+            color: colorScheme.primary,
             onPressed: _isProcessing ? () {} : _startScan,
             isLarge: true,
           ),
           _buildFloatingButton(
             icon: Icons.photo_library_rounded,
             label: 'Galeri',
-            color: AppThemes.infoColor,
+            color: colors.info,
             onPressed: _isProcessing ? () {} : _pickImageFromGallery,
           ),
         ],
@@ -732,6 +740,7 @@ class _QrScanScreenState extends State<QrScanScreen>
     required VoidCallback onPressed,
     bool isLarge = false,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     final bool isDisabled = _isProcessing;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -768,7 +777,7 @@ class _QrScanScreenState extends State<QrScanScreen>
         Text(
           label,
           style: TextStyle(
-              color: isDisabled ? Colors.white.withOpacity(0.5) : Colors.white,
+              color: isDisabled ? colorScheme.onPrimary.withOpacity(0.5) : colorScheme.onPrimary,
               fontSize: 12,
               fontWeight: FontWeight.w600),
         ),

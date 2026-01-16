@@ -12,6 +12,7 @@ declare global {
         role: string;
         nama?: string;
         divisi?: string;
+        pembimbingId?: string;
       };
     }
   }
@@ -22,6 +23,7 @@ interface AuthRequest extends Request {
     id: string;
     username: string;
     role: string;
+    pembimbingId?: string;
   };
 }
 
@@ -48,6 +50,7 @@ export const authenticateToken = (
       id: decoded.id,
       username: decoded.username,
       role: decoded.role,
+      pembimbingId: decoded.pembimbingId,
     };
 
     next();
